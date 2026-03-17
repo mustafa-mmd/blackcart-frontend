@@ -393,11 +393,10 @@ import { Star, ShoppingCart, Heart, Eye, TrendingUp, Loader } from 'lucide-react
 import { Product } from '../../types'
 import { useCart } from '../../context/CartContext'
 import { useAuth } from '../../context/AuthContext'
-import { productService } from '../../services/productService'
 import { userService } from '../../services/userService'
 import toast from 'react-hot-toast'
-// Use debug version temporarily
-import { getImageUrlWithDebug as getImageUrl } from '../../utils/imageUtils'
+// Import the image utility (use regular version, not debug for production)
+import { getImageUrl } from '../../utils/imageUtils'
 
 interface ProductCardProps {
   product: Product
@@ -412,6 +411,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0 }) => {
   const [isHovered, setIsHovered] = React.useState(false)
   const [imageError, setImageError] = React.useState(false)
   const [wishlistLoading, setWishlistLoading] = React.useState(false)
+  const [imageUrl, setImageUrl] = React.useState<string>('/placeholder.png')
 
   // Extract category name properly
   const getCategoryName = (): string => {
@@ -459,32 +459,45 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0 }) => {
     checkWishlistStatus()
   }, [user, product?._id])
 
+  // Get product image URL - FIXED to handle object format
+  useEffect(() => {
+    if (!product) {
+      setImageUrl('/placeholder.png')
+      return
+    }
+    
+    try {
+      // Get the first image from the images array (which contains objects with url property)
+      let imageData = null
+      
+      if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+        imageData = product.images[0]
+      } 
+      // Fallback to product.image if it exists (could be string or object)
+      else if (product.image) {
+        imageData = product.image
+      }
+      
+      if (!imageData) {
+        setImageUrl('/placeholder.png')
+        return
+      }
+      
+      // Use the utility to get the full URL
+      const url = getImageUrl(imageData)
+      setImageUrl(url)
+      
+    } catch (error) {
+      console.error('Error getting image URL:', error)
+      setImageUrl('/placeholder.png')
+    }
+  }, [product])
+
   const getProductName = () => product?.name || 'Product'
 
   const discountPercentage = product?.discountPrice && product?.price
     ? Math.round(((product.price - product.discountPrice) / product.price) * 100)
     : 0
-
-  // Get product image URL
-  const getProductImageUrl = (): string => {
-    if (!product) return '/placeholder.png'
-    
-    try {
-      // Get the image path from product
-      const imagePath = product.images?.[0] || product.image
-      
-      if (!imagePath) return '/placeholder.png'
-      
-      // Use the imported utility function
-      return getImageUrl(imagePath)
-      
-    } catch (error) {
-      console.error('Error getting image URL:', error)
-      return '/placeholder.png'
-    }
-  }
-
-  const imageUrl = getProductImageUrl()
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault()

@@ -396,7 +396,7 @@ import { useAuth } from '../../context/AuthContext'
 import { productService } from '../../services/productService'
 import { userService } from '../../services/userService'
 import toast from 'react-hot-toast'
-// ✅ ADD THIS IMPORT
+// Import the image utility
 import { getImageUrl } from '../../utils/imageUtils'
 
 interface ProductCardProps {
@@ -413,7 +413,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0 }) => {
   const [imageError, setImageError] = React.useState(false)
   const [wishlistLoading, setWishlistLoading] = React.useState(false)
 
-  // ✅ FIXED: Extract category name properly
+  // Extract category name properly
   const getCategoryName = (): string => {
     if (!product?.category) return 'Uncategorized'
     
@@ -465,8 +465,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0 }) => {
     ? Math.round(((product.price - product.discountPrice) / product.price) * 100)
     : 0
 
-  // ✅ FIXED: Use the new image utility
-  const getImageUrl = () => {
+  // ✅ FIXED: Renamed function to avoid conflict with imported getImageUrl
+  const getProductImageUrl = (): string => {
     if (!product) return '/placeholder.png'
     
     try {
@@ -475,7 +475,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0 }) => {
       
       if (!imagePath) return '/placeholder.png'
       
-      // Use the utility to get full URL
+      // Use the imported utility function (not itself!)
       return getImageUrl(imagePath)
       
     } catch (error) {
@@ -484,7 +484,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0 }) => {
     }
   }
 
-  const imageUrl = getImageUrl()
+  // Get the image URL using the fixed function
+  const imageUrl = getProductImageUrl()
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault()

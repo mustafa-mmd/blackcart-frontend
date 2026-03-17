@@ -396,8 +396,8 @@ import { useAuth } from '../../context/AuthContext'
 import { productService } from '../../services/productService'
 import { userService } from '../../services/userService'
 import toast from 'react-hot-toast'
-// Import the image utility
-import { getImageUrl } from '../../utils/imageUtils'
+// Use debug version temporarily
+import { getImageUrlWithDebug as getImageUrl } from '../../utils/imageUtils'
 
 interface ProductCardProps {
   product: Product
@@ -465,7 +465,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0 }) => {
     ? Math.round(((product.price - product.discountPrice) / product.price) * 100)
     : 0
 
-  // ✅ FIXED: Renamed function to avoid conflict with imported getImageUrl
+  // Get product image URL
   const getProductImageUrl = (): string => {
     if (!product) return '/placeholder.png'
     
@@ -475,7 +475,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0 }) => {
       
       if (!imagePath) return '/placeholder.png'
       
-      // Use the imported utility function (not itself!)
+      // Use the imported utility function
       return getImageUrl(imagePath)
       
     } catch (error) {
@@ -484,7 +484,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0 }) => {
     }
   }
 
-  // Get the image URL using the fixed function
   const imageUrl = getProductImageUrl()
 
   const handleAddToCart = (e: React.MouseEvent) => {

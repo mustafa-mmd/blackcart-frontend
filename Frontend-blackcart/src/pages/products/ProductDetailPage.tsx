@@ -848,13 +848,12 @@ import { useCart } from '../../context/CartContext'
 import { useAuth } from '../../context/AuthContext'
 import toast from 'react-hot-toast'
 import ReviewForm from '../../components/reviews/ReviewForm';
-import ReviewList from '../../components/reviews/ReviewList';
 import Breadcrumb from '../../components/common/Breadcrumb'
 import Loader from '../../components/common/Loader'
 import ProductCard from '../../components/product/ProductCard'
 import ProductTabs from '../../components/product/ProductTabs'
 import ImageGallery from '../../components/product/ImageGallery'
-import { Product, Review } from '../../types'
+import { Product } from '../../types'
 import { getImageUrl } from '../../utils/imageUtils'
 
 const ProductDetailPage: React.FC = () => {
@@ -928,8 +927,17 @@ const ProductDetailPage: React.FC = () => {
     if (product?.images && Array.isArray(product.images)) {
       // Map each image object to a URL string using getImageUrl
       const images = product.images
-        .map((img: any) => getImageUrl(img))
-        .filter((url: string) => url && url !== '/placeholder.png'); // Remove invalid URLs
+        .map((img: any) => {
+          try {
+            return getImageUrl(img);
+          } catch (err) {
+            console.error('Error processing image:', err);
+            return null;
+          }
+        })
+        .filter((url: string | null): url is string => 
+          url !== null && url !== '' && url !== '/placeholder.png'
+        );
       
       // If we have images, use them; otherwise, add placeholder
       if (images.length > 0) {
@@ -1317,7 +1325,7 @@ const ProductDetailPage: React.FC = () => {
           {/* Left Column - Images */}
           <div>
             <ImageGallery
-              images={productImages}
+              images={productImages.length > 0 ? productImages : ['/placeholder.png']}
               productName={product.name}
               initialImage={selectedImage}
               onImageChange={setSelectedImage}
@@ -1330,7 +1338,9 @@ const ProductDetailPage: React.FC = () => {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
-                  {product.category}
+                  {typeof product.category === 'object' 
+                    ? product.category.name || 'Category' 
+                    : product.category || 'Category'}
                 </span>
                 <div className="flex items-center space-x-2">
                   <span className="text-sm text-gray-500">SKU:</span>

@@ -32,28 +32,57 @@ const extractImageUrl = (image: any): string => {
   return '';
 };
 
+// Cache for image URLs to avoid repeated processing
+const imageUrlCache = new Map<string, string>();
+
 export const getImageUrl = (image: any): string => {
   // Handle null/undefined
   if (!image) return PLACEHOLDER_URL;
   
   try {
+    // Create a cache key
+    const cacheKey = typeof image === 'string' ? image : JSON.stringify(image);
+    
+    // Check cache first
+    if (imageUrlCache.has(cacheKey)) {
+      return imageUrlCache.get(cacheKey) || PLACEHOLDER_URL;
+    }
+    
     // Extract the URL string from whatever format we have
     const imagePath = extractImageUrl(image);
     
     if (!imagePath) return PLACEHOLDER_URL;
     
     // If it's already a full URL, return as is
-    if (imagePath.startsWith("http")) return imagePath;
+    if (imagePath.startsWith("http")) {
+      imageUrlCache.set(cacheKey, imagePath);
+      return imagePath;
+    }
     
     // Clean the path - remove any leading slashes
     const cleanPath = imagePath.replace(/^\/+/, "");
     
-    // If it already starts with 'uploads/', don't add it again
-    if (cleanPath.startsWith("uploads/")) {
-      return `${API_URL}/${cleanPath}`;
+    // Extract filename for fallback
+    const filename = cleanPath.split('/').pop() || '';
+    
+    // Determine if it's a logo
+    const isLogo = cleanPath.includes('logo');
+    
+    // Try direct uploads path first
+    let finalUrl = '';
+    
+    if (isLogo) {
+      finalUrl = `${API_URL}/uploads/logo/${filename}`;
+    } else if (cleanPath.startsWith("uploads/")) {
+      finalUrl = `${API_URL}/${cleanPath}`;
     } else {
-      return `${API_URL}/uploads/${cleanPath}`;
+      finalUrl = `${API_URL}/uploads/${cleanPath}`;
     }
+    
+    // Cache and return
+    imageUrlCache.set(cacheKey, finalUrl);
+    return finalUrl;
+    
   } catch (error) {
     console.error('Error in getImageUrl:', error, 'for image:', image);
     return PLACEHOLDER_URL;
@@ -74,4 +103,10 @@ export const getImageUrlWithDebug = (image: any): string => {
   console.log(`Final URL: "${url}"`);
   console.groupEnd();
   return url;
+};
+
+// Force clear cache (useful for testing)
+export const clearImageCache = (): void => {
+  imageUrlCache.clear();
+  console.log('Image cache cleared');
 };

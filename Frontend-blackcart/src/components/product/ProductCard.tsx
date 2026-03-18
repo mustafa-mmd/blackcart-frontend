@@ -395,7 +395,7 @@ import { useCart } from '../../context/CartContext'
 import { useAuth } from '../../context/AuthContext'
 import { userService } from '../../services/userService'
 import toast from 'react-hot-toast'
-// Import the image utility (use regular version, not debug for production)
+// Import the image utility
 import { getImageUrl } from '../../utils/imageUtils'
 
 interface ProductCardProps {
@@ -461,36 +461,40 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0 }) => {
 
   // Get product image URL - FIXED to handle object format
   useEffect(() => {
-    if (!product) {
-      setImageUrl('/placeholder.png')
-      return
-    }
-    
-    try {
-      // Get the first image from the images array (which contains objects with url property)
-      let imageData = null
-      
-      if (product.images && Array.isArray(product.images) && product.images.length > 0) {
-        imageData = product.images[0]
-      } 
-      // Fallback to product.image if it exists (could be string or object)
-      else if (product.image) {
-        imageData = product.image
-      }
-      
-      if (!imageData) {
+    const loadImage = () => {
+      if (!product) {
         setImageUrl('/placeholder.png')
         return
       }
       
-      // Use the utility to get the full URL
-      const url = getImageUrl(imageData)
-      setImageUrl(url)
-      
-    } catch (error) {
-      console.error('Error getting image URL:', error)
-      setImageUrl('/placeholder.png')
+      try {
+        // Get the first image from the images array (which contains objects with url property)
+        let imageData = null
+        
+        if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+          imageData = product.images[0]
+        } 
+        // Fallback to product.image if it exists (could be string or object)
+        else if (product.image) {
+          imageData = product.image
+        }
+        
+        if (!imageData) {
+          setImageUrl('/placeholder.png')
+          return
+        }
+        
+        // Use the utility to get the full URL
+        const url = getImageUrl(imageData)
+        setImageUrl(url)
+        
+      } catch (error) {
+        console.error('Error getting image URL for product:', product.name, error)
+        setImageUrl('/placeholder.png')
+      }
     }
+    
+    loadImage()
   }, [product])
 
   const getProductName = () => product?.name || 'Product'

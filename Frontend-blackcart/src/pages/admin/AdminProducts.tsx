@@ -355,7 +355,7 @@ const AdminProducts: React.FC = () => {
         const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
         return `${baseUrl}${imageData}`;
       }
-      return `http://localhost:5000/uploads/${imageData}`;
+      return `https://blackcart-backend.onrender.com/uploads/${imageData}`;
     }
     
     // If it's an object

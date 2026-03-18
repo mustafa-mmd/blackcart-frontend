@@ -48,12 +48,12 @@ const AdminCategories: React.FC = () => {
     
     // If image starts with /uploads, prepend backend URL
     if (category.image.startsWith('/uploads')) {
-      return `http://localhost:5000${category.image}`;
+      return `https://blackcart-backend.onrender.com${category.image}`;
     }
     
     // If it's just a filename (no path), prepend /uploads and backend URL
     if (!category.image.includes('/')) {
-      return `http://localhost:5000/uploads/${category.image}`;
+      return `https://blackcart-backend.onrender.com/uploads/${category.image}`;
     }
     
     // Default fallback

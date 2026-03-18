@@ -43,21 +43,31 @@ export interface UserProfile extends User {
 }
 
 // ============================================
-// PRODUCT TYPES
+// PRODUCT TYPES - FIXED VERSION
 // ============================================
+
+// Add this new interface before the Product interface
+export interface ProductImage {
+  url: string
+  public_id?: string
+  alt?: string
+  secure_url?: string
+  path?: string
+  src?: string
+}
 
 export interface Product {
   _id: string
   name: string
   slug: string
-  // category: string
   categoryId?: string
   brand: string
   price: number
   discountPrice?: number
   description: string
   shortDescription: string
-  images: string[]
+  // ✅ FIXED: images can be either string[] or ProductImage[] to handle both formats
+  images: (string | ProductImage)[]
   thumbnail?: string
   specifications: Specification[]
   features: string[]
@@ -77,6 +87,42 @@ export interface Product {
   createdAt: string
   updatedAt: string
 }
+
+// // ============================================
+// // PRODUCT TYPES
+// // ============================================
+
+// export interface Product {
+//   _id: string
+//   name: string
+//   slug: string
+//   // category: string
+//   categoryId?: string
+//   brand: string
+//   price: number
+//   discountPrice?: number
+//   description: string
+//   shortDescription: string
+//   images: string[]
+//   thumbnail?: string
+//   specifications: Specification[]
+//   features: string[]
+//   stock: number
+//   sku: string
+//   isFeatured: boolean
+//   isActive: boolean
+//   tags: string[]
+//   rating?: number
+//   numReviews?: number
+//   weight?: number
+//   dimensions?: Dimensions
+//   warranty?: string
+//   variants?: ProductVariant[]
+//   metaTitle?: string
+//   metaDescription?: string
+//   createdAt: string
+//   updatedAt: string
+// }
 
 export interface Specification {
   key: string
@@ -126,6 +172,8 @@ export interface CartItem {
   addedAt: string
   variant?: ProductVariant | string
   selectedAttributes?: Record<string, string>
+  // Add this if it doesn't exist
+  image?: string
 }
 
 export interface Cart {

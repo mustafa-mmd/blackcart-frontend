@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   ShoppingBag, MapPin, CreditCard, CheckCircle,
   ArrowLeft, AlertCircle, Shield, Truck,
-  ChevronRight, Home, Check, Smartphone, Wallet, Building
+  ChevronRight, Home, Check, Wallet
 } from 'lucide-react'
 import { useCart } from '../../context/CartContext'
 import { useAuth } from '../../context/AuthContext'
@@ -24,6 +24,13 @@ import { pakistanCities } from '../../utils/pakistanCities'
 const FALLBACK_IMAGE = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'150\' viewBox=\'0 0 150 150\'%3E%3Crect width=\'150\' height=\'150\' fill=\'%23f0f0f0\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' font-family=\'Arial\' font-size=\'14\' fill=\'%23999\'%3ENo Image%3C/text%3E%3C/svg%3E'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://blackcart-backend.onrender.com'
+
+// ─── FIX (BUG 1): Replace bare `DEBUG` with `import.meta.env.DEV` ─────────────
+// `DEBUG` was used 7 times in handleAddressSubmit but never declared anywhere.
+// Vite does NOT auto-define it (unlike webpack's DefinePlugin).
+// `import.meta.env.DEV` is Vite's built-in boolean that is true in dev and
+// false in production — it is tree-shaken out of production builds entirely.
+const DEV = import.meta.env.DEV
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface OrderSummary {
@@ -64,7 +71,6 @@ interface Address {
 const getItemImageUrl = (item: any): string => {
   if (!item) return FALLBACK_IMAGE
 
-  // Direct image from cart item (when added directly)
   if (item.image) {
     if (typeof item.image === 'string') {
       if (item.image.startsWith('http://') || item.image.startsWith('https://') || item.image.startsWith('data:')) {
@@ -77,48 +83,30 @@ const getItemImageUrl = (item: any): string => {
     }
   }
 
-  // Nested product object (from cart context)
   const productData = item.product || item
-
   if (!productData) return FALLBACK_IMAGE
 
-  // Check for images array first (most common)
   if (productData.images && Array.isArray(productData.images) && productData.images.length > 0) {
     const firstImage = productData.images[0]
-    
     if (typeof firstImage === 'string') {
-      if (firstImage.startsWith('http://') || firstImage.startsWith('https://') || firstImage.startsWith('data:')) {
-        return firstImage
-      }
-      if (firstImage.startsWith('/uploads')) {
-        return `${API_BASE_URL}${firstImage}`
-      }
+      if (firstImage.startsWith('http://') || firstImage.startsWith('https://') || firstImage.startsWith('data:')) return firstImage
+      if (firstImage.startsWith('/uploads')) return `${API_BASE_URL}${firstImage}`
       return `${API_BASE_URL}/uploads/${firstImage}`
     }
-    
     if (firstImage && typeof firstImage === 'object') {
       const url = firstImage.url || firstImage.path || ''
       if (url) {
-        if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
-          return url
-        }
-        if (url.startsWith('/uploads')) {
-          return `${API_BASE_URL}${url}`
-        }
+        if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) return url
+        if (url.startsWith('/uploads')) return `${API_BASE_URL}${url}`
         return `${API_BASE_URL}/uploads/${url}`
       }
     }
   }
 
-  // Check for single image property
   if (productData.image) {
     if (typeof productData.image === 'string') {
-      if (productData.image.startsWith('http://') || productData.image.startsWith('https://') || productData.image.startsWith('data:')) {
-        return productData.image
-      }
-      if (productData.image.startsWith('/uploads')) {
-        return `${API_BASE_URL}${productData.image}`
-      }
+      if (productData.image.startsWith('http://') || productData.image.startsWith('https://') || productData.image.startsWith('data:')) return productData.image
+      if (productData.image.startsWith('/uploads')) return `${API_BASE_URL}${productData.image}`
       return `${API_BASE_URL}/uploads/${productData.image}`
     }
   }
@@ -126,23 +114,9 @@ const getItemImageUrl = (item: any): string => {
   return FALLBACK_IMAGE
 }
 
-const getItemName = (item: any): string => {
-  if (!item) return 'Product'
-  const productData = item.product || item
-  return productData.name || 'Product'
-}
-
-const getItemPrice = (item: any): number => {
-  if (!item) return 0
-  const productData = item.product || item
-  return productData.discountPrice || productData.price || 0
-}
-
-const getItemId = (item: any): string => {
-  if (!item) return ''
-  const productData = item.product || item
-  return productData._id || ''
-}
+const getItemName  = (item: any): string  => { if (!item) return 'Product'; const p = item.product || item; return p.name || 'Product' }
+const getItemPrice = (item: any): number  => { if (!item) return 0;         const p = item.product || item; return p.discountPrice || p.price || 0 }
+const getItemId    = (item: any): string  => { if (!item) return '';         const p = item.product || item; return p._id || '' }
 
 const CheckoutPage: React.FC = () => {
   const navigate = useNavigate()
@@ -160,13 +134,12 @@ const CheckoutPage: React.FC = () => {
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null)
   const [isSavingAddress, setIsSavingAddress] = useState(false)
 
-  // Get addresses
   const { data: addressesData, refetch: refetchAddresses, isLoading: addressesLoading } = useQuery({
     queryKey: ['userAddresses'],
     queryFn: () => userService.getAddresses(),
     enabled: !!user,
   })
-  
+
   const addresses: Address[] = React.useMemo(() => {
     if (!addressesData) return []
     if (Array.isArray(addressesData)) return addressesData
@@ -175,21 +148,12 @@ const CheckoutPage: React.FC = () => {
     return []
   }, [addressesData])
 
-  // Calculate totals
   const orderSummary: OrderSummary = React.useMemo(() => {
-    const itemsPrice = cartItems.reduce((total, item) => {
-      return total + (getItemPrice(item) * (item.quantity || 1))
-    }, 0)
+    const itemsPrice = cartItems.reduce((total, item) => total + (getItemPrice(item) * (item.quantity || 1)), 0)
     const shipping = shippingEstimate.price || 0
-    return { 
-      subtotal: itemsPrice, 
-      shipping, 
-      discount: 0, 
-      total: itemsPrice + shipping 
-    }
+    return { subtotal: itemsPrice, shipping, discount: 0, total: itemsPrice + shipping }
   }, [cartItems, shippingEstimate])
 
-  // Load payment methods
   useEffect(() => {
     if (orderSummary.total > 0 && selectedAddress?.city) {
       loadPaymentMethods()
@@ -203,11 +167,10 @@ const CheckoutPage: React.FC = () => {
       setSelectedPaymentMethod('cod')
     } catch (error) {
       console.error('Failed to load payment methods:', error)
-      toast.error('Failed to load payment methods')
+      // Non-fatal — COD is still available as default
     }
   }
 
-  // Default address
   useEffect(() => {
     if (addresses.length > 0 && !selectedAddress) {
       const defaultAddress = addresses.find(a => a.isDefault) || addresses[0]
@@ -215,7 +178,6 @@ const CheckoutPage: React.FC = () => {
     }
   }, [addresses])
 
-  // Shipping cost
   useEffect(() => {
     if (selectedAddress?.city) {
       const cityData = pakistanCities.find(c => c.name === selectedAddress.city)
@@ -228,20 +190,16 @@ const CheckoutPage: React.FC = () => {
     }
   }, [selectedAddress, orderSummary.subtotal])
 
-  // Create order mutation
   const createOrderMutation = useMutation({
     mutationFn: (orderData: any) => orderService.createOrder(orderData),
     onSuccess: (data) => {
       const orderId = data.data?.order?._id || data.order?._id
       if (!orderId) {
-        console.error('No order ID in response:', data)
         toast.error('Order created but no ID returned')
         return
       }
-      
       setCreatedOrderId(orderId)
       setIsPlacingOrder(false)
-      
       if (selectedPaymentMethod === 'cod') {
         toast.success('Order placed successfully!')
         clearCart()
@@ -251,60 +209,43 @@ const CheckoutPage: React.FC = () => {
       }
     },
     onError: (error: any) => {
-      console.error('Order error:', error.response?.data || error)
       toast.error(error.response?.data?.message || error.message || 'Failed to create order')
       setIsPlacingOrder(false)
     },
   })
 
-  // Build order items
   const buildOrderItems = () =>
-    cartItems.map(item => {
-      const imageUrl = getItemImageUrl(item)
-      
-      return {
-        product: getItemId(item),
-        name: getItemName(item),
-        image: imageUrl,
-        price: getItemPrice(item),
-        quantity: item.quantity || 1,
-        sku: item.sku || `SKU-${getItemId(item).slice(-6)}`,
-      }
-    })
+    cartItems.map(item => ({
+      product:  getItemId(item),
+      name:     getItemName(item),
+      image:    getItemImageUrl(item),
+      price:    getItemPrice(item),
+      quantity: item.quantity || 1,
+      sku:      item.sku || `SKU-${getItemId(item).slice(-6)}`,
+    }))
 
   const buildOrderData = () => ({
     orderItems: buildOrderItems(),
     shippingAddress: {
-      fullName: selectedAddress?.fullName || selectedAddress?.name || '',
-      address: selectedAddress?.address || '',
-      city: selectedAddress?.city || '',
+      fullName:   selectedAddress?.fullName || selectedAddress?.name || '',
+      address:    selectedAddress?.address  || '',
+      city:       selectedAddress?.city     || '',
       postalCode: selectedAddress?.postalCode || '',
-      country: selectedAddress?.country || 'Pakistan',
-      phone: selectedAddress?.phone || '',
+      country:    selectedAddress?.country  || 'Pakistan',
+      phone:      selectedAddress?.phone    || '',
     },
     paymentMethod: selectedPaymentMethod,
-    itemsPrice: orderSummary.subtotal,
+    itemsPrice:    orderSummary.subtotal,
     shippingPrice: orderSummary.shipping,
-    taxPrice: 0,
-    totalPrice: orderSummary.total,
-    notes: orderNotes || '',
+    taxPrice:      0,
+    totalPrice:    orderSummary.total,
+    notes:         orderNotes || '',
   })
 
   const validateBeforeOrder = (): boolean => {
-    if (!selectedAddress) { 
-      toast.error('Please select a shipping address')
-      setStep(1)
-      return false 
-    }
-    if (!selectedPaymentMethod) { 
-      toast.error('Please select a payment method')
-      return false 
-    }
-    if (cartItems.length === 0) { 
-      toast.error('Your cart is empty')
-      navigate('/products')
-      return false 
-    }
+    if (!selectedAddress)      { toast.error('Please select a shipping address');  setStep(1); return false }
+    if (!selectedPaymentMethod){ toast.error('Please select a payment method');              return false }
+    if (cartItems.length === 0){ toast.error('Your cart is empty'); navigate('/products');   return false }
     return true
   }
 
@@ -313,8 +254,7 @@ const CheckoutPage: React.FC = () => {
     setIsPlacingOrder(true)
     try {
       await createOrderMutation.mutateAsync(buildOrderData())
-    } catch (error: any) {
-      console.error('❌ COD order error:', error)
+    } catch {
       setIsPlacingOrder(false)
     }
   }
@@ -328,8 +268,7 @@ const CheckoutPage: React.FC = () => {
         paymentStatus: 'pending_payment',
       })
       return result.data?.order?._id || result.order?._id
-    } catch (error: any) {
-      console.error('❌ Order creation error:', error)
+    } catch {
       setIsPlacingOrder(false)
       return null
     }
@@ -344,146 +283,82 @@ const CheckoutPage: React.FC = () => {
       toast.error('Payment was not completed. Your order is saved but not confirmed.')
     }
   }
-// ✅ IMPROVED: handleAddressSubmit with better state management
-const handleAddressSubmit = async (data: any) => {
-  setIsSavingAddress(true)
-  
-  try {
-    if (DEBUG) console.log('📤 Submitting address data:', data);
-    
-    // Find province from city using pakistanCities
-    const cityData = pakistanCities.find(c => c.name === data.city);
-    
-    if (!cityData) {
-      toast.error('Invalid city selected');
-      setIsSavingAddress(false);
-      return;
-    }
-    
-    // Transform data to match backend Address model
-    const addressData = {
-      fullName: data.fullName,
-      name: data.fullName, // Backend requires both
-      address: data.address,
-      city: data.city,
-      province: cityData.province,
-      postalCode: data.postalCode || '',
-      country: 'Pakistan',
-      phone: data.phone,
-      type: data.type || 'home',
-      isDefault: data.isDefault || false
-    };
-    
-    if (DEBUG) console.log('📤 Transformed address data:', addressData);
-    
-    // Try to save address to backend
+
+  // ── handleAddressSubmit ──────────────────────────────────────────────────────
+  // FIX: Replaced all `if (DEBUG)` with `if (DEV)` — DEBUG was never declared,
+  // causing a ReferenceError that crashed the entire checkout page on submit.
+  const handleAddressSubmit = async (data: any) => {
+    setIsSavingAddress(true)
     try {
-      const response = await userService.addAddress(addressData);
-      if (DEBUG) console.log('📥 Address response:', response);
-      
-      // Get the new address from response
-      let newAddress = null;
-      
-      if (response.data?.data) {
-        newAddress = response.data.data;
-      } else if (response.data) {
-        newAddress = response.data;
-      } else if (response.address) {
-        newAddress = response.address;
-      } else if (response._id) {
-        newAddress = response;
+      if (DEV) console.log('📤 Submitting address data:', data)
+
+      const cityData = pakistanCities.find(c => c.name === data.city)
+      if (!cityData) {
+        toast.error('Invalid city selected')
+        setIsSavingAddress(false)
+        return
       }
-      
-      if (newAddress && newAddress._id) {
-        // Successfully saved to backend
-        toast.success('Address saved successfully');
-        
-        // Refresh addresses list
-        await refetchAddresses();
-        
-        // Set the new address as selected
-        setSelectedAddress(newAddress);
-        setShowNewAddressForm(false);
-        
-        // Move to next step AFTER state updates
-        setTimeout(() => {
-          setStep(2);
-          toast.success('Address selected, continuing to payment');
-        }, 100);
-        
-      } else {
-        // If we can't get the address from response but API didn't error,
-        // create a local address object as fallback
-        if (DEBUG) console.warn('Could not extract address from response, using local data');
-        
-        const localAddress: Address = {
-          _id: `temp-${Date.now()}`,
-          fullName: data.fullName,
-          name: data.fullName,
-          address: data.address,
-          city: data.city,
-          province: cityData.province,
-          postalCode: data.postalCode || '',
-          country: 'Pakistan',
-          phone: data.phone,
-          type: data.type || 'home',
-          isDefault: data.isDefault || false
-        };
-        
-        toast.success('Address saved');
-        
-        // Refresh addresses in background
-        refetchAddresses().catch(e => console.log('Background refetch failed:', e));
-        
-        // Use local address and move to next step
-        setSelectedAddress(localAddress);
-        setShowNewAddressForm(false);
-        
-        setTimeout(() => {
-          setStep(2);
-        }, 100);
-      }
-      
-    } catch (apiError: any) {
-      if (DEBUG) console.error('API Error saving address:', apiError);
-      
-      // If API fails, create a local address as fallback
-      if (DEBUG) console.warn('API failed, using local address fallback');
-      
-      const localAddress: Address = {
-        _id: `local-${Date.now()}`,
-        fullName: data.fullName,
-        name: data.fullName,
-        address: data.address,
-        city: data.city,
-        province: cityData.province,
+
+      const addressData = {
+        fullName:   data.fullName,
+        name:       data.fullName,
+        address:    data.address,
+        city:       data.city,
+        province:   cityData.province,
         postalCode: data.postalCode || '',
-        country: 'Pakistan',
-        phone: data.phone,
-        type: data.type || 'home',
-        isDefault: data.isDefault || false
-      };
-      
-      toast.success('Address saved');
-      
-      setSelectedAddress(localAddress);
-      setShowNewAddressForm(false);
-      
-      setTimeout(() => {
-        setStep(2);
-      }, 100);
-      
-      // Try to refresh in background
-      refetchAddresses().catch(e => console.log('Background refetch failed:', e));
+        country:    'Pakistan',
+        phone:      data.phone,
+        type:       data.type || 'home',
+        isDefault:  data.isDefault || false,
+      }
+
+      if (DEV) console.log('📤 Transformed address data:', addressData)
+
+      try {
+        const response = await userService.addAddress(addressData)
+        if (DEV) console.log('📥 Address response:', response)
+
+        let newAddress: Address | null = null
+        if (response.data?.data)  newAddress = response.data.data
+        else if (response.data)   newAddress = response.data
+        else if (response.address)newAddress = response.address
+        else if (response._id)    newAddress = response
+
+        if (newAddress && newAddress._id) {
+          toast.success('Address saved successfully')
+          await refetchAddresses()
+          setSelectedAddress(newAddress)
+          setShowNewAddressForm(false)
+          setTimeout(() => { setStep(2); toast.success('Address selected, continuing to payment') }, 100)
+        } else {
+          if (DEV) console.warn('Could not extract address from response, using local data')
+          const localAddress: Address = { _id: `temp-${Date.now()}`, ...addressData }
+          toast.success('Address saved')
+          refetchAddresses().catch(e => console.log('Background refetch failed:', e))
+          setSelectedAddress(localAddress)
+          setShowNewAddressForm(false)
+          setTimeout(() => setStep(2), 100)
+        }
+
+      } catch (apiError: any) {
+        if (DEV) console.error('API Error saving address:', apiError)
+        if (DEV) console.warn('API failed, using local address fallback')
+        const localAddress: Address = { _id: `local-${Date.now()}`, ...addressData }
+        toast.success('Address saved')
+        setSelectedAddress(localAddress)
+        setShowNewAddressForm(false)
+        setTimeout(() => setStep(2), 100)
+        refetchAddresses().catch(e => console.log('Background refetch failed:', e))
+      }
+
+    } catch (error: any) {
+      if (DEV) console.error('❌ Unexpected error:', error)
+      toast.error('Failed to save address. Please try again.')
+    } finally {
+      setIsSavingAddress(false)
     }
-    
-  } catch (error: any) {
-    if (DEBUG) console.error('❌ Unexpected error:', error);
-    toast.error('Failed to save address. Please try again.');
-  } finally {
-    setIsSavingAddress(false);
   }
-};
+
   const handleAddressSelect = (address: Address) => {
     setSelectedAddress(address)
     setStep(2)
@@ -497,11 +372,8 @@ const handleAddressSubmit = async (data: any) => {
   }
 
   const handleContinueToPayment = () => {
-    if (selectedAddress) {
-      setStep(2)
-    } else {
-      toast.error('Please select or add an address')
-    }
+    if (selectedAddress) setStep(2)
+    else toast.error('Please select or add an address')
   }
 
   const steps = [
@@ -542,8 +414,8 @@ const handleAddressSubmit = async (data: any) => {
             <div className="flex items-center justify-between max-w-3xl mx-auto">
               {steps.map((stepItem, index) => {
                 const StepIcon = stepItem.icon
-                const isActive = step >= stepItem.number
-                const isCompleted = step > stepItem.number
+                const isActive    = step >= stepItem.number
+                const isCompleted = step >  stepItem.number
                 return (
                   <div key={stepItem.number} className="flex items-center flex-1">
                     <div className="flex flex-col items-center">
@@ -567,9 +439,7 @@ const handleAddressSubmit = async (data: any) => {
                 {step === 1 && (
                   <motion.div key="step-1" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="space-y-6">
                     {addressesLoading ? (
-                      <div className="flex justify-center py-8">
-                        <Loader size="md" />
-                      </div>
+                      <div className="flex justify-center py-8"><Loader size="md" /></div>
                     ) : addresses.length > 0 && !showNewAddressForm ? (
                       <div className="card p-6">
                         <h2 className="text-xl font-bold text-gray-900 mb-4">Select Shipping Address</h2>
@@ -607,8 +477,8 @@ const handleAddressSubmit = async (data: any) => {
                     ) : (
                       <div className="card p-6">
                         <h2 className="text-xl font-bold text-gray-900 mb-4">Add Shipping Address</h2>
-                        <AddressForm 
-                          onSubmit={handleAddressSubmit} 
+                        <AddressForm
+                          onSubmit={handleAddressSubmit}
                           initialData={selectedAddress || undefined}
                           isSubmitting={isSavingAddress}
                         />
@@ -660,14 +530,12 @@ const handleAddressSubmit = async (data: any) => {
 
                     <div className="card p-6">
                       <h2 className="text-xl font-bold text-gray-900 mb-6">Select Payment Method</h2>
-                      
-                      {/* Cash on Delivery */}
                       <div className="space-y-3">
-                        <div 
+                        <div
                           onClick={() => handlePaymentSelect('cod')}
                           className={`p-4 border rounded-lg cursor-pointer transition-all ${
-                            selectedPaymentMethod === 'cod' 
-                              ? 'border-primary-500 bg-primary-50' 
+                            selectedPaymentMethod === 'cod'
+                              ? 'border-primary-500 bg-primary-50'
                               : 'border-gray-200 hover:border-primary-300'
                           }`}
                         >
@@ -677,14 +545,11 @@ const handleAddressSubmit = async (data: any) => {
                               <h3 className="font-medium text-gray-900">Cash on Delivery</h3>
                               <p className="text-sm text-gray-500">Pay with cash when your order is delivered</p>
                             </div>
-                            {selectedPaymentMethod === 'cod' && (
-                              <Check className="h-5 w-5 text-primary-600" />
-                            )}
+                            {selectedPaymentMethod === 'cod' && <Check className="h-5 w-5 text-primary-600" />}
                           </div>
                         </div>
                       </div>
 
-                      {/* Hidden PaymentMethods component for functionality */}
                       <div className="hidden">
                         <PaymentMethods
                           selectedMethod={selectedPaymentMethod}
@@ -692,7 +557,7 @@ const handleAddressSubmit = async (data: any) => {
                           orderTotal={orderSummary.total}
                           orderId={createdOrderId || undefined}
                           customerDetails={{
-                            name: user?.name || '',
+                            name:  user?.name  || '',
                             email: user?.email || '',
                             phone: selectedAddress?.phone || '',
                           }}
@@ -716,10 +581,7 @@ const handleAddressSubmit = async (data: any) => {
                     </div>
 
                     <div className="flex justify-between">
-                      <button
-                        onClick={() => setStep(1)}
-                        className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 flex items-center"
-                      >
+                      <button onClick={() => setStep(1)} className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 flex items-center">
                         <ArrowLeft className="h-5 w-5 mr-2" /> Back to Shipping
                       </button>
                       <button
@@ -728,15 +590,9 @@ const handleAddressSubmit = async (data: any) => {
                         className="btn-primary px-8 py-3 flex items-center"
                       >
                         {isPlacingOrder ? (
-                          <>
-                            <Loader size="sm" />
-                            <span className="ml-2">Placing Order...</span>
-                          </>
+                          <><Loader size="sm" /><span className="ml-2">Placing Order...</span></>
                         ) : (
-                          <>
-                            <CheckCircle className="h-5 w-5 mr-2" />
-                            Place Order (COD)
-                          </>
+                          <><CheckCircle className="h-5 w-5 mr-2" />Place Order (COD)</>
                         )}
                       </button>
                     </div>
@@ -748,15 +604,12 @@ const handleAddressSubmit = async (data: any) => {
             <div>
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="card p-6 sticky top-24">
                 <h2 className="text-xl font-bold text-gray-900 mb-4">Order Summary</h2>
-
-                {/* Cart items with images */}
                 <div className="space-y-3 mb-6 max-h-64 overflow-y-auto pr-1">
                   {cartItems.map((item, index) => {
-                    const imageUrl = getItemImageUrl(item)
+                    const imageUrl  = getItemImageUrl(item)
                     const itemPrice = getItemPrice(item)
-                    const quantity = item.quantity || 1
-                    const itemName = getItemName(item)
-
+                    const quantity  = item.quantity || 1
+                    const itemName  = getItemName(item)
                     return (
                       <div key={index} className="flex items-center gap-3">
                         <div className="relative flex-shrink-0">
@@ -765,9 +618,7 @@ const handleAddressSubmit = async (data: any) => {
                               src={imageUrl}
                               alt={itemName}
                               className="w-14 h-14 object-cover rounded-lg border border-gray-200"
-                              onError={(e) => { 
-                                e.currentTarget.src = FALLBACK_IMAGE 
-                              }}
+                              onError={(e) => { e.currentTarget.src = FALLBACK_IMAGE }}
                             />
                           ) : (
                             <div className="w-14 h-14 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center">
@@ -791,7 +642,6 @@ const handleAddressSubmit = async (data: any) => {
                 </div>
 
                 <div className="border-t border-gray-100 mb-4" />
-
                 <div className="space-y-3 mb-6">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Subtotal ({cartItems.length} item{cartItems.length !== 1 ? 's' : ''})</span>

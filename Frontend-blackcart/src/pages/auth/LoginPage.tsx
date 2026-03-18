@@ -48,7 +48,7 @@ const LoginPage: React.FC = () => {
   // Direct Google OAuth redirect - No need for context method
   const handleGoogleLogin = () => {
     // Redirect to backend Google OAuth endpoint
-    window.location.href = 'http://localhost:5000/api/auth/google';
+    window.location.href = 'https://blackcart-backend.onrender.com/api/auth/google';
   }
 
   return (

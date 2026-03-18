@@ -16,7 +16,7 @@ export const testImageUrls = (product) => {
     if (typeof img === 'string') {
       console.log('  Is full URL:', img.startsWith('http'))
       console.log('  Starts with /uploads:', img.startsWith('/uploads'))
-      console.log('  Direct URL:', `http://localhost:5000${img.startsWith('/') ? '' : '/'}${img}`)
+      console.log('  Direct URL:', `https://blackcart-backend.onrender.com${img.startsWith('/') ? '' : '/'}${img}`)
     }
     
     if (typeof img === 'object') {

@@ -400,8 +400,13 @@ import { useCart } from '../../context/CartContext'
 import { useAuth } from '../../context/AuthContext'
 import { userService } from '../../services/userService'
 import toast from 'react-hot-toast'
-// Import the enhanced image utility
-import { getImageUrlAsync, isMobileDevice, getImageUrlWithRetry } from '../../utils/imageUtils'
+// Import the enhanced image utility - FIXED: Import from the file, not from default
+import { 
+  getImageUrlAsync, 
+  isMobileDevice, 
+  getImageUrlWithRetry,
+  getImageUrl 
+} from '../../utils/imageUtils'
 
 interface ProductCardProps {
   product: Product

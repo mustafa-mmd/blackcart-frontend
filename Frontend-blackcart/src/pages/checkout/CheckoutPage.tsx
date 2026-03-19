@@ -968,7 +968,7 @@ const CheckoutPage: React.FC = () => {
     const safetyTimer = setTimeout(() => {
       setIsPlacingOrder(false)
       toast.error('Request timed out. Please check your connection and try again.')
-    }, 30_000)
+    }, 60_000)
 
     try {
       await createOrderMutation.mutateAsync(buildOrderData())

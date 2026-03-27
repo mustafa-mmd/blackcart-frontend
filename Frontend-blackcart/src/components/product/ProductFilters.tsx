@@ -36,7 +36,7 @@ const ProductFilters: React.FC<ProductFiltersProps> = ({
   isLoading = false 
 }) => {
   const [isOpen, setIsOpen] = useState(false)
-  const [localPriceRange, setLocalPriceRange] = useState({ min: 0, max: 5000000 })
+  const [localPriceRange, setLocalPriceRange] = useState({ min: 0, max: 50000 })
   
   // Use debounce for price range to avoid too many API calls
   const debouncedPriceRange = useDebounce(localPriceRange, 500)
@@ -57,7 +57,7 @@ const ProductFilters: React.FC<ProductFiltersProps> = ({
     const defaultData = { 
       categories: [], 
       brands: [], 
-      priceRange: { minPrice: 0, maxPrice: 5000000 } 
+      priceRange: { minPrice: 0, maxPrice: 50000 } 
     }
     
     if (!filterOptions?.success) return defaultData
@@ -94,7 +94,7 @@ const ProductFilters: React.FC<ProductFiltersProps> = ({
   useEffect(() => {
     setLocalPriceRange({
       min: filters.minPrice !== undefined ? filters.minPrice : (priceRangeData?.minPrice || 0),
-      max: filters.maxPrice !== undefined ? filters.maxPrice : (priceRangeData?.maxPrice || 5000000),
+      max: filters.maxPrice !== undefined ? filters.maxPrice : (priceRangeData?.maxPrice || 50000),
     })
   }, [filters.minPrice, filters.maxPrice, priceRangeData])
 
@@ -166,7 +166,7 @@ const ProductFilters: React.FC<ProductFiltersProps> = ({
     })
     setLocalPriceRange({
       min: priceRangeData?.minPrice || 0,
-      max: priceRangeData?.maxPrice || 5000000,
+      max: priceRangeData?.maxPrice || 50000,
     })
   }, [onFilterChange, priceRangeData, filters.search])
 
@@ -332,8 +332,8 @@ const ProductFilters: React.FC<ProductFiltersProps> = ({
                 <input
                   type="range"
                   min={priceRangeData?.minPrice || 0}
-                  max={priceRangeData?.maxPrice || 5000000}
-                  step={(priceRangeData?.maxPrice || 5000000) / 100}
+                  max={priceRangeData?.maxPrice || 50000}
+                  step={(priceRangeData?.maxPrice || 50000) / 100}
                   value={localPriceRange.min}
                   onChange={(e) => {
                     const newMin = parseInt(e.target.value)
@@ -346,8 +346,8 @@ const ProductFilters: React.FC<ProductFiltersProps> = ({
                 <input
                   type="range"
                   min={priceRangeData?.minPrice || 0}
-                  max={priceRangeData?.maxPrice || 5000000}
-                  step={(priceRangeData?.maxPrice || 5000000) / 100}
+                  max={priceRangeData?.maxPrice || 50000}
+                  step={(priceRangeData?.maxPrice || 50000) / 100}
                   value={localPriceRange.max}
                   onChange={(e) => {
                     const newMax = parseInt(e.target.value)
@@ -360,8 +360,8 @@ const ProductFilters: React.FC<ProductFiltersProps> = ({
                 <div 
                   className="absolute h-full bg-blue-600 rounded-full"
                   style={{ 
-                    left: `${(localPriceRange.min / (priceRangeData?.maxPrice || 5000000)) * 100}%`,
-                    right: `${100 - (localPriceRange.max / (priceRangeData?.maxPrice || 5000000)) * 100}%`
+                    left: `${(localPriceRange.min / (priceRangeData?.maxPrice || 50000)) * 100}%`,
+                    right: `${100 - (localPriceRange.max / (priceRangeData?.maxPrice || 50000)) * 100}%`
                   }}
                 />
               </div>

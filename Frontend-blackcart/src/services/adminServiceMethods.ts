@@ -259,10 +259,49 @@ export const adminService = {
     }
   },
 
-  updateProduct: async (id: string, data: any): Promise<ApiResponse<Product>> => {
-    const response = await api.put(`/admin/products/${id}`, data)
-    return response.data
-  },
+  // updateProduct: async (id: string, data: any): Promise<ApiResponse<Product>> => {
+  //   const response = await api.put(`/admin/products/${id}`, data)
+  //   return response.data
+  // },
+// src/services/adminServiceMethods.ts
+// Replace the updateProduct method with this fixed version:
+
+updateProduct: async (id: string, data: any): Promise<ApiResponse<Product>> => {
+  try {
+    console.log('📤 [SERVICE] Updating product:', id);
+    console.log('📤 Data type:', data instanceof FormData ? 'FormData' : typeof data);
+    
+    // If it's FormData, log its contents for debugging
+    if (data instanceof FormData) {
+      console.log('📋 FormData contents:');
+      for (let pair of data.entries()) {
+        if (pair[1] instanceof File) {
+          console.log(`  ${pair[0]}: File - ${pair[1].name}`);
+        } else {
+          console.log(`  ${pair[0]}: ${pair[1]}`);
+        }
+      }
+    }
+    
+    // Make the API request
+    const response = await api.put(`/admin/products/${id}`, data, {
+      headers: data instanceof FormData 
+        ? { 'Content-Type': 'multipart/form-data' }
+        : { 'Content-Type': 'application/json' }
+    });
+    
+    console.log('✅ [SERVICE] Product updated successfully:', response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error('❌ [SERVICE] Error updating product:', {
+      id,
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message
+    });
+    throw error;
+  }
+},
 
   deleteProduct: async (id: string, force?: boolean): Promise<ApiResponse<{ message: string }>> => {
     const params: any = {};

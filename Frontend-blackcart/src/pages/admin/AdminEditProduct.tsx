@@ -1326,150 +1326,126 @@ const AdminEditProduct: React.FC = () => {
     
     return [];
   }
-
-  const onSubmit = async (data: ProductFormData) => {
-    try {
-      setIsSubmitting(true);
-      
-      // Validate category
-      if (!data.categoryId) {
-        toast.error('Please select a valid category');
-        setIsSubmitting(false);
-        return;
-      }
-      
-      // Prepare form data
-      const formData = new FormData();
-      
-      // Handle tags
-      let tagsArray = [];
-      if (data.tags) {
-        if (Array.isArray(data.tags)) {
-          tagsArray = data.tags;
-        } else if (typeof data.tags === 'string') {
-          tagsArray = data.tags.split(',').map(tag => tag.trim()).filter(Boolean);
-        }
-      }
-      
-      // Basic fields
-      const fields = [
-        'name', 'description', 'shortDescription', 'price',
-        'categoryId', 'brand', 'sku', 'stock', 'isFeatured', 'isActive'
-      ];
-      
-      fields.forEach(field => {
-        const value = data[field as keyof ProductFormData];
-        if (value !== undefined && value !== null) {
-          formData.append(field, value.toString());
-        }
-      });
-      
-      // Handle discountPrice separately
-      if (data.discountPrice === undefined || data.discountPrice === null || data.discountPrice === 0) {
-        formData.append('discountPrice', '');
-      } else {
-        formData.append('discountPrice', data.discountPrice.toString());
-      }
-      
-      // Add tags as JSON string
-      formData.append('tags', JSON.stringify(tagsArray));
-      
-      // Add specifications
-      const validSpecs = specifications.filter(spec => spec.key.trim() && spec.value.trim());
-      formData.append('specifications', JSON.stringify(validSpecs));
-      
-      // Add features
-      const validFeatures = features.filter(feature => feature.trim());
-      formData.append('features', JSON.stringify(validFeatures));
-      
-      // IMPORTANT: Add images to delete as separate fields for backend to process
-      // Add each URL to delete as a separate field
-      imagesToDelete.forEach((url, index) => {
-        formData.append(`imagesToDelete[${index}]`, url);
-        console.log(`📤 Adding URL to delete [${index}]:`, url);
-      });
-      
-      // Add each ID to delete as a separate field
-      imagesToDeleteIds.forEach((id, index) => {
-        formData.append(`imagesToDeleteIds[${index}]`, id);
-        console.log(`📤 Adding ID to delete [${index}]:`, id);
-      });
-      
-      // Also send as JSON for backward compatibility
-      if (imagesToDelete.length > 0 || imagesToDeleteIds.length > 0) {
-        const imagesToDeleteData = {
-          urls: imagesToDelete,
-          ids: imagesToDeleteIds
-        };
-        formData.append('imagesToDeleteJson', JSON.stringify(imagesToDeleteData));
-        console.log('📤 Full deletion data:', imagesToDeleteData);
-      }
-      
-      // Add new images
-      newImages.forEach((image, index) => {
-        formData.append('images', image);
-        console.log(`📤 Adding new image ${index}:`, image.name);
-      });
-      
-      // Add existing images that are not removed (with their IDs)
-      const remainingImages = existingImages.map(img => ({
-        url: img.url,
-        _id: img._id,
-        public_id: img.public_id
-      }));
-      
-      if (remainingImages.length > 0) {
-        formData.append('existingImages', JSON.stringify(remainingImages));
-        console.log('📤 Remaining images:', remainingImages);
-      }
-      
-      console.log('📤 Submitting update with:', {
-        imagesToDeleteCount: imagesToDelete.length,
-        imagesToDeleteIdsCount: imagesToDeleteIds.length,
-        newImagesCount: newImages.length,
-        remainingImagesCount: remainingImages.length
-      });
-      
-      // Log all form data entries for debugging
-      console.log('📋 FormData contents:');
-      for (let pair of formData.entries()) {
-        if (pair[1] instanceof File) {
-          console.log(`  ${pair[0]}: File - ${pair[1].name}`);
-        } else {
-          console.log(`  ${pair[0]}: ${pair[1]}`);
-        }
-      }
-      
-      // Use admin service to update product
-      const response = await adminService.updateProduct(id!, formData);
-      
-      console.log('📥 Update response:', response);
-      
-      if (response.success) {
-        toast.success('✅ Product updated successfully!');
-        // Clear deletion states
-        setImagesToDelete([]);
-        setImagesToDeleteIds([]);
-        navigate('/admin/products');
-      } else {
-        toast.error(response.message || 'Failed to update product');
-      }
-    } catch (error: any) {
-      console.error('❌ Update error:', error);
-      
-      if (error.response?.data?.message) {
-        if (error.response.data.message.includes('category')) {
-          toast.error('Invalid category selected');
-        } else {
-          toast.error(error.response.data.message);
-        }
-      } else {
-        toast.error(error.message || 'Failed to update product');
-      }
-    } finally {
+const onSubmit = async (data: ProductFormData) => {
+  try {
+    setIsSubmitting(true);
+    
+    // Validate category
+    if (!data.categoryId) {
+      toast.error('Please select a valid category');
       setIsSubmitting(false);
+      return;
     }
-  };
+    
+    // Prepare form data
+    const formData = new FormData();
+    
+    // Handle tags
+    let tagsArray = [];
+    if (data.tags) {
+      if (Array.isArray(data.tags)) {
+        tagsArray = data.tags;
+      } else if (typeof data.tags === 'string') {
+        tagsArray = data.tags.split(',').map(tag => tag.trim()).filter(Boolean);
+      }
+    }
+    
+    // Basic fields - add as JSON string for simpler backend parsing
+    const updateData: any = {
+      name: data.name,
+      description: data.description,
+      shortDescription: data.shortDescription,
+      price: data.price,
+      categoryId: data.categoryId,
+      brand: data.brand,
+      sku: data.sku,
+      stock: data.stock,
+      isFeatured: data.isFeatured,
+      isActive: data.isActive,
+      tags: tagsArray,
+      specifications: specifications.filter(spec => spec.key.trim() && spec.value.trim()),
+      features: features.filter(feature => feature.trim())
+    };
+    
+    // Handle discount price
+    if (data.discountPrice && data.discountPrice > 0) {
+      updateData.discountPrice = data.discountPrice;
+    } else {
+      updateData.discountPrice = null;
+    }
+    
+    // CRITICAL: Add images to delete
+    if (imagesToDelete.length > 0 || imagesToDeleteIds.length > 0) {
+      updateData.imagesToDelete = {
+        urls: imagesToDelete,
+        ids: imagesToDeleteIds
+      };
+      console.log('🗑️ Images to delete:', updateData.imagesToDelete);
+    }
+    
+    // Add existing images (keep them)
+    if (existingImages.length > 0) {
+      updateData.existingImages = existingImages.map(img => ({
+        url: img.url,
+        _id: img._id
+      }));
+    }
+    
+    // Add main data as JSON
+    formData.append('data', JSON.stringify(updateData));
+    
+    // Add new images
+    newImages.forEach((image) => {
+      formData.append('images', image);
+    });
+    
+    console.log('📤 Submitting update with:', {
+      hasDeleteData: !!(imagesToDelete.length || imagesToDeleteIds.length),
+      deleteCount: imagesToDelete.length + imagesToDeleteIds.length,
+      newImagesCount: newImages.length,
+      existingImagesCount: existingImages.length
+    });
+    
+    // Log all form data entries for debugging
+    console.log('📋 FormData contents:');
+    for (let pair of formData.entries()) {
+      if (pair[1] instanceof File) {
+        console.log(`  ${pair[0]}: File - ${pair[1].name}`);
+      } else {
+        console.log(`  ${pair[0]}: ${pair[1].substring(0, 200)}`);
+      }
+    }
+    
+    // Use admin service to update product
+    const response = await adminService.updateProduct(id!, formData);
+    
+    console.log('📥 Update response:', response);
+    
+    if (response.success) {
+      toast.success('✅ Product updated successfully!');
+      // Clear deletion states
+      setImagesToDelete([]);
+      setImagesToDeleteIds([]);
+      navigate('/admin/products');
+    } else {
+      toast.error(response.message || 'Failed to update product');
+    }
+  } catch (error: any) {
+    console.error('❌ Update error:', error);
+    
+    if (error.response?.data?.message) {
+      if (error.response.data.message.includes('category')) {
+        toast.error('Invalid category selected');
+      } else {
+        toast.error(error.response.data.message);
+      }
+    } else {
+      toast.error(error.message || 'Failed to update product');
+    }
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   const handleCancel = () => {
     if (window.confirm('Are you sure you want to cancel? Any unsaved changes will be lost.')) {

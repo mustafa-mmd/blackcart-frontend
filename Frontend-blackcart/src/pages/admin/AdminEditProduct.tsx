@@ -996,7 +996,6 @@
 
 //fix the proper deletion 
 
-
 // Frontend-blackcart/src/pages/admin/AdminEditProduct.tsx
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
@@ -1071,7 +1070,7 @@ const AdminEditProduct: React.FC = () => {
   const [specifications, setSpecifications] = useState<Specification[]>([{ key: '', value: '' }])
   const [features, setFeatures] = useState<string[]>([''])
   const [imagesToDelete, setImagesToDelete] = useState<string[]>([])
-  const [imagesToDeleteIds, setImagesToDeleteIds] = useState<string[]>([]) // Track image IDs for deletion
+  const [imagesToDeleteIds, setImagesToDeleteIds] = useState<string[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loadingCategories, setLoadingCategories] = useState(false)
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('')
@@ -1106,15 +1105,15 @@ const AdminEditProduct: React.FC = () => {
             
             // Handle image structure - store full image objects with IDs
             const images = productData.images || [];
-            const processedImages: ProductImage[] = images.map((img: any) => {
+            const processedImages: ProductImage[] = images.map((img: any, idx: number) => {
               if (typeof img === 'string') {
-                return { url: img, alt: 'Product image', _id: img };
+                return { url: img, alt: 'Product image', _id: `img_${idx}_${Date.now()}` };
               }
               return {
                 url: img.url || img.path || '',
                 public_id: img.public_id || img.publicId,
                 alt: img.alt || 'Product image',
-                _id: img._id || img.url || img.path
+                _id: img._id || img.public_id || `img_${idx}_${Date.now()}`
               };
             });
             setExistingImages(processedImages);
@@ -1248,13 +1247,22 @@ const AdminEditProduct: React.FC = () => {
 
   const handleRemoveExistingImage = (index: number) => {
     const imageToRemove = existingImages[index]
+    console.log('🗑️ Removing existing image:', imageToRemove)
     
     // Store the image ID or URL for deletion
     if (imageToRemove._id) {
-      setImagesToDeleteIds(prev => [...prev, imageToRemove._id!])
+      setImagesToDeleteIds(prev => {
+        const newIds = [...prev, imageToRemove._id!]
+        console.log('📝 Images to delete IDs:', newIds)
+        return newIds
+      })
     }
     if (imageToRemove.url) {
-      setImagesToDelete(prev => [...prev, imageToRemove.url])
+      setImagesToDelete(prev => {
+        const newUrls = [...prev, imageToRemove.url]
+        console.log('📝 Images to delete URLs:', newUrls)
+        return newUrls
+      })
     }
     
     // Remove from existing images
@@ -1374,19 +1382,33 @@ const AdminEditProduct: React.FC = () => {
       const validFeatures = features.filter(feature => feature.trim());
       formData.append('features', JSON.stringify(validFeatures));
       
-      // Add images to delete - send both URLs and IDs
+      // IMPORTANT: Add images to delete as separate fields for backend to process
+      // Add each URL to delete as a separate field
+      imagesToDelete.forEach((url, index) => {
+        formData.append(`imagesToDelete[${index}]`, url);
+        console.log(`📤 Adding URL to delete [${index}]:`, url);
+      });
+      
+      // Add each ID to delete as a separate field
+      imagesToDeleteIds.forEach((id, index) => {
+        formData.append(`imagesToDeleteIds[${index}]`, id);
+        console.log(`📤 Adding ID to delete [${index}]:`, id);
+      });
+      
+      // Also send as JSON for backward compatibility
       if (imagesToDelete.length > 0 || imagesToDeleteIds.length > 0) {
         const imagesToDeleteData = {
           urls: imagesToDelete,
           ids: imagesToDeleteIds
         };
-        formData.append('imagesToDelete', JSON.stringify(imagesToDeleteData));
-        console.log('🗑️ Marking for deletion:', imagesToDeleteData);
+        formData.append('imagesToDeleteJson', JSON.stringify(imagesToDeleteData));
+        console.log('📤 Full deletion data:', imagesToDeleteData);
       }
       
       // Add new images
-      newImages.forEach((image) => {
+      newImages.forEach((image, index) => {
         formData.append('images', image);
+        console.log(`📤 Adding new image ${index}:`, image.name);
       });
       
       // Add existing images that are not removed (with their IDs)
@@ -1398,6 +1420,7 @@ const AdminEditProduct: React.FC = () => {
       
       if (remainingImages.length > 0) {
         formData.append('existingImages', JSON.stringify(remainingImages));
+        console.log('📤 Remaining images:', remainingImages);
       }
       
       console.log('📤 Submitting update with:', {
@@ -1407,11 +1430,26 @@ const AdminEditProduct: React.FC = () => {
         remainingImagesCount: remainingImages.length
       });
       
+      // Log all form data entries for debugging
+      console.log('📋 FormData contents:');
+      for (let pair of formData.entries()) {
+        if (pair[1] instanceof File) {
+          console.log(`  ${pair[0]}: File - ${pair[1].name}`);
+        } else {
+          console.log(`  ${pair[0]}: ${pair[1]}`);
+        }
+      }
+      
       // Use admin service to update product
       const response = await adminService.updateProduct(id!, formData);
       
+      console.log('📥 Update response:', response);
+      
       if (response.success) {
         toast.success('✅ Product updated successfully!');
+        // Clear deletion states
+        setImagesToDelete([]);
+        setImagesToDeleteIds([]);
         navigate('/admin/products');
       } else {
         toast.error(response.message || 'Failed to update product');
@@ -1852,7 +1890,6 @@ const AdminEditProduct: React.FC = () => {
                           alt={`Product ${index + 1}`}
                           className="w-full h-32 object-cover rounded-lg"
                         />
-                        {/* Delete button - always visible on mobile, shows on hover on desktop */}
                         <button
                           type="button"
                           onClick={() => {
@@ -1867,7 +1904,6 @@ const AdminEditProduct: React.FC = () => {
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
-                        {/* Optional: Show delete indicator for mobile */}
                         <div className="absolute bottom-2 right-2 md:hidden">
                           <span className="text-xs bg-black bg-opacity-50 text-white px-2 py-1 rounded">
                             Tap to delete
@@ -1895,13 +1931,13 @@ const AdminEditProduct: React.FC = () => {
                       First image will be the main display image.
                     </p>
                     {(imagesToDelete.length > 0 || imagesToDeleteIds.length > 0) && (
-                      <p className="text-orange-600 mt-1">
-                        {imagesToDelete.length + imagesToDeleteIds.length} image(s) marked for deletion
+                      <p className="text-orange-600 mt-1 font-medium">
+                        ⚠️ {imagesToDelete.length + imagesToDeleteIds.length} image(s) will be deleted when you save
                       </p>
                     )}
                     {newImages.length > 0 && (
                       <p className="text-green-600 mt-1">
-                        {newImages.length} new image(s) to upload
+                        ✓ {newImages.length} new image(s) will be uploaded when you save
                       </p>
                     )}
                   </div>

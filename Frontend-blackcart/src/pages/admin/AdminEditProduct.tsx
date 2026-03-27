@@ -1083,6 +1083,12 @@ const AdminEditProduct: React.FC = () => {
       try {
         setIsLoading(true);
         
+        // Reset deletion states when loading new product
+        setImagesToDelete([]);
+        setImagesToDeleteIds([]);
+        setNewImages([]);
+        setImagePreviews([]);
+        
         // Fetch categories first
         console.log('📡 Fetching categories...');
         const categoriesResponse = await adminService.getCategories();
@@ -1121,7 +1127,6 @@ const AdminEditProduct: React.FC = () => {
             // Determine category ID
             let categoryId = '';
             
-            // Try multiple ways to get category ID
             if (productData.categoryId) {
               categoryId = productData.categoryId;
             } else if (productData.category) {
@@ -1132,19 +1137,17 @@ const AdminEditProduct: React.FC = () => {
               }
             }
             
-            // Verify category exists
             if (categoryId && categoriesResponse.success && categoriesResponse.data?.categories) {
               const categoryExists = categoriesResponse.data.categories.some(
                 (cat: Category) => cat._id === categoryId
               );
               
               if (!categoryExists) {
-                console.warn(`⚠️ Category ID ${categoryId} not found in available categories`);
+                console.warn(`⚠️ Category ID ${categoryId} not found`);
                 categoryId = '';
               }
             }
             
-            // Store selected category ID
             setSelectedCategoryId(categoryId);
             
             // Set form values
@@ -1167,7 +1170,6 @@ const AdminEditProduct: React.FC = () => {
             
             reset(formValues);
             
-            // Set specifications and features for local state
             if (productData.specifications && productData.specifications.length > 0) {
               setSpecifications(productData.specifications);
             } else {
@@ -1203,9 +1205,8 @@ const AdminEditProduct: React.FC = () => {
     
     const files = Array.from(e.target.files)
     
-    // Validate file types and sizes
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
-    const maxSize = 5 * 1024 * 1024 // 5MB
+    const maxSize = 5 * 1024 * 1024
     
     const validFiles: File[] = []
     
@@ -1227,7 +1228,6 @@ const AdminEditProduct: React.FC = () => {
     
     setNewImages(prev => [...prev, ...validFiles])
     
-    // Create previews
     validFiles.forEach(file => {
       const reader = new FileReader()
       reader.onloadend = () => {
@@ -1247,27 +1247,19 @@ const AdminEditProduct: React.FC = () => {
 
   const handleRemoveExistingImage = (index: number) => {
     const imageToRemove = existingImages[index]
-    console.log('🗑️ Removing existing image:', imageToRemove)
+    console.log('🗑️ Marking image for deletion:', imageToRemove)
     
-    // Store the image ID or URL for deletion
+    // Store the image ID and URL for deletion
     if (imageToRemove._id) {
-      setImagesToDeleteIds(prev => {
-        const newIds = [...prev, imageToRemove._id!]
-        console.log('📝 Images to delete IDs:', newIds)
-        return newIds
-      })
+      setImagesToDeleteIds(prev => [...prev, imageToRemove._id!])
     }
     if (imageToRemove.url) {
-      setImagesToDelete(prev => {
-        const newUrls = [...prev, imageToRemove.url]
-        console.log('📝 Images to delete URLs:', newUrls)
-        return newUrls
-      })
+      setImagesToDelete(prev => [...prev, imageToRemove.url])
     }
     
-    // Remove from existing images
+    // Remove from UI immediately
     setExistingImages(prev => prev.filter((_, i) => i !== index))
-    toast.success('Image marked for deletion')
+    toast.success(`Image will be deleted when you save the product`)
   }
 
   const addSpecification = () => {
@@ -1308,144 +1300,123 @@ const AdminEditProduct: React.FC = () => {
     setValue('features', newFeatures, { shouldValidate: true })
   }
 
-  const safeSplit = (value: any): string[] => {
-    if (!value) return [];
-    
-    if (Array.isArray(value)) {
-      return value
-        .map(item => String(item).trim())
-        .filter(item => item.length > 0);
-    }
-    
-    if (typeof value === 'string') {
-      return value
-        .split(',')
-        .map(tag => tag.trim())
-        .filter(tag => tag.length > 0);
-    }
-    
-    return [];
-  }
-const onSubmit = async (data: ProductFormData) => {
-  try {
-    setIsSubmitting(true);
-    
-    // Validate category
-    if (!data.categoryId) {
-      toast.error('Please select a valid category');
-      setIsSubmitting(false);
-      return;
-    }
-    
-    // Prepare form data
-    const formData = new FormData();
-    
-    // Handle tags
-    let tagsArray = [];
-    if (data.tags) {
-      if (Array.isArray(data.tags)) {
-        tagsArray = data.tags;
-      } else if (typeof data.tags === 'string') {
-        tagsArray = data.tags.split(',').map(tag => tag.trim()).filter(Boolean);
+  const onSubmit = async (data: ProductFormData) => {
+    try {
+      setIsSubmitting(true);
+      
+      // Validate category
+      if (!data.categoryId) {
+        toast.error('Please select a valid category');
+        setIsSubmitting(false);
+        return;
       }
-    }
-    
-    // Basic fields - add as JSON string for simpler backend parsing
-    const updateData: any = {
-      name: data.name,
-      description: data.description,
-      shortDescription: data.shortDescription,
-      price: data.price,
-      categoryId: data.categoryId,
-      brand: data.brand,
-      sku: data.sku,
-      stock: data.stock,
-      isFeatured: data.isFeatured,
-      isActive: data.isActive,
-      tags: tagsArray,
-      specifications: specifications.filter(spec => spec.key.trim() && spec.value.trim()),
-      features: features.filter(feature => feature.trim())
-    };
-    
-    // Handle discount price
-    if (data.discountPrice && data.discountPrice > 0) {
-      updateData.discountPrice = data.discountPrice;
-    } else {
-      updateData.discountPrice = null;
-    }
-    
-    // CRITICAL: Add images to delete
-    if (imagesToDelete.length > 0 || imagesToDeleteIds.length > 0) {
-      updateData.imagesToDelete = {
-        urls: imagesToDelete,
-        ids: imagesToDeleteIds
-      };
-      console.log('🗑️ Images to delete:', updateData.imagesToDelete);
-    }
-    
-    // Add existing images (keep them)
-    if (existingImages.length > 0) {
-      updateData.existingImages = existingImages.map(img => ({
+      
+      // Prepare form data
+      const formData = new FormData();
+      
+      // Handle tags
+      let tagsArray = [];
+      if (data.tags) {
+        if (Array.isArray(data.tags)) {
+          tagsArray = data.tags;
+        } else if (typeof data.tags === 'string') {
+          tagsArray = data.tags.split(',').map(tag => tag.trim()).filter(Boolean);
+        }
+      }
+      
+      // Basic fields
+      const fields = [
+        'name', 'description', 'shortDescription', 'price',
+        'categoryId', 'brand', 'sku', 'stock', 'isFeatured', 'isActive'
+      ];
+      
+      fields.forEach(field => {
+        const value = data[field as keyof ProductFormData];
+        if (value !== undefined && value !== null) {
+          formData.append(field, value.toString());
+        }
+      });
+      
+      // Handle discountPrice
+      if (data.discountPrice && data.discountPrice > 0) {
+        formData.append('discountPrice', data.discountPrice.toString());
+      }
+      
+      // Add tags
+      formData.append('tags', JSON.stringify(tagsArray));
+      
+      // Add specifications
+      const validSpecs = specifications.filter(spec => spec.key.trim() && spec.value.trim());
+      formData.append('specifications', JSON.stringify(validSpecs));
+      
+      // Add features
+      const validFeatures = features.filter(feature => feature.trim());
+      formData.append('features', JSON.stringify(validFeatures));
+      
+      // IMPORTANT: Add images to delete
+      if (imagesToDelete.length > 0 || imagesToDeleteIds.length > 0) {
+        const deletionData = {
+          urls: imagesToDelete,
+          ids: imagesToDeleteIds
+        };
+        formData.append('imagesToDelete', JSON.stringify(deletionData));
+        console.log('🗑️ Sending deletion data:', deletionData);
+      } else {
+        console.log('✅ No images to delete');
+      }
+      
+      // Add new images
+      newImages.forEach((image) => {
+        formData.append('images', image);
+        console.log('📤 Adding new image:', image.name);
+      });
+      
+      // Add existing images that remain
+      const remainingImages = existingImages.map(img => ({
         url: img.url,
         _id: img._id
       }));
-    }
-    
-    // Add main data as JSON
-    formData.append('data', JSON.stringify(updateData));
-    
-    // Add new images
-    newImages.forEach((image) => {
-      formData.append('images', image);
-    });
-    
-    console.log('📤 Submitting update with:', {
-      hasDeleteData: !!(imagesToDelete.length || imagesToDeleteIds.length),
-      deleteCount: imagesToDelete.length + imagesToDeleteIds.length,
-      newImagesCount: newImages.length,
-      existingImagesCount: existingImages.length
-    });
-    
-    // Log all form data entries for debugging
-    console.log('📋 FormData contents:');
-    for (let pair of formData.entries()) {
-      if (pair[1] instanceof File) {
-        console.log(`  ${pair[0]}: File - ${pair[1].name}`);
-      } else {
-        console.log(`  ${pair[0]}: ${pair[1].substring(0, 200)}`);
+      
+      if (remainingImages.length > 0) {
+        formData.append('existingImages', JSON.stringify(remainingImages));
+        console.log('📤 Remaining images:', remainingImages.length);
       }
-    }
-    
-    // Use admin service to update product
-    const response = await adminService.updateProduct(id!, formData);
-    
-    console.log('📥 Update response:', response);
-    
-    if (response.success) {
-      toast.success('✅ Product updated successfully!');
-      // Clear deletion states
-      setImagesToDelete([]);
-      setImagesToDeleteIds([]);
-      navigate('/admin/products');
-    } else {
-      toast.error(response.message || 'Failed to update product');
-    }
-  } catch (error: any) {
-    console.error('❌ Update error:', error);
-    
-    if (error.response?.data?.message) {
-      if (error.response.data.message.includes('category')) {
-        toast.error('Invalid category selected');
+      
+      console.log('📤 Submitting update with:', {
+        imagesToDeleteCount: imagesToDelete.length,
+        imagesToDeleteIdsCount: imagesToDeleteIds.length,
+        newImagesCount: newImages.length,
+        remainingImagesCount: remainingImages.length
+      });
+      
+      // Update product
+      const response = await adminService.updateProduct(id!, formData);
+      
+      console.log('📥 Update response:', response);
+      
+      if (response.success) {
+        toast.success('✅ Product updated successfully!');
+        // Clear all states
+        setImagesToDelete([]);
+        setImagesToDeleteIds([]);
+        setNewImages([]);
+        setImagePreviews([]);
+        navigate('/admin/products');
       } else {
+        toast.error(response.message || 'Failed to update product');
+      }
+    } catch (error: any) {
+      console.error('❌ Update error:', error);
+      
+      if (error.response?.data?.message) {
         toast.error(error.response.data.message);
+      } else {
+        toast.error(error.message || 'Failed to update product');
       }
-    } else {
-      toast.error(error.message || 'Failed to update product');
+    } finally {
+      setIsSubmitting(false);
     }
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+  };
 
   const handleCancel = () => {
     if (window.confirm('Are you sure you want to cancel? Any unsaved changes will be lost.')) {
@@ -1630,11 +1601,6 @@ const onSubmit = async (data: ProductFormData) => {
                       </div>
                       {errors.categoryId && (
                         <p className="mt-1 text-sm text-red-600">{errors.categoryId.message}</p>
-                      )}
-                      {product?.category && selectedCategoryId && (
-                        <p className="mt-1 text-sm text-green-600">
-                          Current: {typeof product.category === 'object' ? product.category.name : product.category}
-                        </p>
                       )}
                     </div>
 
@@ -1908,7 +1874,7 @@ const onSubmit = async (data: ProductFormData) => {
                     </p>
                     {(imagesToDelete.length > 0 || imagesToDeleteIds.length > 0) && (
                       <p className="text-orange-600 mt-1 font-medium">
-                        ⚠️ {imagesToDelete.length + imagesToDeleteIds.length} image(s) will be deleted when you save
+                        ⚠️ {imagesToDelete.length + imagesToDeleteIds.length} image(s) will be permanently deleted when you click "Update Product"
                       </p>
                     )}
                     {newImages.length > 0 && (

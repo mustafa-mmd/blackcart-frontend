@@ -173,7 +173,7 @@ const Header: React.FC = () => {
 
             {user ? (
               <div className="relative group">
-                <button className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100">
+              <button onClick={() => navigate('/profile')} className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100">
                   <User className="h-6 w-6 text-gray-600" />
                   <span className="hidden md:inline font-medium">{user.name}</span>
                 </button>

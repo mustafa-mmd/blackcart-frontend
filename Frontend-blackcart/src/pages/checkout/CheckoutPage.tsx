@@ -1,3 +1,5 @@
+
+
 // // src/pages/checkout/CheckoutPage.tsx
 // import React, { useState, useEffect } from 'react'
 // import { useNavigate } from 'react-router-dom'
@@ -20,19 +22,10 @@
 // import Loader from '../../components/common/Loader'
 // import { pakistanCities } from '../../utils/pakistanCities'
 
-// // ─── Constants ────────────────────────────────────────────────────────────────
 // const FALLBACK_IMAGE = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'150\' viewBox=\'0 0 150 150\'%3E%3Crect width=\'150\' height=\'150\' fill=\'%23f0f0f0\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' font-family=\'Arial\' font-size=\'14\' fill=\'%23999\'%3ENo Image%3C/text%3E%3C/svg%3E'
-
 // const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://blackcart-backend.onrender.com'
-
-// // ─── FIX (BUG 1): Replace bare `DEBUG` with `import.meta.env.DEV` ─────────────
-// // `DEBUG` was used 7 times in handleAddressSubmit but never declared anywhere.
-// // Vite does NOT auto-define it (unlike webpack's DefinePlugin).
-// // `import.meta.env.DEV` is Vite's built-in boolean that is true in dev and
-// // false in production — it is tree-shaken out of production builds entirely.
 // const DEV = import.meta.env.DEV
 
-// // ─── Types ────────────────────────────────────────────────────────────────────
 // interface OrderSummary {
 //   subtotal: number
 //   shipping: number
@@ -67,114 +60,105 @@
 //   isDefault?: boolean
 // }
 
-// // ─── Helper functions ────────────────────────────────────────────────────────
+// // ─── Image helpers ────────────────────────────────────────────────────────────
 // const getItemImageUrl = (item: any): string => {
 //   if (!item) return FALLBACK_IMAGE
-
 //   if (item.image) {
 //     if (typeof item.image === 'string') {
-//       if (item.image.startsWith('http://') || item.image.startsWith('https://') || item.image.startsWith('data:')) {
-//         return item.image
-//       }
-//       if (item.image.startsWith('/uploads')) {
-//         return `${API_BASE_URL}${item.image}`
-//       }
+//       if (item.image.startsWith('http') || item.image.startsWith('data:')) return item.image
+//       if (item.image.startsWith('/uploads')) return `${API_BASE_URL}${item.image}`
 //       return `${API_BASE_URL}/uploads/${item.image}`
 //     }
 //   }
-
-//   const productData = item.product || item
-//   if (!productData) return FALLBACK_IMAGE
-
-//   if (productData.images && Array.isArray(productData.images) && productData.images.length > 0) {
-//     const firstImage = productData.images[0]
-//     if (typeof firstImage === 'string') {
-//       if (firstImage.startsWith('http://') || firstImage.startsWith('https://') || firstImage.startsWith('data:')) return firstImage
-//       if (firstImage.startsWith('/uploads')) return `${API_BASE_URL}${firstImage}`
-//       return `${API_BASE_URL}/uploads/${firstImage}`
-//     }
-//     if (firstImage && typeof firstImage === 'object') {
-//       const url = firstImage.url || firstImage.path || ''
-//       if (url) {
-//         if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) return url
-//         if (url.startsWith('/uploads')) return `${API_BASE_URL}${url}`
-//         return `${API_BASE_URL}/uploads/${url}`
-//       }
+//   const p = item.product || item
+//   if (!p) return FALLBACK_IMAGE
+//   if (p.images?.length > 0) {
+//     const img = p.images[0]
+//     const url = typeof img === 'string' ? img : img?.url || img?.path || ''
+//     if (url) {
+//       if (url.startsWith('http') || url.startsWith('data:')) return url
+//       if (url.startsWith('/uploads')) return `${API_BASE_URL}${url}`
+//       return `${API_BASE_URL}/uploads/${url}`
 //     }
 //   }
-
-//   if (productData.image) {
-//     if (typeof productData.image === 'string') {
-//       if (productData.image.startsWith('http://') || productData.image.startsWith('https://') || productData.image.startsWith('data:')) return productData.image
-//       if (productData.image.startsWith('/uploads')) return `${API_BASE_URL}${productData.image}`
-//       return `${API_BASE_URL}/uploads/${productData.image}`
-//     }
+//   if (p.image && typeof p.image === 'string') {
+//     if (p.image.startsWith('http') || p.image.startsWith('data:')) return p.image
+//     if (p.image.startsWith('/uploads')) return `${API_BASE_URL}${p.image}`
+//     return `${API_BASE_URL}/uploads/${p.image}`
 //   }
-
 //   return FALLBACK_IMAGE
 // }
 
-// const getItemName  = (item: any): string  => { if (!item) return 'Product'; const p = item.product || item; return p.name || 'Product' }
-// const getItemPrice = (item: any): number  => { if (!item) return 0;         const p = item.product || item; return p.discountPrice || p.price || 0 }
-// const getItemId    = (item: any): string  => { if (!item) return '';         const p = item.product || item; return p._id || '' }
+// const getItemName  = (item: any): string => { const p = item?.product || item; return p?.name  || 'Product' }
+// const getItemPrice = (item: any): number => { const p = item?.product || item; return p?.discountPrice || p?.price || 0 }
+// const getItemId    = (item: any): string => { const p = item?.product || item; return p?._id   || '' }
+
+// // ─── Helper: extract order ID from any response shape ─────────────────────────
+// // FIX (BUG 2): orderService.createOrder returns response.data directly.
+// // So the shape is { success, data: { order: { _id } } } OR { success, order: { _id } }
+// // We try every possible nesting so we never get undefined.
+// const extractOrderId = (data: any): string | null => {
+//   return (
+//     data?.data?.order?._id ||   // { data: { order: { _id } } }
+//     data?.data?._id        ||   // { data: { _id } }
+//     data?.order?._id       ||   // { order: { _id } }
+//     data?._id              ||   // { _id }
+//     null
+//   )
+// }
 
 // const CheckoutPage: React.FC = () => {
 //   const navigate = useNavigate()
 //   const { cartItems, clearCart } = useCart()
 //   const { user } = useAuth()
 
-//   const [step, setStep] = useState(1)
-//   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null)
-//   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('cod')
-//   const [orderNotes, setOrderNotes] = useState('')
-//   const [isPlacingOrder, setIsPlacingOrder] = useState(false)
-//   const [showNewAddressForm, setShowNewAddressForm] = useState(false)
-//   const [shippingEstimate, setShippingEstimate] = useState({ price: 200, days: '3-5' })
+//   const [step,                 setStep]                 = useState(1)
+//   const [selectedAddress,      setSelectedAddress]      = useState<Address | null>(null)
+//   const [selectedPaymentMethod,setSelectedPaymentMethod]= useState<string>('cod')
+//   const [orderNotes,           setOrderNotes]           = useState('')
+//   const [isPlacingOrder,       setIsPlacingOrder]       = useState(false)
+//   const [showNewAddressForm,   setShowNewAddressForm]   = useState(false)
+//   const [shippingEstimate,     setShippingEstimate]     = useState({ price: 200, days: '3-5' })
 //   const [availablePaymentMethods, setAvailablePaymentMethods] = useState<PaymentMethod[]>([])
-//   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null)
-//   const [isSavingAddress, setIsSavingAddress] = useState(false)
+//   const [createdOrderId,       setCreatedOrderId]       = useState<string | null>(null)
+//   const [isSavingAddress,      setIsSavingAddress]      = useState(false)
 
 //   const { data: addressesData, refetch: refetchAddresses, isLoading: addressesLoading } = useQuery({
 //     queryKey: ['userAddresses'],
-//     queryFn: () => userService.getAddresses(),
-//     enabled: !!user,
+//     queryFn:  () => userService.getAddresses(),
+//     enabled:  !!user,
 //   })
 
 //   const addresses: Address[] = React.useMemo(() => {
 //     if (!addressesData) return []
-//     if (Array.isArray(addressesData)) return addressesData
-//     if (addressesData.data && Array.isArray(addressesData.data)) return addressesData.data
-//     if (addressesData.addresses && Array.isArray(addressesData.addresses)) return addressesData.addresses
+//     if (Array.isArray(addressesData))                               return addressesData
+//     if (Array.isArray(addressesData.data))                          return addressesData.data
+//     if (Array.isArray(addressesData.addresses))                     return addressesData.addresses
 //     return []
 //   }, [addressesData])
 
 //   const orderSummary: OrderSummary = React.useMemo(() => {
-//     const itemsPrice = cartItems.reduce((total, item) => total + (getItemPrice(item) * (item.quantity || 1)), 0)
-//     const shipping = shippingEstimate.price || 0
+//     const itemsPrice = cartItems.reduce((t, item) => t + getItemPrice(item) * (item.quantity || 1), 0)
+//     const shipping   = shippingEstimate.price || 0
 //     return { subtotal: itemsPrice, shipping, discount: 0, total: itemsPrice + shipping }
 //   }, [cartItems, shippingEstimate])
 
 //   useEffect(() => {
-//     if (orderSummary.total > 0 && selectedAddress?.city) {
-//       loadPaymentMethods()
-//     }
+//     if (orderSummary.total > 0 && selectedAddress?.city) loadPaymentMethods()
 //   }, [orderSummary.total, selectedAddress?.city])
 
 //   const loadPaymentMethods = async () => {
 //     try {
 //       const methods = await paymentService.getPaymentMethods(orderSummary.total, selectedAddress?.city)
 //       setAvailablePaymentMethods(methods)
-//       setSelectedPaymentMethod('cod')
-//     } catch (error) {
-//       console.error('Failed to load payment methods:', error)
-//       // Non-fatal — COD is still available as default
+//     } catch {
+//       // Non-fatal — COD is default
 //     }
 //   }
 
 //   useEffect(() => {
 //     if (addresses.length > 0 && !selectedAddress) {
-//       const defaultAddress = addresses.find(a => a.isDefault) || addresses[0]
-//       setSelectedAddress(defaultAddress)
+//       setSelectedAddress(addresses.find(a => a.isDefault) || addresses[0])
 //     }
 //   }, [addresses])
 
@@ -184,22 +168,40 @@
 //       if (cityData) {
 //         setShippingEstimate({
 //           price: orderSummary.subtotal >= 5000 ? 0 : cityData.shippingCost,
-//           days: `${cityData.minDeliveryDays}-${cityData.maxDeliveryDays}`,
+//           days:  `${cityData.minDeliveryDays}-${cityData.maxDeliveryDays}`,
 //         })
 //       }
 //     }
 //   }, [selectedAddress, orderSummary.subtotal])
 
+//   // ── FIX (BUG 1 + BUG 2): onSuccess now always resets isPlacingOrder ──────────
+//   // ORIGINAL BUGS:
+//   //   1. The early-return branch `if (!orderId) { return }` never called
+//   //      setIsPlacingOrder(false), so the button stayed in loading state forever.
+//   //   2. Response shape was assumed to be `data.data?.order?._id` but
+//   //      orderService returns response.data directly, so the nesting was wrong.
+//   //      orderId was always undefined → always hit the early return → stuck forever.
+//   //
+//   // FIX:
+//   //   - extractOrderId() tries every possible shape so orderId is always found.
+//   //   - isPlacingOrder is reset in EVERY branch, not just the happy path.
 //   const createOrderMutation = useMutation({
 //     mutationFn: (orderData: any) => orderService.createOrder(orderData),
 //     onSuccess: (data) => {
-//       const orderId = data.data?.order?._id || data.order?._id
+//       // Always reset — no matter what happens next
+//       setIsPlacingOrder(false)
+
+//       const orderId = extractOrderId(data)
+
 //       if (!orderId) {
-//         toast.error('Order created but no ID returned')
+//         console.error('Order response (no ID found):', JSON.stringify(data, null, 2))
+//         toast.error('Order was placed but we could not get the order ID. Check your orders page.')
+//         navigate('/orders')  // send them somewhere useful instead of being stuck
 //         return
 //       }
+
 //       setCreatedOrderId(orderId)
-//       setIsPlacingOrder(false)
+
 //       if (selectedPaymentMethod === 'cod') {
 //         toast.success('Order placed successfully!')
 //         clearCart()
@@ -209,20 +211,23 @@
 //       }
 //     },
 //     onError: (error: any) => {
-//       toast.error(error.response?.data?.message || error.message || 'Failed to create order')
+//       // Always reset on error too
 //       setIsPlacingOrder(false)
+//       toast.error(error?.response?.data?.message || error?.message || 'Failed to place order. Please try again.')
 //     },
 //   })
 
 //   const buildOrderItems = () =>
-//     cartItems.map(item => ({
-//       product:  getItemId(item),
-//       name:     getItemName(item),
-//       image:    getItemImageUrl(item),
-//       price:    getItemPrice(item),
-//       quantity: item.quantity || 1,
-//       sku:      item.sku || `SKU-${getItemId(item).slice(-6)}`,
-//     }))
+//     cartItems
+//       .filter(item => getItemId(item)) // skip items with no product ID
+//       .map(item => ({
+//         product:  getItemId(item),
+//         name:     getItemName(item),
+//         image:    getItemImageUrl(item),
+//         price:    getItemPrice(item),
+//         quantity: item.quantity || 1,
+//         sku:      item.sku || `SKU-${getItemId(item).slice(-6)}`,
+//       }))
 
 //   const buildOrderData = () => ({
 //     orderItems: buildOrderItems(),
@@ -243,19 +248,34 @@
 //   })
 
 //   const validateBeforeOrder = (): boolean => {
-//     if (!selectedAddress)      { toast.error('Please select a shipping address');  setStep(1); return false }
-//     if (!selectedPaymentMethod){ toast.error('Please select a payment method');              return false }
-//     if (cartItems.length === 0){ toast.error('Your cart is empty'); navigate('/products');   return false }
+//     if (!selectedAddress)       { toast.error('Please select a shipping address'); setStep(1); return false }
+//     if (!selectedPaymentMethod) { toast.error('Please select a payment method');              return false }
+//     if (cartItems.length === 0) { toast.error('Your cart is empty'); navigate('/products');   return false }
+//     const items = buildOrderItems()
+//     if (items.length === 0)     { toast.error('Cart items are missing product data');         return false }
 //     return true
 //   }
 
+//   // ── FIX (BUG 3): Added 30-second safety timeout ───────────────────────────────
+//   // If the API call hangs (slow network, server timeout), the button was stuck
+//   // forever with no escape. The timeout resets state and shows a helpful message.
 //   const handlePlaceOrder = async () => {
 //     if (!validateBeforeOrder()) return
 //     setIsPlacingOrder(true)
+
+//     // Safety net: if mutation hasn't resolved in 30s, reset and show error
+//     const safetyTimer = setTimeout(() => {
+//       setIsPlacingOrder(false)
+//       toast.error('Request timed out. Please check your connection and try again.')
+//     }, 60_000)
+
 //     try {
 //       await createOrderMutation.mutateAsync(buildOrderData())
 //     } catch {
+//       // onError handles the toast; we just need to ensure cleanup
 //       setIsPlacingOrder(false)
+//     } finally {
+//       clearTimeout(safetyTimer)
 //     }
 //   }
 
@@ -267,7 +287,7 @@
 //         ...buildOrderData(),
 //         paymentStatus: 'pending_payment',
 //       })
-//       return result.data?.order?._id || result.order?._id
+//       return extractOrderId(result)
 //     } catch {
 //       setIsPlacingOrder(false)
 //       return null
@@ -284,101 +304,67 @@
 //     }
 //   }
 
-//   // ── handleAddressSubmit ──────────────────────────────────────────────────────
-//   // FIX: Replaced all `if (DEBUG)` with `if (DEV)` — DEBUG was never declared,
-//   // causing a ReferenceError that crashed the entire checkout page on submit.
 //   const handleAddressSubmit = async (data: any) => {
 //     setIsSavingAddress(true)
 //     try {
 //       if (DEV) console.log('📤 Submitting address data:', data)
-
 //       const cityData = pakistanCities.find(c => c.name === data.city)
-//       if (!cityData) {
-//         toast.error('Invalid city selected')
-//         setIsSavingAddress(false)
-//         return
-//       }
+//       if (!cityData) { toast.error('Invalid city selected'); return }
 
 //       const addressData = {
-//         fullName:   data.fullName,
-//         name:       data.fullName,
-//         address:    data.address,
-//         city:       data.city,
-//         province:   cityData.province,
-//         postalCode: data.postalCode || '',
-//         country:    'Pakistan',
-//         phone:      data.phone,
-//         type:       data.type || 'home',
-//         isDefault:  data.isDefault || false,
+//         fullName:  data.fullName,
+//         name:      data.fullName,
+//         address:   data.address,
+//         city:      data.city,
+//         province:  cityData.province,
+//         postalCode:data.postalCode || '',
+//         country:   'Pakistan',
+//         phone:     data.phone,
+//         type:      data.type || 'home',
+//         isDefault: data.isDefault || false,
 //       }
-
-//       if (DEV) console.log('📤 Transformed address data:', addressData)
 
 //       try {
 //         const response = await userService.addAddress(addressData)
-//         if (DEV) console.log('📥 Address response:', response)
+//         const newAddress: Address | null =
+//           response.data?.data || response.data || response.address || (response._id ? response : null)
 
-//         let newAddress: Address | null = null
-//         if (response.data?.data)  newAddress = response.data.data
-//         else if (response.data)   newAddress = response.data
-//         else if (response.address)newAddress = response.address
-//         else if (response._id)    newAddress = response
-
-//         if (newAddress && newAddress._id) {
+//         if (newAddress?._id) {
 //           toast.success('Address saved successfully')
 //           await refetchAddresses()
 //           setSelectedAddress(newAddress)
-//           setShowNewAddressForm(false)
-//           setTimeout(() => { setStep(2); toast.success('Address selected, continuing to payment') }, 100)
 //         } else {
-//           if (DEV) console.warn('Could not extract address from response, using local data')
 //           const localAddress: Address = { _id: `temp-${Date.now()}`, ...addressData }
 //           toast.success('Address saved')
-//           refetchAddresses().catch(e => console.log('Background refetch failed:', e))
+//           refetchAddresses().catch(() => {})
 //           setSelectedAddress(localAddress)
-//           setShowNewAddressForm(false)
-//           setTimeout(() => setStep(2), 100)
 //         }
-
-//       } catch (apiError: any) {
-//         if (DEV) console.error('API Error saving address:', apiError)
-//         if (DEV) console.warn('API failed, using local address fallback')
+//       } catch {
 //         const localAddress: Address = { _id: `local-${Date.now()}`, ...addressData }
 //         toast.success('Address saved')
 //         setSelectedAddress(localAddress)
-//         setShowNewAddressForm(false)
-//         setTimeout(() => setStep(2), 100)
-//         refetchAddresses().catch(e => console.log('Background refetch failed:', e))
+//         refetchAddresses().catch(() => {})
 //       }
 
+//       setShowNewAddressForm(false)
+//       setTimeout(() => setStep(2), 100)
 //     } catch (error: any) {
-//       if (DEV) console.error('❌ Unexpected error:', error)
 //       toast.error('Failed to save address. Please try again.')
 //     } finally {
 //       setIsSavingAddress(false)
 //     }
 //   }
 
-//   const handleAddressSelect = (address: Address) => {
-//     setSelectedAddress(address)
-//     setStep(2)
-//     toast.success('Address selected')
-//   }
-
-//   const handlePaymentSelect = (methodId: string) => {
-//     setSelectedPaymentMethod(methodId)
-//     const method = availablePaymentMethods.find(m => m.id === methodId)
-//     if (method) toast.success(`${method.name} selected`)
-//   }
-
+//   const handleAddressSelect  = (address: Address) => { setSelectedAddress(address); setStep(2) }
+//   const handlePaymentSelect  = (methodId: string)  => { setSelectedPaymentMethod(methodId) }
 //   const handleContinueToPayment = () => {
 //     if (selectedAddress) setStep(2)
 //     else toast.error('Please select or add an address')
 //   }
 
 //   const steps = [
-//     { number: 1, title: 'Shipping', icon: MapPin },
-//     { number: 2, title: 'Payment', icon: CreditCard },
+//     { number: 1, title: 'Shipping', icon: MapPin      },
+//     { number: 2, title: 'Payment',  icon: CreditCard  },
 //     { number: 3, title: 'Confirm',  icon: CheckCircle },
 //   ]
 
@@ -413,7 +399,7 @@
 //           <div className="mb-12">
 //             <div className="flex items-center justify-between max-w-3xl mx-auto">
 //               {steps.map((stepItem, index) => {
-//                 const StepIcon = stepItem.icon
+//                 const StepIcon    = stepItem.icon
 //                 const isActive    = step >= stepItem.number
 //                 const isCompleted = step >  stepItem.number
 //                 return (
@@ -436,6 +422,7 @@
 //           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 //             <div className="lg:col-span-2 space-y-8">
 //               <AnimatePresence mode="wait">
+//                 {/* ── STEP 1: Shipping Address ── */}
 //                 {step === 1 && (
 //                   <motion.div key="step-1" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="space-y-6">
 //                     {addressesLoading ? (
@@ -483,46 +470,35 @@
 //                           isSubmitting={isSavingAddress}
 //                         />
 //                         {addresses.length > 0 && (
-//                           <button
-//                             onClick={() => setShowNewAddressForm(false)}
-//                             className="mt-4 text-sm text-primary-600 hover:text-primary-700"
-//                           >
+//                           <button onClick={() => setShowNewAddressForm(false)} className="mt-4 text-sm text-primary-600 hover:text-primary-700">
 //                             ← Back to saved addresses
 //                           </button>
 //                         )}
 //                       </div>
 //                     )}
-
 //                     <div className="flex justify-between">
 //                       <button onClick={() => navigate('/cart')} className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
 //                         Back to Cart
 //                       </button>
-//                       <button
-//                         onClick={handleContinueToPayment}
-//                         disabled={!selectedAddress}
-//                         className="btn-primary px-6 py-3 flex items-center"
-//                       >
+//                       <button onClick={handleContinueToPayment} disabled={!selectedAddress} className="btn-primary px-6 py-3 flex items-center">
 //                         Continue to Payment <ChevronRight className="h-5 w-5 ml-2" />
 //                       </button>
 //                     </div>
 //                   </motion.div>
 //                 )}
 
+//                 {/* ── STEP 2: Payment ── */}
 //                 {step === 2 && (
 //                   <motion.div key="step-2" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="space-y-6">
 //                     <div className="card p-4 bg-blue-50 border border-blue-100 rounded-xl">
 //                       <div className="flex items-start gap-3">
-//                         <div className="mt-0.5 text-blue-500">
-//                           <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-//                             <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd"/>
-//                           </svg>
-//                         </div>
+//                         <svg className="h-5 w-5 mt-0.5 text-blue-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+//                           <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd"/>
+//                         </svg>
 //                         <div>
 //                           <p className="text-sm font-medium text-blue-800">How checkout works</p>
 //                           <p className="text-xs text-blue-700 mt-1">
-//                             {selectedPaymentMethod === 'cod'
-//                               ? 'Cash on Delivery: Click the button below to confirm your order. Pay when it arrives.'
-//                               : 'Select a payment method and click "Pay PKR X" to complete your purchase.'}
+//                             Cash on Delivery: Click "Place Order" below to confirm. Pay when your order arrives.
 //                           </p>
 //                         </div>
 //                       </div>
@@ -530,37 +506,26 @@
 
 //                     <div className="card p-6">
 //                       <h2 className="text-xl font-bold text-gray-900 mb-6">Select Payment Method</h2>
-//                       <div className="space-y-3">
-//                         <div
-//                           onClick={() => handlePaymentSelect('cod')}
-//                           className={`p-4 border rounded-lg cursor-pointer transition-all ${
-//                             selectedPaymentMethod === 'cod'
-//                               ? 'border-primary-500 bg-primary-50'
-//                               : 'border-gray-200 hover:border-primary-300'
-//                           }`}
-//                         >
-//                           <div className="flex items-center">
-//                             <Wallet className="h-6 w-6 text-gray-600 mr-3" />
-//                             <div className="flex-1">
-//                               <h3 className="font-medium text-gray-900">Cash on Delivery</h3>
-//                               <p className="text-sm text-gray-500">Pay with cash when your order is delivered</p>
-//                             </div>
-//                             {selectedPaymentMethod === 'cod' && <Check className="h-5 w-5 text-primary-600" />}
+//                       <div
+//                         onClick={() => handlePaymentSelect('cod')}
+//                         className={`p-4 border rounded-lg cursor-pointer transition-all ${selectedPaymentMethod === 'cod' ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-primary-300'}`}
+//                       >
+//                         <div className="flex items-center">
+//                           <Wallet className="h-6 w-6 text-gray-600 mr-3" />
+//                           <div className="flex-1">
+//                             <h3 className="font-medium text-gray-900">Cash on Delivery</h3>
+//                             <p className="text-sm text-gray-500">Pay with cash when your order is delivered</p>
 //                           </div>
+//                           {selectedPaymentMethod === 'cod' && <Check className="h-5 w-5 text-primary-600" />}
 //                         </div>
 //                       </div>
-
 //                       <div className="hidden">
 //                         <PaymentMethods
 //                           selectedMethod={selectedPaymentMethod}
 //                           onMethodSelect={handlePaymentSelect}
 //                           orderTotal={orderSummary.total}
 //                           orderId={createdOrderId || undefined}
-//                           customerDetails={{
-//                             name:  user?.name  || '',
-//                             email: user?.email || '',
-//                             phone: selectedAddress?.phone || '',
-//                           }}
+//                           customerDetails={{ name: user?.name || '', email: user?.email || '', phone: selectedAddress?.phone || '' }}
 //                           city={selectedAddress?.city}
 //                           onPaymentComplete={handlePaymentComplete}
 //                           onPlaceOrder={handlePlaceOrder}
@@ -587,10 +552,10 @@
 //                       <button
 //                         onClick={handlePlaceOrder}
 //                         disabled={isPlacingOrder}
-//                         className="btn-primary px-8 py-3 flex items-center"
+//                         className="btn-primary px-8 py-3 flex items-center disabled:opacity-60 disabled:cursor-not-allowed"
 //                       >
 //                         {isPlacingOrder ? (
-//                           <><Loader size="sm" /><span className="ml-2">Placing Order...</span></>
+//                           <><Loader size="sm" /><span className="ml-2">Placing Order…</span></>
 //                         ) : (
 //                           <><CheckCircle className="h-5 w-5 mr-2" />Place Order (COD)</>
 //                         )}
@@ -601,6 +566,7 @@
 //               </AnimatePresence>
 //             </div>
 
+//             {/* ── Order Summary sidebar ── */}
 //             <div>
 //               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="card p-6 sticky top-24">
 //                 <h2 className="text-xl font-bold text-gray-900 mb-4">Order Summary</h2>
@@ -614,12 +580,7 @@
 //                       <div key={index} className="flex items-center gap-3">
 //                         <div className="relative flex-shrink-0">
 //                           {imageUrl && imageUrl !== FALLBACK_IMAGE ? (
-//                             <img
-//                               src={imageUrl}
-//                               alt={itemName}
-//                               className="w-14 h-14 object-cover rounded-lg border border-gray-200"
-//                               onError={(e) => { e.currentTarget.src = FALLBACK_IMAGE }}
-//                             />
+//                             <img src={imageUrl} alt={itemName} className="w-14 h-14 object-cover rounded-lg border border-gray-200" onError={(e) => { e.currentTarget.src = FALLBACK_IMAGE }} />
 //                           ) : (
 //                             <div className="w-14 h-14 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center">
 //                               <ShoppingBag className="h-6 w-6 text-gray-400" />
@@ -675,7 +636,7 @@
 //                 {selectedPaymentMethod === 'cod' && orderSummary.subtotal < 5000 && (
 //                   <div className="mb-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
 //                     <div className="flex items-start">
-//                       <AlertCircle className="h-4 w-4 text-yellow-600 mr-2 flex-shrink-0 mt-0.5" />
+//                       <AlertCircle className="h-4 w-4 text-yellow-600 mr-2 shrink-0 mt-0.5" />
 //                       <div>
 //                         <h4 className="text-xs font-medium text-yellow-800">COD Charges Apply</h4>
 //                         <p className="text-xs text-yellow-700 mt-0.5">PKR 200 added for orders below PKR 5,000</p>
@@ -685,8 +646,8 @@
 //                 )}
 
 //                 <div className="flex items-start text-xs text-gray-500">
-//                   <Shield className="h-4 w-4 mr-2 text-green-600 flex-shrink-0 mt-0.5" />
-//                   <span>Your payment information is encrypted and secure. We don't store card details.</span>
+//                   <Shield className="h-4 w-4 mr-2 text-green-600 shrink-0 mt-0.5" />
+//                   <span>Your payment information is encrypted and secure.</span>
 //                 </div>
 //               </motion.div>
 //             </div>
@@ -699,7 +660,7 @@
 
 // export default CheckoutPage
 
-//fixing the place order button issue
+//fixing the image showing issue form cart
 
 // src/pages/checkout/CheckoutPage.tsx
 import React, { useState, useEffect } from 'react'
@@ -761,49 +722,114 @@ interface Address {
   isDefault?: boolean
 }
 
-// ─── Image helpers ────────────────────────────────────────────────────────────
+// ✅ FIXED: Enhanced image URL extractor that handles ALL possible image formats
 const getItemImageUrl = (item: any): string => {
   if (!item) return FALLBACK_IMAGE
+  
+  // Helper function to check if URL is absolute
+  const isAbsoluteUrl = (url: string) => {
+    return url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')
+  }
+  
+  // Helper function to format URL
+  const formatUrl = (url: string): string => {
+    if (!url) return FALLBACK_IMAGE
+    if (isAbsoluteUrl(url)) return url
+    if (url.startsWith('/uploads')) return `${API_BASE_URL}${url}`
+    if (url.startsWith('uploads/')) return `${API_BASE_URL}/${url}`
+    if (url.startsWith('./uploads')) return `${API_BASE_URL}${url.substring(1)}`
+    return `${API_BASE_URL}/uploads/${url}`
+  }
+  
+  // Try to get image from item.product (if product is nested)
+  const productObj = item.product || item
+  
+  // Case 1: Check if item has direct image property
   if (item.image) {
     if (typeof item.image === 'string') {
-      if (item.image.startsWith('http') || item.image.startsWith('data:')) return item.image
-      if (item.image.startsWith('/uploads')) return `${API_BASE_URL}${item.image}`
-      return `${API_BASE_URL}/uploads/${item.image}`
+      return formatUrl(item.image)
+    }
+    if (typeof item.image === 'object' && item.image.url) {
+      return formatUrl(item.image.url)
     }
   }
-  const p = item.product || item
-  if (!p) return FALLBACK_IMAGE
-  if (p.images?.length > 0) {
-    const img = p.images[0]
-    const url = typeof img === 'string' ? img : img?.url || img?.path || ''
-    if (url) {
-      if (url.startsWith('http') || url.startsWith('data:')) return url
-      if (url.startsWith('/uploads')) return `${API_BASE_URL}${url}`
-      return `${API_BASE_URL}/uploads/${url}`
+  
+  // Case 2: Check product object's images array (most common)
+  if (productObj.images && Array.isArray(productObj.images) && productObj.images.length > 0) {
+    const firstImage = productObj.images[0]
+    
+    // If first image is a string (URL)
+    if (typeof firstImage === 'string') {
+      return formatUrl(firstImage)
+    }
+    
+    // If first image is an object with url property
+    if (firstImage && typeof firstImage === 'object') {
+      if (firstImage.url) return formatUrl(firstImage.url)
+      if (firstImage.path) return formatUrl(firstImage.path)
+      if (firstImage.public_id) return formatUrl(firstImage.public_id)
     }
   }
-  if (p.image && typeof p.image === 'string') {
-    if (p.image.startsWith('http') || p.image.startsWith('data:')) return p.image
-    if (p.image.startsWith('/uploads')) return `${API_BASE_URL}${p.image}`
-    return `${API_BASE_URL}/uploads/${p.image}`
+  
+  // Case 3: Check product object's image property (single image)
+  if (productObj.image) {
+    if (typeof productObj.image === 'string') {
+      return formatUrl(productObj.image)
+    }
+    if (typeof productObj.image === 'object' && productObj.image.url) {
+      return formatUrl(productObj.image.url)
+    }
   }
+  
+  // Case 4: Check for thumbnail or mainImage
+  if (productObj.thumbnail) {
+    if (typeof productObj.thumbnail === 'string') {
+      return formatUrl(productObj.thumbnail)
+    }
+  }
+  
+  if (productObj.mainImage) {
+    if (typeof productObj.mainImage === 'string') {
+      return formatUrl(productObj.mainImage)
+    }
+  }
+  
+  // Case 5: Fallback to placeholder
+  console.log('⚠️ No image found for product:', productObj.name || 'Unknown', 'Item structure:', item)
   return FALLBACK_IMAGE
 }
 
-const getItemName  = (item: any): string => { const p = item?.product || item; return p?.name  || 'Product' }
-const getItemPrice = (item: any): number => { const p = item?.product || item; return p?.discountPrice || p?.price || 0 }
-const getItemId    = (item: any): string => { const p = item?.product || item; return p?._id   || '' }
+// ✅ FIXED: Get product name from any structure
+const getItemName = (item: any): string => {
+  const productObj = item.product || item
+  return productObj?.name || productObj?.title || 'Product'
+}
 
-// ─── Helper: extract order ID from any response shape ─────────────────────────
-// FIX (BUG 2): orderService.createOrder returns response.data directly.
-// So the shape is { success, data: { order: { _id } } } OR { success, order: { _id } }
-// We try every possible nesting so we never get undefined.
+// ✅ FIXED: Get product price from any structure
+const getItemPrice = (item: any): number => {
+  const productObj = item.product || item
+  return productObj?.discountPrice || productObj?.price || 0
+}
+
+// ✅ FIXED: Get product ID from any structure
+const getItemId = (item: any): string => {
+  const productObj = item.product || item
+  return productObj?._id || productObj?.id || ''
+}
+
+// ✅ FIXED: Get product SKU from any structure
+const getItemSku = (item: any): string => {
+  const productObj = item.product || item
+  return productObj?.sku || `SKU-${getItemId(item).slice(-6)}`
+}
+
+// Helper: extract order ID from any response shape
 const extractOrderId = (data: any): string | null => {
   return (
-    data?.data?.order?._id ||   // { data: { order: { _id } } }
-    data?.data?._id        ||   // { data: { _id } }
-    data?.order?._id       ||   // { order: { _id } }
-    data?._id              ||   // { _id }
+    data?.data?.order?._id ||
+    data?.data?._id ||
+    data?.order?._id ||
+    data?._id ||
     null
   )
 }
@@ -813,36 +839,59 @@ const CheckoutPage: React.FC = () => {
   const { cartItems, clearCart } = useCart()
   const { user } = useAuth()
 
-  const [step,                 setStep]                 = useState(1)
-  const [selectedAddress,      setSelectedAddress]      = useState<Address | null>(null)
-  const [selectedPaymentMethod,setSelectedPaymentMethod]= useState<string>('cod')
-  const [orderNotes,           setOrderNotes]           = useState('')
-  const [isPlacingOrder,       setIsPlacingOrder]       = useState(false)
-  const [showNewAddressForm,   setShowNewAddressForm]   = useState(false)
-  const [shippingEstimate,     setShippingEstimate]     = useState({ price: 200, days: '3-5' })
+  const [step, setStep] = useState(1)
+  const [selectedAddress, setSelectedAddress] = useState<Address | null>(null)
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('cod')
+  const [orderNotes, setOrderNotes] = useState('')
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false)
+  const [showNewAddressForm, setShowNewAddressForm] = useState(false)
+  const [shippingEstimate, setShippingEstimate] = useState({ price: 200, days: '3-5' })
   const [availablePaymentMethods, setAvailablePaymentMethods] = useState<PaymentMethod[]>([])
-  const [createdOrderId,       setCreatedOrderId]       = useState<string | null>(null)
-  const [isSavingAddress,      setIsSavingAddress]      = useState(false)
+  const [createdOrderId, setCreatedOrderId] = useState<string | null>(null)
+  const [isSavingAddress, setIsSavingAddress] = useState(false)
+  const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({})
 
   const { data: addressesData, refetch: refetchAddresses, isLoading: addressesLoading } = useQuery({
     queryKey: ['userAddresses'],
-    queryFn:  () => userService.getAddresses(),
-    enabled:  !!user,
+    queryFn: () => userService.getAddresses(),
+    enabled: !!user,
   })
 
   const addresses: Address[] = React.useMemo(() => {
     if (!addressesData) return []
-    if (Array.isArray(addressesData))                               return addressesData
-    if (Array.isArray(addressesData.data))                          return addressesData.data
-    if (Array.isArray(addressesData.addresses))                     return addressesData.addresses
+    if (Array.isArray(addressesData)) return addressesData
+    if (Array.isArray(addressesData.data)) return addressesData.data
+    if (Array.isArray(addressesData.addresses)) return addressesData.addresses
     return []
   }, [addressesData])
 
+  // ✅ FIXED: Enhanced cart items processing with better error handling
+  const processedCartItems = React.useMemo(() => {
+    return cartItems
+      .filter(item => {
+        const productId = getItemId(item)
+        if (!productId) {
+          console.warn('Skipping item without ID:', item)
+          return false
+        }
+        return true
+      })
+      .map(item => ({
+        ...item,
+        productId: getItemId(item),
+        productName: getItemName(item),
+        productPrice: getItemPrice(item),
+        productImage: getItemImageUrl(item),
+        productSku: getItemSku(item),
+        quantity: item.quantity || 1
+      }))
+  }, [cartItems])
+
   const orderSummary: OrderSummary = React.useMemo(() => {
-    const itemsPrice = cartItems.reduce((t, item) => t + getItemPrice(item) * (item.quantity || 1), 0)
-    const shipping   = shippingEstimate.price || 0
+    const itemsPrice = processedCartItems.reduce((t, item) => t + (item.productPrice * item.quantity), 0)
+    const shipping = shippingEstimate.price || 0
     return { subtotal: itemsPrice, shipping, discount: 0, total: itemsPrice + shipping }
-  }, [cartItems, shippingEstimate])
+  }, [processedCartItems, shippingEstimate])
 
   useEffect(() => {
     if (orderSummary.total > 0 && selectedAddress?.city) loadPaymentMethods()
@@ -869,35 +918,22 @@ const CheckoutPage: React.FC = () => {
       if (cityData) {
         setShippingEstimate({
           price: orderSummary.subtotal >= 5000 ? 0 : cityData.shippingCost,
-          days:  `${cityData.minDeliveryDays}-${cityData.maxDeliveryDays}`,
+          days: `${cityData.minDeliveryDays}-${cityData.maxDeliveryDays}`,
         })
       }
     }
   }, [selectedAddress, orderSummary.subtotal])
 
-  // ── FIX (BUG 1 + BUG 2): onSuccess now always resets isPlacingOrder ──────────
-  // ORIGINAL BUGS:
-  //   1. The early-return branch `if (!orderId) { return }` never called
-  //      setIsPlacingOrder(false), so the button stayed in loading state forever.
-  //   2. Response shape was assumed to be `data.data?.order?._id` but
-  //      orderService returns response.data directly, so the nesting was wrong.
-  //      orderId was always undefined → always hit the early return → stuck forever.
-  //
-  // FIX:
-  //   - extractOrderId() tries every possible shape so orderId is always found.
-  //   - isPlacingOrder is reset in EVERY branch, not just the happy path.
   const createOrderMutation = useMutation({
     mutationFn: (orderData: any) => orderService.createOrder(orderData),
     onSuccess: (data) => {
-      // Always reset — no matter what happens next
       setIsPlacingOrder(false)
-
       const orderId = extractOrderId(data)
 
       if (!orderId) {
         console.error('Order response (no ID found):', JSON.stringify(data, null, 2))
         toast.error('Order was placed but we could not get the order ID. Check your orders page.')
-        navigate('/orders')  // send them somewhere useful instead of being stuck
+        navigate('/orders')
         return
       }
 
@@ -912,68 +948,58 @@ const CheckoutPage: React.FC = () => {
       }
     },
     onError: (error: any) => {
-      // Always reset on error too
       setIsPlacingOrder(false)
       toast.error(error?.response?.data?.message || error?.message || 'Failed to place order. Please try again.')
     },
   })
 
   const buildOrderItems = () =>
-    cartItems
-      .filter(item => getItemId(item)) // skip items with no product ID
-      .map(item => ({
-        product:  getItemId(item),
-        name:     getItemName(item),
-        image:    getItemImageUrl(item),
-        price:    getItemPrice(item),
-        quantity: item.quantity || 1,
-        sku:      item.sku || `SKU-${getItemId(item).slice(-6)}`,
-      }))
+    processedCartItems.map(item => ({
+      product: item.productId,
+      name: item.productName,
+      image: item.productImage,
+      price: item.productPrice,
+      quantity: item.quantity,
+      sku: item.productSku,
+    }))
 
   const buildOrderData = () => ({
     orderItems: buildOrderItems(),
     shippingAddress: {
-      fullName:   selectedAddress?.fullName || selectedAddress?.name || '',
-      address:    selectedAddress?.address  || '',
-      city:       selectedAddress?.city     || '',
+      fullName: selectedAddress?.fullName || selectedAddress?.name || '',
+      address: selectedAddress?.address || '',
+      city: selectedAddress?.city || '',
       postalCode: selectedAddress?.postalCode || '',
-      country:    selectedAddress?.country  || 'Pakistan',
-      phone:      selectedAddress?.phone    || '',
+      country: selectedAddress?.country || 'Pakistan',
+      phone: selectedAddress?.phone || '',
     },
     paymentMethod: selectedPaymentMethod,
-    itemsPrice:    orderSummary.subtotal,
+    itemsPrice: orderSummary.subtotal,
     shippingPrice: orderSummary.shipping,
-    taxPrice:      0,
-    totalPrice:    orderSummary.total,
-    notes:         orderNotes || '',
+    taxPrice: 0,
+    totalPrice: orderSummary.total,
+    notes: orderNotes || '',
   })
 
   const validateBeforeOrder = (): boolean => {
-    if (!selectedAddress)       { toast.error('Please select a shipping address'); setStep(1); return false }
-    if (!selectedPaymentMethod) { toast.error('Please select a payment method');              return false }
-    if (cartItems.length === 0) { toast.error('Your cart is empty'); navigate('/products');   return false }
-    const items = buildOrderItems()
-    if (items.length === 0)     { toast.error('Cart items are missing product data');         return false }
+    if (!selectedAddress) { toast.error('Please select a shipping address'); setStep(1); return false }
+    if (!selectedPaymentMethod) { toast.error('Please select a payment method'); return false }
+    if (processedCartItems.length === 0) { toast.error('Your cart is empty'); navigate('/products'); return false }
     return true
   }
 
-  // ── FIX (BUG 3): Added 30-second safety timeout ───────────────────────────────
-  // If the API call hangs (slow network, server timeout), the button was stuck
-  // forever with no escape. The timeout resets state and shows a helpful message.
   const handlePlaceOrder = async () => {
     if (!validateBeforeOrder()) return
     setIsPlacingOrder(true)
 
-    // Safety net: if mutation hasn't resolved in 30s, reset and show error
     const safetyTimer = setTimeout(() => {
       setIsPlacingOrder(false)
       toast.error('Request timed out. Please check your connection and try again.')
-    }, 60_000)
+    }, 60000)
 
     try {
       await createOrderMutation.mutateAsync(buildOrderData())
     } catch {
-      // onError handles the toast; we just need to ensure cleanup
       setIsPlacingOrder(false)
     } finally {
       clearTimeout(safetyTimer)
@@ -1013,15 +1039,15 @@ const CheckoutPage: React.FC = () => {
       if (!cityData) { toast.error('Invalid city selected'); return }
 
       const addressData = {
-        fullName:  data.fullName,
-        name:      data.fullName,
-        address:   data.address,
-        city:      data.city,
-        province:  cityData.province,
-        postalCode:data.postalCode || '',
-        country:   'Pakistan',
-        phone:     data.phone,
-        type:      data.type || 'home',
+        fullName: data.fullName,
+        name: data.fullName,
+        address: data.address,
+        city: data.city,
+        province: cityData.province,
+        postalCode: data.postalCode || '',
+        country: 'Pakistan',
+        phone: data.phone,
+        type: data.type || 'home',
         isDefault: data.isDefault || false,
       }
 
@@ -1037,14 +1063,14 @@ const CheckoutPage: React.FC = () => {
         } else {
           const localAddress: Address = { _id: `temp-${Date.now()}`, ...addressData }
           toast.success('Address saved')
-          refetchAddresses().catch(() => {})
+          refetchAddresses().catch(() => { })
           setSelectedAddress(localAddress)
         }
       } catch {
         const localAddress: Address = { _id: `local-${Date.now()}`, ...addressData }
         toast.success('Address saved')
         setSelectedAddress(localAddress)
-        refetchAddresses().catch(() => {})
+        refetchAddresses().catch(() => { })
       }
 
       setShowNewAddressForm(false)
@@ -1056,20 +1082,40 @@ const CheckoutPage: React.FC = () => {
     }
   }
 
-  const handleAddressSelect  = (address: Address) => { setSelectedAddress(address); setStep(2) }
-  const handlePaymentSelect  = (methodId: string)  => { setSelectedPaymentMethod(methodId) }
+  const handleAddressSelect = (address: Address) => { setSelectedAddress(address); setStep(2) }
+  const handlePaymentSelect = (methodId: string) => { setSelectedPaymentMethod(methodId) }
   const handleContinueToPayment = () => {
     if (selectedAddress) setStep(2)
     else toast.error('Please select or add an address')
   }
 
   const steps = [
-    { number: 1, title: 'Shipping', icon: MapPin      },
-    { number: 2, title: 'Payment',  icon: CreditCard  },
-    { number: 3, title: 'Confirm',  icon: CheckCircle },
+    { number: 1, title: 'Shipping', icon: MapPin },
+    { number: 2, title: 'Payment', icon: CreditCard },
+    { number: 3, title: 'Confirm', icon: CheckCircle },
   ]
 
-  if (cartItems.length === 0) {
+  // Handle image error
+  const handleImageError = (itemId: string) => {
+    setImageErrors(prev => ({ ...prev, [itemId]: true }))
+  }
+
+  if (processedCartItems.length === 0 && cartItems.length > 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="container-lg section-padding text-center">
+          <div className="inline-flex items-center justify-center w-24 h-24 bg-yellow-100 rounded-full mb-6">
+            <AlertCircle className="h-12 w-12 text-yellow-600" />
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">Processing Cart Items</h1>
+          <p className="text-gray-600 mb-6">Please wait while we load your cart items...</p>
+          <Loader size="md" />
+        </div>
+      </div>
+    )
+  }
+
+  if (processedCartItems.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="container-lg section-padding text-center">
@@ -1100,9 +1146,9 @@ const CheckoutPage: React.FC = () => {
           <div className="mb-12">
             <div className="flex items-center justify-between max-w-3xl mx-auto">
               {steps.map((stepItem, index) => {
-                const StepIcon    = stepItem.icon
-                const isActive    = step >= stepItem.number
-                const isCompleted = step >  stepItem.number
+                const StepIcon = stepItem.icon
+                const isActive = step >= stepItem.number
+                const isCompleted = step > stepItem.number
                 return (
                   <div key={stepItem.number} className="flex items-center flex-1">
                     <div className="flex flex-col items-center">
@@ -1123,7 +1169,7 @@ const CheckoutPage: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-8">
               <AnimatePresence mode="wait">
-                {/* ── STEP 1: Shipping Address ── */}
+                {/* STEP 1: Shipping Address */}
                 {step === 1 && (
                   <motion.div key="step-1" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="space-y-6">
                     {addressesLoading ? (
@@ -1188,13 +1234,13 @@ const CheckoutPage: React.FC = () => {
                   </motion.div>
                 )}
 
-                {/* ── STEP 2: Payment ── */}
+                {/* STEP 2: Payment */}
                 {step === 2 && (
                   <motion.div key="step-2" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="space-y-6">
                     <div className="card p-4 bg-blue-50 border border-blue-100 rounded-xl">
                       <div className="flex items-start gap-3">
                         <svg className="h-5 w-5 mt-0.5 text-blue-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd"/>
+                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                         </svg>
                         <div>
                           <p className="text-sm font-medium text-blue-800">How checkout works</p>
@@ -1267,21 +1313,29 @@ const CheckoutPage: React.FC = () => {
               </AnimatePresence>
             </div>
 
-            {/* ── Order Summary sidebar ── */}
+            {/* Order Summary sidebar - FIXED with proper image display */}
             <div>
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="card p-6 sticky top-24">
                 <h2 className="text-xl font-bold text-gray-900 mb-4">Order Summary</h2>
                 <div className="space-y-3 mb-6 max-h-64 overflow-y-auto pr-1">
-                  {cartItems.map((item, index) => {
-                    const imageUrl  = getItemImageUrl(item)
-                    const itemPrice = getItemPrice(item)
-                    const quantity  = item.quantity || 1
-                    const itemName  = getItemName(item)
+                  {processedCartItems.map((item, index) => {
+                    const imageUrl = imageErrors[item.productId] ? FALLBACK_IMAGE : item.productImage
+                    const itemPrice = item.productPrice
+                    const quantity = item.quantity
+                    const itemName = item.productName
+                    
+                    console.log(`🖼️ Item ${index}: ${itemName} - Image URL:`, imageUrl)
+                    
                     return (
-                      <div key={index} className="flex items-center gap-3">
+                      <div key={`${item.productId}-${index}`} className="flex items-center gap-3">
                         <div className="relative flex-shrink-0">
                           {imageUrl && imageUrl !== FALLBACK_IMAGE ? (
-                            <img src={imageUrl} alt={itemName} className="w-14 h-14 object-cover rounded-lg border border-gray-200" onError={(e) => { e.currentTarget.src = FALLBACK_IMAGE }} />
+                            <img 
+                              src={imageUrl} 
+                              alt={itemName} 
+                              className="w-14 h-14 object-cover rounded-lg border border-gray-200"
+                              onError={() => handleImageError(item.productId)}
+                            />
                           ) : (
                             <div className="w-14 h-14 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center">
                               <ShoppingBag className="h-6 w-6 text-gray-400" />
@@ -1306,7 +1360,7 @@ const CheckoutPage: React.FC = () => {
                 <div className="border-t border-gray-100 mb-4" />
                 <div className="space-y-3 mb-6">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Subtotal ({cartItems.length} item{cartItems.length !== 1 ? 's' : ''})</span>
+                    <span className="text-gray-600">Subtotal ({processedCartItems.length} item{processedCartItems.length !== 1 ? 's' : ''})</span>
                     <span className="font-medium">PKR {orderSummary.subtotal.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-sm">

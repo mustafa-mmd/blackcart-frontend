@@ -90,45 +90,45 @@ const AdminCategories: React.FC = () => {
   };
 
   const handleCreateCategory = async () => {
-    if (!newCategory.name.trim()) {
-      toast.error('Category name is required');
-      return;
+  if (!newCategory.name.trim()) {
+    toast.error('Category name is required');
+    return;
+  }
+
+  try {
+    const formData = new FormData();
+    formData.append('name', newCategory.name.trim());
+    formData.append('description', newCategory.description.trim());
+    formData.append('isActive', newCategory.isActive.toString());
+    formData.append('featured', newCategory.featured.toString());
+    
+    if (imageFile) {
+      // ✅ FIXED: Use 'image' not 'images' for category upload
+      formData.append('image', imageFile);
+      console.log('📤 Added image to FormData:', imageFile.name);
     }
 
-    try {
-      const formData = new FormData();
-      formData.append('name', newCategory.name.trim());
-      formData.append('description', newCategory.description.trim());
-      formData.append('isActive', newCategory.isActive.toString());
-      formData.append('featured', newCategory.featured.toString());
+    console.log('🚀 Sending FormData:', Object.fromEntries(formData.entries()));
+    
+    const response = await adminService.createCategory(formData);
+    
+    console.log('📦 Create category response:', response);
+    
+    if (response.success) {
+      toast.success('Category created successfully!');
+      setShowCreateModal(false);
+      resetForm();
       
-      if (imageFile) {
-        formData.append('images', imageFile);
-        console.log('📤 Added image to FormData:', imageFile.name);
-      }
-
-      console.log('🚀 Sending FormData:', Object.fromEntries(formData.entries()));
-      
-      const response = await adminService.createCategory(formData);
-      
-      console.log('📦 Create category response:', response);
-      
-      if (response.success) {
-        toast.success('Category created successfully!');
-        setShowCreateModal(false);
-        resetForm();
-        
-        // ✅ ADD DELAY BEFORE REFRESHING
-        await delay(500);
-        fetchCategories();
-      } else {
-        toast.error(response.message || 'Failed to create category');
-      }
-    } catch (error: any) {
-      console.error('Create category error:', error);
-      toast.error(error.message || 'Failed to create category');
+      await delay(500);
+      fetchCategories();
+    } else {
+      toast.error(response.message || 'Failed to create category');
     }
-  };
+  } catch (error: any) {
+    console.error('Create category error:', error);
+    toast.error(error.message || 'Failed to create category');
+  }
+};
 
   const handleUpdateCategory = async () => {
     if (!selectedCategory) return;

@@ -1,7 +1,5 @@
 
 
-// //making real complete
-
 // import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 // import { motion } from 'framer-motion'
 // import { Filter, X, ChevronDown, ChevronUp, Star } from 'lucide-react'
@@ -440,26 +438,23 @@
 //   )
 // }
 
-// export default ProductFilters
+//export default ProductFilters
 
 //in the below code add multiple check permission and commenout rating filter
-
-//making real complete
-
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { motion } from 'framer-motion'
-import { Filter, X, ChevronDown, ChevronUp, Star } from 'lucide-react'
+import { Filter, X, ChevronDown, ChevronUp } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { productService } from '../../services/productService'
 import { useDebounce } from '../../hooks/useDebounce'
 
 interface ProductFiltersProps {
   filters: {
-    category?: string | string[]  // Updated to support multiple categories
-    brand?: string
+    category?: string[]   // ✅ multi-select array
+    brand?: string[]      // ✅ multi-select array
     minPrice?: number
     maxPrice?: number
-    rating?: number
+    // rating?: number     // ⛔ commented out - not used for now
     featured?: boolean
     newArrivals?: boolean
     search?: string
@@ -482,21 +477,18 @@ const ProductFilters: React.FC<ProductFiltersProps> = ({
   const [isOpen, setIsOpen] = useState(false)
   const [localPriceRange, setLocalPriceRange] = useState({ min: 0, max: 50000 })
   
-  // Use debounce for price range to avoid too many API calls
   const debouncedPriceRange = useDebounce(localPriceRange, 500)
 
-  // Fetch filter options
   const { data: filterOptions, isLoading: optionsLoading } = useQuery({
     queryKey: ['filterOptions'],
     queryFn: async () => {
       const result = await productService.getFilterOptions()
       return result
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 5,
     retry: 1,
   })
 
-  // Extract and normalize data
   const { categories, brands, priceRangeData } = useMemo(() => {
     const defaultData = { 
       categories: [], 
@@ -508,7 +500,6 @@ const ProductFilters: React.FC<ProductFiltersProps> = ({
     
     const data = filterOptions.data || {}
     
-    // Normalize categories
     const rawCategories = Array.isArray(data.categories) ? data.categories : []
     const normalizedCategories = rawCategories.map((cat: any) => {
       if (typeof cat === 'string') {
@@ -520,7 +511,6 @@ const ProductFilters: React.FC<ProductFiltersProps> = ({
       }
     })
     
-    // Normalize brands
     const rawBrands = Array.isArray(data.brands) ? data.brands : []
     const normalizedBrands = rawBrands.map((brand: any) => {
       if (typeof brand === 'string') return brand
@@ -534,7 +524,7 @@ const ProductFilters: React.FC<ProductFiltersProps> = ({
     }
   }, [filterOptions])
 
-  // Update local price range when filters change
+  // Sync local price range with filters
   useEffect(() => {
     setLocalPriceRange({
       min: filters.minPrice !== undefined ? filters.minPrice : (priceRangeData?.minPrice || 0),
@@ -542,7 +532,7 @@ const ProductFilters: React.FC<ProductFiltersProps> = ({
     })
   }, [filters.minPrice, filters.maxPrice, priceRangeData])
 
-  // Apply price filter when debounced value changes
+  // Apply debounced price change
   useEffect(() => {
     if (debouncedPriceRange.min !== filters.minPrice || debouncedPriceRange.max !== filters.maxPrice) {
       onFilterChange({
@@ -553,80 +543,46 @@ const ProductFilters: React.FC<ProductFiltersProps> = ({
     }
   }, [debouncedPriceRange, filters, onFilterChange])
 
-  // Updated: Handle multiple category selection
+  // ✅ Multi-select: toggle category in/out of array
   const handleCategoryChange = useCallback((categorySlug: string) => {
-    let updatedCategories: string[] = []
-    
-    // Get current categories (ensure it's always an array)
-    const currentCategories = Array.isArray(filters.category) 
-      ? filters.category 
-      : filters.category 
-        ? [filters.category] 
-        : []
-    
-    // Check if category is already selected
-    if (currentCategories.includes(categorySlug)) {
-      // Remove if already selected
-      updatedCategories = currentCategories.filter(cat => cat !== categorySlug)
-    } else {
-      // Add if not selected
-      updatedCategories = [...currentCategories, categorySlug]
-    }
-    
-    onFilterChange({ 
-      ...filters, 
-      category: updatedCategories.length > 0 ? updatedCategories : undefined,
-      page: 1 // Reset page
-    })
+    const current: string[] = Array.isArray(filters.category) ? filters.category : []
+    const updated = current.includes(categorySlug)
+      ? current.filter(c => c !== categorySlug)   // remove
+      : [...current, categorySlug]                 // add
+    onFilterChange({ ...filters, category: updated, page: 1 })
   }, [filters, onFilterChange])
 
+  // ✅ Multi-select: toggle brand in/out of array
   const handleBrandChange = useCallback((brand: string) => {
-    onFilterChange({ 
-      ...filters, 
-      brand: filters.brand === brand ? undefined : brand,
-      page: 1
-    })
+    const current: string[] = Array.isArray(filters.brand) ? filters.brand : []
+    const updated = current.includes(brand)
+      ? current.filter(b => b !== brand)
+      : [...current, brand]
+    onFilterChange({ ...filters, brand: updated, page: 1 })
   }, [filters, onFilterChange])
-
-  // Commented out rating filter functionality
-  // const handleRatingChange = useCallback((rating: number) => {
-  //   onFilterChange({ 
-  //     ...filters, 
-  //     rating: filters.rating === rating ? undefined : rating,
-  //     page: 1
-  //   })
-  // }, [filters, onFilterChange])
 
   const handlePriceChange = useCallback((min: number, max: number) => {
     setLocalPriceRange({ min, max })
   }, [])
 
   const handleFeaturedChange = useCallback(() => {
-    onFilterChange({
-      ...filters,
-      featured: !filters.featured,
-      page: 1
-    })
+    onFilterChange({ ...filters, featured: !filters.featured, page: 1 })
   }, [filters, onFilterChange])
 
   const handleNewArrivalsChange = useCallback(() => {
-    onFilterChange({
-      ...filters,
-      newArrivals: !filters.newArrivals,
-      page: 1
-    })
+    onFilterChange({ ...filters, newArrivals: !filters.newArrivals, page: 1 })
   }, [filters, onFilterChange])
 
   const clearFilters = useCallback(() => {
     onFilterChange({
-      category: undefined,
-      brand: undefined,
+      category: [],
+      brand: [],
       minPrice: undefined,
       maxPrice: undefined,
-      rating: undefined,
+      // rating: undefined,   // ⛔ commented out
       featured: false,
       newArrivals: false,
-      search: filters.search, // Keep search if present
+      search: filters.search,
     })
     setLocalPriceRange({
       min: priceRangeData?.minPrice || 0,
@@ -634,22 +590,20 @@ const ProductFilters: React.FC<ProductFiltersProps> = ({
     })
   }, [onFilterChange, priceRangeData, filters.search])
 
-  const activeFilterCount = useMemo(() => 
-    Object.entries(filters).filter(([key, value]) => {
-      if (key === 'search') return value && value !== ''
-      if (key === 'featured' || key === 'newArrivals') return value === true
-      if (key === 'minPrice' || key === 'maxPrice') return value !== undefined
-      if (key === 'category') {
-        // Count multiple categories properly
-        if (Array.isArray(value) && value.length > 0) return true
-        if (typeof value === 'string' && value !== '' && value !== 'all') return true
-        return false
-      }
-      if (key === 'rating') return value !== undefined && value !== 0
-      return value !== undefined && value !== '' && value !== 'all'
-    }).length,
-    [filters]
-  )
+  const activeFilterCount = useMemo(() => {
+    let count = 0
+    const cats = Array.isArray(filters.category) ? filters.category : []
+    const brands_ = Array.isArray(filters.brand) ? filters.brand : []
+    if (cats.length > 0) count += cats.length
+    if (brands_.length > 0) count += brands_.length
+    if (filters.minPrice !== undefined) count++
+    if (filters.maxPrice !== undefined) count++
+    // if (filters.rating !== undefined && filters.rating !== 0) count++  // ⛔ commented out
+    if (filters.featured) count++
+    if (filters.newArrivals) count++
+    if (filters.search && filters.search !== '') count++
+    return count
+  }, [filters])
 
   const formatPrice = useCallback((price: number): string => {
     if (price >= 10000000) return `PKR ${(price / 10000000).toFixed(1)} Cr`
@@ -657,6 +611,17 @@ const ProductFilters: React.FC<ProductFiltersProps> = ({
     if (price >= 1000) return `PKR ${(price / 1000).toFixed(1)}K`
     return `PKR ${price.toLocaleString()}`
   }, [])
+
+  // Helpers for checked state
+  const isCategoryChecked = (slug: string) => {
+    const current = Array.isArray(filters.category) ? filters.category : []
+    return current.includes(slug)
+  }
+
+  const isBrandChecked = (brand: string) => {
+    const current = Array.isArray(filters.brand) ? filters.brand : []
+    return current.includes(brand)
+  }
 
   return (
     <>
@@ -695,113 +660,156 @@ const ProductFilters: React.FC<ProductFiltersProps> = ({
                 className="text-sm text-blue-600 hover:text-blue-700 flex items-center"
               >
                 <X className="h-4 w-4 mr-1" />
-                Clear All
+                Clear All ({activeFilterCount})
               </button>
             )}
           </div>
 
-          {/* Categories - Updated for multiple selection */}
+          {/* ✅ Categories — multi-select checkboxes */}
           <div className="mb-6">
-            <h4 className="font-medium text-gray-900 mb-3">Categories</h4>
-            <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+            <h4 className="font-semibold text-gray-900 mb-3 text-sm uppercase tracking-wide">
+              Categories
+            </h4>
+            <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
               {(optionsLoading || isLoading) ? (
                 Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                  <div key={i} className="h-5 bg-gray-200 rounded animate-pulse" />
                 ))
               ) : categories.length > 0 ? (
-                <>
-                  <label className="flex items-center cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      checked={!filters.category || 
-                        (Array.isArray(filters.category) && filters.category.length === 0) || 
-                        filters.category === ''}
-                      onChange={() => {
-                        onFilterChange({ 
-                          ...filters, 
-                          category: undefined,
-                          page: 1 
-                        })
-                      }}
-                      className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                    <span className="ml-2 text-gray-700 group-hover:text-blue-600">
-                      All Categories
-                    </span>
-                  </label>
-                  {categories.map((category) => {
-                    const categorySlug = category.slug || category.name
-                    const isChecked = Array.isArray(filters.category) 
-                      ? filters.category.includes(categorySlug)
-                      : filters.category === categorySlug
-                    
-                    return (
-                      <label key={categorySlug} className="flex items-center cursor-pointer group">
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() => handleCategoryChange(categorySlug)}
-                          className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                        />
-                        <span className="ml-2 text-gray-700 group-hover:text-blue-600">
-                          {category.name}
-                        </span>
-                      </label>
-                    )
-                  })}
-                </>
+                categories.map((category) => {
+                  const slug = category.slug || category.name
+                  const checked = isCategoryChecked(slug)
+                  return (
+                    <label
+                      key={slug}
+                      className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors ${
+                        checked ? 'bg-blue-50' : 'hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                        checked
+                          ? 'bg-blue-600 border-blue-600'
+                          : 'border-gray-300 bg-white'
+                      }`}>
+                        {checked && (
+                          <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
+                            <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        )}
+                      </div>
+                      <input
+                        type="checkbox"
+                        className="sr-only"
+                        checked={checked}
+                        onChange={() => handleCategoryChange(slug)}
+                      />
+                      <span className={`text-sm ${checked ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>
+                        {category.name}
+                      </span>
+                    </label>
+                  )
+                })
               ) : (
                 <p className="text-sm text-gray-500">No categories available</p>
               )}
             </div>
+
+            {/* Selected categories tags */}
+            {Array.isArray(filters.category) && filters.category.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-3">
+                {filters.category.map(slug => {
+                  const cat = categories.find(c => (c.slug || c.name) === slug)
+                  return (
+                    <span
+                      key={slug}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full"
+                    >
+                      {cat?.name || slug}
+                      <button onClick={() => handleCategoryChange(slug)}>
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  )
+                })}
+              </div>
+            )}
           </div>
 
-          {/* Brands */}
+          <div className="border-t border-gray-100 mb-6" />
+
+          {/* ✅ Brands — multi-select checkboxes */}
           <div className="mb-6">
-            <h4 className="font-medium text-gray-900 mb-3">Brands</h4>
-            <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+            <h4 className="font-semibold text-gray-900 mb-3 text-sm uppercase tracking-wide">
+              Brands
+            </h4>
+            <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
               {(optionsLoading || isLoading) ? (
                 Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                  <div key={i} className="h-5 bg-gray-200 rounded animate-pulse" />
                 ))
               ) : brands.length > 0 ? (
-                <>
-                  <label className="flex items-center cursor-pointer group">
-                    <input
-                      type="radio"
-                      name="brand"
-                      checked={!filters.brand}
-                      onChange={() => handleBrandChange('')}
-                      className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                    />
-                    <span className="ml-2 text-gray-700 group-hover:text-blue-600">
-                      All Brands
-                    </span>
-                  </label>
-                  {brands.map((brand, index) => (
-                    <label key={`${brand}-${index}`} className="flex items-center cursor-pointer group">
+                brands.map((brand: string, index: number) => {
+                  const checked = isBrandChecked(brand)
+                  return (
+                    <label
+                      key={`${brand}-${index}`}
+                      className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors ${
+                        checked ? 'bg-blue-50' : 'hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                        checked
+                          ? 'bg-blue-600 border-blue-600'
+                          : 'border-gray-300 bg-white'
+                      }`}>
+                        {checked && (
+                          <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
+                            <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        )}
+                      </div>
                       <input
-                        type="radio"
-                        name="brand"
-                        checked={filters.brand === brand}
+                        type="checkbox"
+                        className="sr-only"
+                        checked={checked}
                         onChange={() => handleBrandChange(brand)}
-                        className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                       />
-                      <span className="ml-2 text-gray-700 group-hover:text-blue-600">
+                      <span className={`text-sm ${checked ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>
                         {brand}
                       </span>
                     </label>
-                  ))}
-                </>
+                  )
+                })
               ) : (
                 <p className="text-sm text-gray-500">No brands available</p>
               )}
             </div>
+
+            {/* Selected brand tags */}
+            {Array.isArray(filters.brand) && filters.brand.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-3">
+                {filters.brand.map(b => (
+                  <span
+                    key={b}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full"
+                  >
+                    {b}
+                    <button onClick={() => handleBrandChange(b)}>
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
+
+          <div className="border-t border-gray-100 mb-6" />
 
           {/* Price Range */}
           <div className="mb-6">
-            <h4 className="font-medium text-gray-900 mb-3">Price Range</h4>
+            <h4 className="font-semibold text-gray-900 mb-3 text-sm uppercase tracking-wide">
+              Price Range
+            </h4>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-blue-600">
@@ -824,7 +832,7 @@ const ProductFilters: React.FC<ProductFiltersProps> = ({
                       handlePriceChange(newMin, localPriceRange.max)
                     }
                   }}
-                  className="absolute w-full h-2 opacity-0 cursor-pointer"
+                  className="absolute w-full h-2 opacity-0 cursor-pointer z-10"
                 />
                 <input
                   type="range"
@@ -838,7 +846,7 @@ const ProductFilters: React.FC<ProductFiltersProps> = ({
                       handlePriceChange(localPriceRange.min, newMax)
                     }
                   }}
-                  className="absolute w-full h-2 opacity-0 cursor-pointer"
+                  className="absolute w-full h-2 opacity-0 cursor-pointer z-10"
                 />
                 <div 
                   className="absolute h-full bg-blue-600 rounded-full"
@@ -848,12 +856,40 @@ const ProductFilters: React.FC<ProductFiltersProps> = ({
                   }}
                 />
               </div>
+              {/* Manual input boxes for precision */}
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  placeholder="Min"
+                  value={localPriceRange.min || ''}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value) || 0
+                    if (val < localPriceRange.max) handlePriceChange(val, localPriceRange.max)
+                  }}
+                  className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm text-center focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                />
+                <span className="text-gray-400 self-center">–</span>
+                <input
+                  type="number"
+                  placeholder="Max"
+                  value={localPriceRange.max || ''}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value) || 50000
+                    if (val > localPriceRange.min) handlePriceChange(localPriceRange.min, val)
+                  }}
+                  className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm text-center focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                />
+              </div>
             </div>
           </div>
 
-          {/* Rating - Commented out */}
-          {/* <div className="mb-6">
-            <h4 className="font-medium text-gray-900 mb-3">Minimum Rating</h4>
+          <div className="border-t border-gray-100 mb-6" />
+
+          {/* ⛔ Rating Section — commented out for now
+          <div className="mb-6">
+            <h4 className="font-semibold text-gray-900 mb-3 text-sm uppercase tracking-wide">
+              Minimum Rating
+            </h4>
             <div className="space-y-2">
               <label className="flex items-center cursor-pointer group">
                 <input
@@ -890,29 +926,46 @@ const ProductFilters: React.FC<ProductFiltersProps> = ({
                 </label>
               ))}
             </div>
-          </div> */}
+          </div>
+          */}
 
           {/* Other Filters */}
           <div className="space-y-3">
-            <label className="flex items-center cursor-pointer group">
-              <input
-                type="checkbox"
-                checked={filters.featured || false}
-                onChange={handleFeaturedChange}
-                className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-              />
-              <span className="ml-2 text-gray-700 group-hover:text-blue-600">
+            <h4 className="font-semibold text-gray-900 mb-3 text-sm uppercase tracking-wide">
+              More Filters
+            </h4>
+            <label className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors ${
+              filters.featured ? 'bg-blue-50' : 'hover:bg-gray-50'
+            }`}>
+              <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                filters.featured ? 'bg-blue-600 border-blue-600' : 'border-gray-300 bg-white'
+              }`}>
+                {filters.featured && (
+                  <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
+                    <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                )}
+              </div>
+              <input type="checkbox" className="sr-only" checked={filters.featured || false} onChange={handleFeaturedChange} />
+              <span className={`text-sm ${filters.featured ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>
                 Featured Products
               </span>
             </label>
-            <label className="flex items-center cursor-pointer group">
-              <input
-                type="checkbox"
-                checked={filters.newArrivals || false}
-                onChange={handleNewArrivalsChange}
-                className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-              />
-              <span className="ml-2 text-gray-700 group-hover:text-blue-600">
+
+            <label className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors ${
+              filters.newArrivals ? 'bg-blue-50' : 'hover:bg-gray-50'
+            }`}>
+              <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                filters.newArrivals ? 'bg-blue-600 border-blue-600' : 'border-gray-300 bg-white'
+              }`}>
+                {filters.newArrivals && (
+                  <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
+                    <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                )}
+              </div>
+              <input type="checkbox" className="sr-only" checked={filters.newArrivals || false} onChange={handleNewArrivalsChange} />
+              <span className={`text-sm ${filters.newArrivals ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>
                 New Arrivals (Last 30 days)
               </span>
             </label>

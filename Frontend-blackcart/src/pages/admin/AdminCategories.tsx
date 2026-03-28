@@ -103,7 +103,7 @@ const AdminCategories: React.FC = () => {
       formData.append('featured', newCategory.featured.toString());
       
       if (imageFile) {
-        formData.append('image', imageFile);
+        formData.append('images', imageFile);
         console.log('📤 Added image to FormData:', imageFile.name);
       }
 

@@ -253,44 +253,51 @@ export const categoryService = {
       }
     });
   },
-
-  // Admin: Update category - FIXED with queue
-  updateCategory: async (id: string, data: FormData): Promise<ApiResponse<Category>> => {
-    return queueRequest(async () => {
-      try {
-        console.log(`📡 Frontend: Updating category ${id}`, 
-          Object.fromEntries(data.entries())
-        );
-        
-        const response = await api.put(`/admin/categories/${id}`, data);
-        
-        console.log('✅ Frontend: Category updated:', {
-          id: response.data.data?._id,
-          name: response.data.data?.name
-        });
-        
-        return {
-          success: true,
-          data: response.data?.data,
-          message: response.data?.message || 'Category updated successfully'
-        };
-      } catch (error: any) {
-        console.error('❌ Frontend: Error updating category:', {
-          message: error.message,
-          response: error.response?.data,
-          status: error.response?.status,
-          config: error.config
-        });
-        
-        return {
-          success: false,
-          data: null,
-          message: getErrorMessage(error)
-        };
+// Admin: Update category - FIXED with proper data cleaning
+updateCategory: async (id: string, data: FormData): Promise<ApiResponse<Category>> => {
+  return queueRequest(async () => {
+    try {
+      console.log(`📡 Frontend: Updating category ${id}`);
+      
+      // ✅ Log what's being sent
+      const formDataEntries: any = {};
+      for (let [key, value] of data.entries()) {
+        formDataEntries[key] = value;
       }
-    });
-  },
-
+      console.log('📦 Sending FormData:', formDataEntries);
+      
+      const response = await api.put(`/admin/categories/${id}`, data, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      
+      console.log('✅ Frontend: Category updated:', {
+        id: response.data.data?._id,
+        name: response.data.data?.name
+      });
+      
+      return {
+        success: true,
+        data: response.data?.data,
+        message: response.data?.message || 'Category updated successfully'
+      };
+    } catch (error: any) {
+      console.error('❌ Frontend: Error updating category:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        config: error.config
+      });
+      
+      return {
+        success: false,
+        data: null,
+        message: getErrorMessage(error)
+      };
+    }
+  });
+},
   // Admin: Delete category - FIXED with queue
   deleteCategory: async (id: string): Promise<ApiResponse<{ message: string }>> => {
     return queueRequest(async () => {

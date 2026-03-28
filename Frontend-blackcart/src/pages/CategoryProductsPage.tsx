@@ -930,15 +930,13 @@
 // export default CategoryProductsPage;
 
 
-// src/pages/CategoryProductsPage.tsx 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   ChevronLeft, Filter, Grid, List, Star, 
-  Package, XCircle, ArrowLeft, Search, 
-  SlidersHorizontal, X, ShoppingCart, Home,
-  Tag, Check
+  Package, XCircle, Search, 
+  SlidersHorizontal, X, ShoppingCart
 } from 'lucide-react';
 import { categoryService } from '../services/categoryService';
 import { productService } from '../services/productService';
@@ -981,7 +979,7 @@ const CategoryProductsPage: React.FC = () => {
   const prevFiltersRef = useRef(filters);
   const isInitialMount = useRef(true);
 
-  // ✅ FIXED: Handles Cloudinary object format AND plain string URLs for products
+  // ✅ FIXED: Handles Cloudinary demo URLs and all image formats for products
   const getProductImage = (product: any): string => {
     try {
       if (productService.getFirstImageUrl) {
@@ -994,14 +992,24 @@ const CategoryProductsPage: React.FC = () => {
 
       // Handle Cloudinary object format { url: '...', public_id: '...' }
       if (typeof imageData === 'object' && imageData !== null) {
-        return imageData.url || imageData.secure_url || '/images/placeholder-product.jpg';
+        const url = imageData.url || imageData.secure_url;
+        if (url && url.includes('cloudinary.com/demo')) {
+          return '/images/placeholder-product.jpg';
+        }
+        return url || '/images/placeholder-product.jpg';
       }
 
       // Handle string format
-      if (imageData.startsWith('http')) return imageData;
-      if (imageData.startsWith('/uploads')) return `${API_URL}${imageData}`;
+      if (typeof imageData === 'string') {
+        if (imageData.includes('cloudinary.com/demo')) {
+          return '/images/placeholder-product.jpg';
+        }
+        if (imageData.startsWith('http')) return imageData;
+        if (imageData.startsWith('/uploads')) return `${API_URL}${imageData}`;
+        return `${API_URL}/uploads/${imageData}`;
+      }
 
-      return `${API_URL}/uploads/${imageData}`;
+      return '/images/placeholder-product.jpg';
 
     } catch (error) {
       console.error('Error getting product image:', error);
@@ -1009,21 +1017,31 @@ const CategoryProductsPage: React.FC = () => {
     }
   };
 
-  // ✅ FIXED: Handles Cloudinary object format AND plain string URLs for categories
+  // ✅ FIXED: Handles Cloudinary demo URLs and all image formats for categories
   const getCategoryImage = (category: any): string => {
     if (!category?.image) return '';
 
     // Handle Cloudinary object format { url: '...', public_id: '...' }
     if (typeof category.image === 'object' && category.image !== null) {
-      return category.image.url || category.image.secure_url || '';
+      const url = category.image.url || category.image.secure_url;
+      if (url && url.includes('cloudinary.com/demo')) {
+        return '';
+      }
+      return url || '';
     }
 
     // Handle string format
-    if (category.image.startsWith('http')) return category.image;
-    if (category.image.startsWith('/uploads')) return `${API_URL}${category.image}`;
-    if (!category.image.includes('/')) return `${API_URL}/uploads/${category.image}`;
+    if (typeof category.image === 'string') {
+      if (category.image.includes('cloudinary.com/demo')) {
+        return '';
+      }
+      if (category.image.startsWith('http')) return category.image;
+      if (category.image.startsWith('/uploads')) return `${API_URL}${category.image}`;
+      if (!category.image.includes('/')) return `${API_URL}/uploads/${category.image}`;
+      return category.image;
+    }
 
-    return category.image;
+    return '';
   };
 
   const fetchCategoryAndProducts = async (filterParams = filters) => {

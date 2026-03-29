@@ -537,28 +537,26 @@
 // export default ProductFilters
 
 //above code is correct we just add the close sidebar button
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { motion } from 'framer-motion'
-import { Filter, X, ChevronDown, ChevronUp } from 'lucide-react'
+import { Filter, X, ChevronDown, ChevronUp, ChevronLeft } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { productService } from '../../services/productService'
 import { useDebounce } from '../../hooks/useDebounce'
 
 interface ProductFiltersProps {
   filters: {
-    category?: string[]   // ✅ multi-select array
-    brand?: string[]      // ✅ multi-select array
+    category?: string[]   // multi-select array
+    brand?: string[]      // multi-select array
     minPrice?: number
     maxPrice?: number
-    // rating?: number     // ⛔ commented out - not used for now
     featured?: boolean
     newArrivals?: boolean
     search?: string
   }
   onFilterChange: (filters: any) => void
   isLoading?: boolean
-  onClose?: () => void  // ✅ NEW: Close callback
+  onClose?: () => void  // Close callback
 }
 
 interface Category {
@@ -642,16 +640,16 @@ const ProductFilters: React.FC<ProductFiltersProps> = ({
     }
   }, [debouncedPriceRange, filters, onFilterChange])
 
-  // ✅ Multi-select: toggle category in/out of array
+  // Multi-select: toggle category in/out of array
   const handleCategoryChange = useCallback((categorySlug: string) => {
     const current: string[] = Array.isArray(filters.category) ? filters.category : []
     const updated = current.includes(categorySlug)
-      ? current.filter(c => c !== categorySlug)   // remove
-      : [...current, categorySlug]                 // add
+      ? current.filter(c => c !== categorySlug)
+      : [...current, categorySlug]
     onFilterChange({ ...filters, category: updated, page: 1 })
   }, [filters, onFilterChange])
 
-  // ✅ Multi-select: toggle brand in/out of array
+  // Multi-select: toggle brand in/out of array
   const handleBrandChange = useCallback((brand: string) => {
     const current: string[] = Array.isArray(filters.brand) ? filters.brand : []
     const updated = current.includes(brand)
@@ -678,7 +676,6 @@ const ProductFilters: React.FC<ProductFiltersProps> = ({
       brand: [],
       minPrice: undefined,
       maxPrice: undefined,
-      // rating: undefined,   // ⛔ commented out
       featured: false,
       newArrivals: false,
       search: filters.search,
@@ -697,7 +694,6 @@ const ProductFilters: React.FC<ProductFiltersProps> = ({
     if (brands_.length > 0) count += brands_.length
     if (filters.minPrice !== undefined) count++
     if (filters.maxPrice !== undefined) count++
-    // if (filters.rating !== undefined && filters.rating !== 0) count++  // ⛔ commented out
     if (filters.featured) count++
     if (filters.newArrivals) count++
     if (filters.search && filters.search !== '') count++
@@ -711,7 +707,6 @@ const ProductFilters: React.FC<ProductFiltersProps> = ({
     return `PKR ${price.toLocaleString()}`
   }, [])
 
-  // Helpers for checked state
   const isCategoryChecked = (slug: string) => {
     const current = Array.isArray(filters.category) ? filters.category : []
     return current.includes(slug)
@@ -750,7 +745,7 @@ const ProductFilters: React.FC<ProductFiltersProps> = ({
           animate={{ opacity: 1, x: 0 }}
           className="bg-white rounded-lg shadow-sm border p-6 sticky top-24"
         >
-          {/* Header with Close Button for Desktop */}
+          {/* Header with Close Button */}
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-bold text-gray-900">Filters</h3>
             <div className="flex items-center gap-2">
@@ -763,11 +758,12 @@ const ProductFilters: React.FC<ProductFiltersProps> = ({
                   Clear ({activeFilterCount})
                 </button>
               )}
-              {/* ✅ NEW: Close button for desktop */}
+
+              {/* ✅ FIXED: Close button — visible on all desktop sizes (lg and above) */}
               {onClose && (
                 <button
                   onClick={onClose}
-                  className="lg:hidden xl:flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
+                  className="hidden lg:flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
                   title="Hide filters"
                 >
                   <ChevronLeft className="h-5 w-5" />
@@ -776,7 +772,7 @@ const ProductFilters: React.FC<ProductFiltersProps> = ({
             </div>
           </div>
 
-          {/* ✅ Categories — multi-select checkboxes */}
+          {/* Categories — multi-select checkboxes */}
           <div className="mb-6">
             <h4 className="font-semibold text-gray-900 mb-3 text-sm uppercase tracking-wide">
               Categories
@@ -787,7 +783,7 @@ const ProductFilters: React.FC<ProductFiltersProps> = ({
                   <div key={i} className="h-5 bg-gray-200 rounded animate-pulse" />
                 ))
               ) : categories.length > 0 ? (
-                categories.map((category) => {
+                categories.map((category: any) => {
                   const slug = category.slug || category.name
                   const checked = isCategoryChecked(slug)
                   return (
@@ -829,7 +825,7 @@ const ProductFilters: React.FC<ProductFiltersProps> = ({
             {Array.isArray(filters.category) && filters.category.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-3">
                 {filters.category.map(slug => {
-                  const cat = categories.find(c => (c.slug || c.name) === slug)
+                  const cat = categories.find((c: any) => (c.slug || c.name) === slug)
                   return (
                     <span
                       key={slug}
@@ -848,7 +844,7 @@ const ProductFilters: React.FC<ProductFiltersProps> = ({
 
           <div className="border-t border-gray-100 mb-6" />
 
-          {/* ✅ Brands — multi-select checkboxes */}
+          {/* Brands — multi-select checkboxes */}
           <div className="mb-6">
             <h4 className="font-semibold text-gray-900 mb-3 text-sm uppercase tracking-wide">
               Brands

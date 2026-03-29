@@ -419,21 +419,16 @@ const AdminUsers: React.FC = () => {
     }
   };
 
-  // ✅ FIXED: Better error handling for delete
-  const handleDeleteUser = async (userId: string, userName: string) => {
-    if (window.confirm(`Are you sure you want to delete user "${userName}"? This action cannot be undone.`)) {
+  const handleDeleteUser = async (userId: string) => {
+    if (window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
       try {
-        const response = await adminService.deleteUser(userId);
-        if (response.success) {
-          alert('User deleted successfully');
-          fetchUsers(pagination.page);
-        } else {
-          alert(response.message || 'Failed to delete user');
-        }
+        await adminService.deleteUser(userId);
+        fetchUsers(pagination.page);
       } catch (error: any) {
+        // Show the actual error message from backend (e.g. "Cannot delete user with existing orders")
+        const message = error?.response?.data?.message || 'Error deleting user';
+        alert(message);
         console.error('Error deleting user:', error);
-        const errorMessage = error.response?.data?.message || error.message || 'Failed to delete user';
-        alert(`Error: ${errorMessage}`);
       }
     }
   };
@@ -446,20 +441,21 @@ const AdminUsers: React.FC = () => {
     });
   };
 
-  // ✅ FIXED: Columns with proper action buttons layout
+  // ✅ FIXED: columns no longer includes an 'actions' key
+  // All actions are handled exclusively by renderActions below
   const columns = [
     {
       key: 'name',
       header: 'User',
       render: (value: string, row: User) => (
         <div className="flex items-center">
-          <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+          <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
             <span className="text-sm font-semibold text-blue-600">
               {value?.charAt(0).toUpperCase() || 'U'}
             </span>
           </div>
           <div>
-            <div className="font-medium text-gray-900">{value || 'No Name'}</div>
+            <div className="font-medium text-gray-900">{value}</div>
             <div className="text-sm text-gray-500">{row.email}</div>
           </div>
         </div>
@@ -475,7 +471,7 @@ const AdminUsers: React.FC = () => {
             ? 'bg-purple-100 text-purple-800'
             : 'bg-gray-100 text-gray-800'
         }`}>
-          {value?.charAt(0).toUpperCase() + value?.slice(1) || 'User'}
+          {value.charAt(0).toUpperCase() + value.slice(1)}
         </span>
       ),
       sortable: true,
@@ -517,46 +513,71 @@ const AdminUsers: React.FC = () => {
       ),
       sortable: true,
     },
-    {
-      key: 'actions',
-      header: 'Actions',
-      render: (value: any, row: User) => (
-        // ✅ FIXED: Horizontal layout for buttons (no overlap)
-        <div className="flex flex-row items-center gap-2">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              navigate(`/admin/users/${row._id}`);
-            }}
-            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
-            title="View Details"
-          >
-            <Eye className="h-4 w-4" />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              navigate(`/admin/users/edit/${row._id}`);
-            }}
-            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition"
-            title="Edit User"
-          >
-            <Edit2 className="h-4 w-4" />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDeleteUser(row._id, row.name || row.email);
-            }}
-            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
-            title="Delete User"
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
-        </div>
-      ),
-    },
   ];
+
+  // ✅ FIXED: All 4 actions in one clean block — no overlap with columns
+  const renderActions = (row: User) => (
+    <div className="flex flex-col gap-1.5 min-w-[140px]">
+      {/* Row 1: Icon buttons — Edit & Delete */}
+      <div className="flex items-center gap-1">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            // ✅ FIXED: navigate to admin/users/:id with edit query param
+            // Make sure this route exists in your React Router config
+            navigate(`/admin/users/${row._id}?tab=edit`);
+          }}
+          className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition"
+          title="Edit User"
+        >
+          <Edit2 className="h-3.5 w-3.5" />
+          Edit
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleDeleteUser(row._id);
+          }}
+          className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition"
+          title="Delete User"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+          Delete
+        </button>
+      </div>
+
+      {/* Row 2: View Details */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          navigate(`/admin/users/${row._id}`);
+        }}
+        className="w-full flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-gray-50 text-gray-700 rounded-lg hover:bg-gray-100 transition"
+      >
+        <Eye className="h-3.5 w-3.5" />
+        View Details
+      </button>
+
+      {/* Row 3: Activate / Deactivate */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          handleUpdateUser(row._id, { isActive: !row.isActive });
+        }}
+        className={`w-full flex items-center justify-center gap-1 px-2 py-1.5 text-xs rounded-lg transition ${
+          row.isActive
+            ? 'bg-orange-50 text-orange-700 hover:bg-orange-100'
+            : 'bg-green-50 text-green-700 hover:bg-green-100'
+        }`}
+      >
+        {row.isActive ? (
+          <><UserX className="h-3.5 w-3.5" /> Deactivate</>
+        ) : (
+          <><UserCheck className="h-3.5 w-3.5" /> Activate</>
+        )}
+      </button>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
@@ -613,26 +634,26 @@ const AdminUsers: React.FC = () => {
         </div>
 
         {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-white p-4 rounded-xl border border-gray-200">
             <p className="text-sm text-gray-500">Total Users</p>
             <p className="text-2xl font-bold text-gray-900">{pagination.total}</p>
           </div>
           <div className="bg-white p-4 rounded-xl border border-gray-200">
             <p className="text-sm text-gray-500">Active Users</p>
-            <p className="text-2xl font-bold text-gray-900">
+            <p className="text-2xl font-bold text-green-600">
               {users.filter(u => u.isActive).length}
             </p>
           </div>
           <div className="bg-white p-4 rounded-xl border border-gray-200">
             <p className="text-sm text-gray-500">Admins</p>
-            <p className="text-2xl font-bold text-gray-900">
+            <p className="text-2xl font-bold text-purple-600">
               {users.filter(u => u.role === 'admin').length}
             </p>
           </div>
           <div className="bg-white p-4 rounded-xl border border-gray-200">
             <p className="text-sm text-gray-500">Verified Emails</p>
-            <p className="text-2xl font-bold text-gray-900">
+            <p className="text-2xl font-bold text-blue-600">
               {users.filter(u => u.emailVerified).length}
             </p>
           </div>
@@ -648,6 +669,7 @@ const AdminUsers: React.FC = () => {
             ...pagination,
             onPageChange: handlePageChange,
           }}
+          actions={renderActions}
           onRowClick={(row) => navigate(`/admin/users/${row._id}`)}
           emptyMessage="No users found"
         />

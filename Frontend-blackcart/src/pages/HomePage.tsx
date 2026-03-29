@@ -773,41 +773,51 @@ const HomePage: React.FC = () => {
 
   const accessories = [
     { 
-      icon: <Mouse className="h-12 w-12 text-red-500" />, 
+      icon: <Mouse className="h-8 w-8 text-red-500" />, 
       name: "Gaming Mouse", 
       category: "mouse",
       bgClass: "bg-gradient-to-br from-red-500/20 to-pink-600/20",
     },
     { 
-      icon: <Keyboard className="h-12 w-12 text-green-500" />, 
-      name: "Mechanical Keyboard", 
+      icon: <Keyboard className="h-8 w-8 text-green-500" />, 
+      name: "Keyboard", 
       category: "keyboard",
       bgClass: "bg-gradient-to-br from-green-500/20 to-teal-600/20",
     },
     { 
-      icon: <Headphones className="h-12 w-12 text-purple-500" />, 
-      name: "Wireless Headset", 
+      icon: <Headphones className="h-8 w-8 text-purple-500" />, 
+      name: "Headset", 
       category: "headphones",
       bgClass: "bg-gradient-to-br from-purple-500/20 to-indigo-600/20",
     },
     { 
-      icon: <Monitor className="h-12 w-12 text-blue-500" />, 
-      name: "Gaming Monitor", 
+      icon: <Monitor className="h-8 w-8 text-blue-500" />, 
+      name: "Monitor", 
       category: "monitor",
       bgClass: "bg-gradient-to-br from-blue-500/20 to-cyan-600/20",
     },
     { 
-      icon: <Webcam className="h-12 w-12 text-yellow-500" />, 
-      name: "HD Webcam", 
+      icon: <Webcam className="h-8 w-8 text-yellow-500" />, 
+      name: "Webcam", 
       category: "webcam",
       bgClass: "bg-gradient-to-br from-yellow-500/20 to-orange-600/20",
     },
     { 
-      icon: <Music className="h-12 w-12 text-pink-500" />,
-      name: "Studio Speakers", 
+      icon: <Music className="h-8 w-8 text-pink-500" />,
+      name: "Speakers", 
       category: "speakers",
       bgClass: "bg-gradient-to-br from-pink-500/20 to-rose-600/20",
     },
+  ]
+
+  // accessories for full sections (with longer names)
+  const accessoriesFull = [
+    { icon: <Mouse className="h-12 w-12 text-red-500" />, name: "Gaming Mouse", bgClass: "bg-gradient-to-br from-red-500/20 to-pink-600/20" },
+    { icon: <Keyboard className="h-12 w-12 text-green-500" />, name: "Mechanical Keyboard", bgClass: "bg-gradient-to-br from-green-500/20 to-teal-600/20" },
+    { icon: <Headphones className="h-12 w-12 text-purple-500" />, name: "Wireless Headset", bgClass: "bg-gradient-to-br from-purple-500/20 to-indigo-600/20" },
+    { icon: <Monitor className="h-12 w-12 text-blue-500" />, name: "Gaming Monitor", bgClass: "bg-gradient-to-br from-blue-500/20 to-cyan-600/20" },
+    { icon: <Webcam className="h-12 w-12 text-yellow-500" />, name: "HD Webcam", bgClass: "bg-gradient-to-br from-yellow-500/20 to-orange-600/20" },
+    { icon: <Music className="h-12 w-12 text-pink-500" />, name: "Studio Speakers", bgClass: "bg-gradient-to-br from-pink-500/20 to-rose-600/20" },
   ]
 
   const allProducts = homeProductsData?.data?.products || []
@@ -829,7 +839,6 @@ const HomePage: React.FC = () => {
     }
   }
 
-  // Loading state
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center">
@@ -842,7 +851,6 @@ const HomePage: React.FC = () => {
     )
   }
 
-  // Error state
   if (hasErrors) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
@@ -855,17 +863,11 @@ const HomePage: React.FC = () => {
             We're having trouble loading products. This might be due to server issues.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button
-              onClick={handleRetry}
-              className="btn-primary inline-flex items-center justify-center"
-            >
+            <button onClick={handleRetry} className="btn-primary inline-flex items-center justify-center">
               <RefreshCw className="h-4 w-4 mr-2" />
               Try Again
             </button>
-            <Link
-              to="/products"
-              className="btn-secondary inline-flex items-center justify-center"
-            >
+            <Link to="/products" className="btn-secondary inline-flex items-center justify-center">
               <Package className="h-4 w-4 mr-2" />
               Browse All Products
             </Link>
@@ -875,7 +877,6 @@ const HomePage: React.FC = () => {
     )
   }
 
-  // Empty database state
   if (isDatabaseEmpty) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -889,42 +890,25 @@ const HomePage: React.FC = () => {
               <p className="text-xl md:text-2xl text-white/80 mb-8">
                 Pakistan's premier e-commerce destination for laptops & computer accessories.
               </p>
-              
               <div className="bg-yellow-500/20 border border-yellow-500/30 rounded-xl p-6 mb-8 backdrop-blur-sm">
                 <div className="flex items-center justify-center mb-3">
                   <AlertCircle className="h-8 w-8 text-yellow-300 mr-3" />
                   <h3 className="text-xl font-bold text-white">Admin Notice</h3>
                 </div>
-                <p className="text-white/90 mb-4">
-                  No products found in the database. Please add products to start selling.
-                </p>
+                <p className="text-white/90 mb-4">No products found in the database. Please add products to start selling.</p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Link
-                    to="/admin/dashboard"
-                    className="bg-white text-blue-700 hover:bg-gray-100 font-bold py-3 px-6 rounded-lg transition-all inline-flex items-center justify-center"
-                  >
-                    <ShoppingBag className="h-5 w-5 mr-2" />
-                    Add Products (Admin)
+                  <Link to="/admin/dashboard" className="bg-white text-blue-700 hover:bg-gray-100 font-bold py-3 px-6 rounded-lg transition-all inline-flex items-center justify-center">
+                    <ShoppingBag className="h-5 w-5 mr-2" />Add Products (Admin)
                   </Link>
-                  <Link
-                    to="/dashboard"
-                    className="bg-transparent border-2 border-white hover:bg-white/10 font-bold py-3 px-6 rounded-lg transition-colors inline-flex items-center justify-center"
-                  >
+                  <Link to="/dashboard" className="bg-transparent border-2 border-white hover:bg-white/10 font-bold py-3 px-6 rounded-lg transition-colors inline-flex items-center justify-center">
                     Go to Dashboard
                   </Link>
                 </div>
               </div>
-              
               <div className="mt-8">
-                <p className="text-lg text-white/80 mb-6">
-                  Our product catalog is being updated. Check back soon for amazing deals!
-                </p>
-                <Link
-                  to="/categories"
-                  className="inline-flex items-center bg-white/20 hover:bg-white/30 border-2 border-white text-white font-bold py-3 px-8 rounded-lg text-lg transition-colors"
-                >
-                  <Package className="h-5 w-5 mr-2" />
-                  Browse Categories
+                <p className="text-lg text-white/80 mb-6">Our product catalog is being updated. Check back soon for amazing deals!</p>
+                <Link to="/categories" className="inline-flex items-center bg-white/20 hover:bg-white/30 border-2 border-white text-white font-bold py-3 px-8 rounded-lg text-lg transition-colors">
+                  <Package className="h-5 w-5 mr-2" />Browse Categories
                 </Link>
               </div>
             </div>
@@ -935,81 +919,36 @@ const HomePage: React.FC = () => {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
               <h2 className="text-3xl font-bold mb-4 text-gray-900">Coming Soon!</h2>
-              <p className="text-gray-600 max-w-2xl mx-auto">
-                We're preparing amazing products for you. Here's what to expect:
-              </p>
+              <p className="text-gray-600 max-w-2xl mx-auto">We're preparing amazing products for you. Here's what to expect:</p>
             </div>
-            
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100">
-                <div className="flex items-center mb-4">
-                  <div className="p-3 bg-blue-100 rounded-full mr-4">
-                    <Sparkles className="h-6 w-6 text-blue-600" />
+              {[
+                { icon: <Sparkles className="h-6 w-6 text-blue-600" />, bg: 'bg-blue-100', title: 'Featured Products', desc: 'Handpicked quality products from top brands will be available soon.', color: 'text-blue-600', border: 'border-blue-100', gradient: 'from-blue-50 to-indigo-50' },
+                { icon: <Clock className="h-6 w-6 text-green-600" />, bg: 'bg-green-100', title: 'New Arrivals', desc: 'Stay tuned for the latest products and cutting-edge technology.', color: 'text-green-600', border: 'border-green-100', gradient: 'from-green-50 to-teal-50' },
+                { icon: <TrendingUp className="h-6 w-6 text-purple-600" />, bg: 'bg-purple-100', title: 'Trending Products', desc: "Discover what's popular and trending in the tech world.", color: 'text-purple-600', border: 'border-purple-100', gradient: 'from-purple-50 to-pink-50' },
+              ].map((item, i) => (
+                <div key={i} className={`bg-gradient-to-br ${item.gradient} rounded-xl p-6 border ${item.border}`}>
+                  <div className="flex items-center mb-4">
+                    <div className={`p-3 ${item.bg} rounded-full mr-4`}>{item.icon}</div>
+                    <h3 className="text-xl font-bold text-gray-900">{item.title}</h3>
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900">Featured Products</h3>
-                </div>
-                <p className="text-gray-600 mb-4">
-                  Handpicked quality products from top brands will be available soon.
-                </p>
-                <div className="flex items-center text-sm text-blue-600">
-                  <Clock className="h-4 w-4 mr-2" />
-                  Coming soon
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-br from-green-50 to-teal-50 rounded-xl p-6 border border-green-100">
-                <div className="flex items-center mb-4">
-                  <div className="p-3 bg-green-100 rounded-full mr-4">
-                    <Clock className="h-6 w-6 text-green-600" />
+                  <p className="text-gray-600 mb-4">{item.desc}</p>
+                  <div className={`flex items-center text-sm ${item.color}`}>
+                    <Clock className="h-4 w-4 mr-2" />Coming soon
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900">New Arrivals</h3>
                 </div>
-                <p className="text-gray-600 mb-4">
-                  Stay tuned for the latest products and cutting-edge technology.
-                </p>
-                <div className="flex items-center text-sm text-green-600">
-                  <Clock className="h-4 w-4 mr-2" />
-                  Coming soon
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-100">
-                <div className="flex items-center mb-4">
-                  <div className="p-3 bg-purple-100 rounded-full mr-4">
-                    <TrendingUp className="h-6 w-6 text-purple-600" />
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900">Trending Products</h3>
-                </div>
-                <p className="text-gray-600 mb-4">
-                  Discover what's popular and trending in the tech world.
-                </p>
-                <div className="flex items-center text-sm text-purple-600">
-                  <Clock className="h-4 w-4 mr-2" />
-                  Coming soon
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         </section>
 
-        {/* Why Choose BlackCart - empty state */}
         <section className="py-16 bg-gray-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 className="text-3xl font-bold text-center mb-12 text-gray-900">Why Choose BlackCart?</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
               {features.map((feature, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: index * 0.1 }}
-                  className="bg-white rounded-xl p-6 text-center border border-gray-200 shadow-lg"
-                >
-                  <div className="mb-4 flex justify-center">
-                    <div className="p-3 bg-blue-50 rounded-full">
-                      {feature.icon}
-                    </div>
-                  </div>
+                <motion.div key={index} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: index * 0.1 }} className="bg-white rounded-xl p-6 text-center border border-gray-200 shadow-lg">
+                  <div className="mb-4 flex justify-center"><div className="p-3 bg-blue-50 rounded-full">{feature.icon}</div></div>
                   <h3 className="text-xl font-semibold mb-2 text-gray-800">{feature.title}</h3>
                   <p className="text-gray-600">{feature.description}</p>
                 </motion.div>
@@ -1022,56 +961,28 @@ const HomePage: React.FC = () => {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-8">
               <h2 className="text-3xl font-bold mb-4">Trusted by Thousands</h2>
-              <p className="text-gray-300 max-w-2xl mx-auto">
-                Join our community of satisfied customers across Pakistan
-              </p>
+              <p className="text-gray-300 max-w-2xl mx-auto">Join our community of satisfied customers across Pakistan</p>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-              <div className="text-center">
-                <Award className="h-12 w-12 text-yellow-400 mx-auto mb-4" />
-                <div className="text-3xl font-bold mb-2">4.8/5</div>
-                <div className="text-gray-300">Customer Rating</div>
-              </div>
-              <div className="text-center">
-                <Truck className="h-12 w-12 text-green-400 mx-auto mb-4" />
-                <div className="text-3xl font-bold mb-2">50K+</div>
-                <div className="text-gray-300">Successful Deliveries</div>
-              </div>
-              <div className="text-center">
-                <Shield className="h-12 w-12 text-blue-400 mx-auto mb-4" />
-                <div className="text-3xl font-bold mb-2">100%</div>
-                <div className="text-gray-300">Secure Payments</div>
-              </div>
-              <div className="text-center">
-                <Users className="h-12 w-12 text-purple-400 mx-auto mb-4" />
-                <div className="text-3xl font-bold mb-2">24/7</div>
-                <div className="text-gray-300">Customer Support</div>
-              </div>
+              {[
+                { icon: <Award className="h-12 w-12 text-yellow-400 mx-auto mb-4" />, val: '4.8/5', label: 'Customer Rating' },
+                { icon: <Truck className="h-12 w-12 text-green-400 mx-auto mb-4" />, val: '50K+', label: 'Successful Deliveries' },
+                { icon: <Shield className="h-12 w-12 text-blue-400 mx-auto mb-4" />, val: '100%', label: 'Secure Payments' },
+                { icon: <Users className="h-12 w-12 text-purple-400 mx-auto mb-4" />, val: '24/7', label: 'Customer Support' },
+              ].map((s, i) => (
+                <div key={i} className="text-center">{s.icon}<div className="text-3xl font-bold mb-2">{s.val}</div><div className="text-gray-300">{s.label}</div></div>
+              ))}
             </div>
           </div>
         </section>
 
         <section className="py-20 bg-gradient-to-r from-blue-600 to-blue-700 text-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h2 className="text-3xl md:text-4xl font-bold mb-6">
-              Ready to Experience the Best Shopping?
-            </h2>
-            <p className="text-xl text-white/80 mb-8 max-w-2xl mx-auto">
-              Join thousands of satisfied customers across Pakistan who trust BlackCart for their shopping needs.
-            </p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Experience the Best Shopping?</h2>
+            <p className="text-xl text-white/80 mb-8 max-w-2xl mx-auto">Join thousands of satisfied customers across Pakistan who trust BlackCart for their shopping needs.</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link
-                to="/register"
-                className="bg-white text-blue-700 hover:bg-gray-100 font-bold py-3 px-8 rounded-lg text-lg transition-all"
-              >
-                Create Free Account
-              </Link>
-              <Link
-                to="/products"
-                className="bg-transparent border-2 border-white hover:bg-white/10 font-bold py-3 px-8 rounded-lg text-lg transition-colors"
-              >
-                Browse Products
-              </Link>
+              <Link to="/register" className="bg-white text-blue-700 hover:bg-gray-100 font-bold py-3 px-8 rounded-lg text-lg transition-all">Create Free Account</Link>
+              <Link to="/products" className="bg-transparent border-2 border-white hover:bg-white/10 font-bold py-3 px-8 rounded-lg text-lg transition-colors">Browse Products</Link>
             </div>
           </div>
         </section>
@@ -1082,24 +993,26 @@ const HomePage: React.FC = () => {
   // ─── Normal rendering when products exist ────────────────────────────────────
   return (
     <div>
-      {/* Hero Section - FIXED: Reduced height to fit viewport without scrolling */}
-      <section className="relative bg-gradient-to-r from-blue-600 to-blue-800 text-white overflow-hidden min-h-[80vh] md:min-h-[85vh] lg:min-h-[90vh] flex items-center">
+      {/* ✅ FIXED: Hero fits exactly one screen — navbar height subtracted */}
+      <section className="relative bg-gradient-to-r from-blue-600 to-blue-800 text-white overflow-hidden min-h-[calc(100vh-80px)] flex items-center">
         <div className="absolute inset-0 bg-black/20" />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 lg:py-16 relative w-full">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12 items-center">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 relative w-full">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
+
+            {/* LEFT side — unchanged */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8 }}
               className="max-w-2xl"
             >
-              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4">
                 Welcome to <span className="text-yellow-300">BlackCart</span>
               </h1>
-              <p className="text-base md:text-xl lg:text-2xl text-white/80 mb-6 md:mb-8">
+              <p className="text-base md:text-xl lg:text-2xl text-white/80 mb-6">
                 Pakistan's premier e-commerce destination for laptops & computer accessories. Shop from thousands of products with secure payments and fast delivery.
               </p>
-              <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <Link
                   to="/products"
                   className="bg-white text-blue-700 hover:bg-gray-100 font-bold py-2 md:py-3 px-6 md:px-8 rounded-lg text-base md:text-lg transition-all duration-300 transform hover:-translate-y-1 inline-flex items-center justify-center"
@@ -1115,7 +1028,8 @@ const HomePage: React.FC = () => {
                 </Link>
               </div>
             </motion.div>
-            
+
+            {/* ✅ FIXED: RIGHT side — compact card so nothing overflows viewport */}
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -1123,54 +1037,59 @@ const HomePage: React.FC = () => {
               className="hidden lg:block"
             >
               <div className="relative">
-                <div className="absolute -top-6 -right-6 w-64 h-64 bg-yellow-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30"></div>
-                <div className="absolute -bottom-8 -left-8 w-64 h-64 bg-purple-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30"></div>
-                
-                <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
-                  <h3 className="text-xl md:text-2xl font-bold mb-4 md:mb-6 text-center">Premium Computer Accessories</h3>
-                  
+                <div className="absolute -top-6 -right-6 w-48 h-48 bg-yellow-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30" />
+                <div className="absolute -bottom-4 -left-4 w-48 h-48 bg-purple-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30" />
+
+                {/* ✅ Reduced padding: p-6 → p-4 */}
+                <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/20">
+                  <h3 className="text-lg font-bold mb-3 text-center">Premium Computer Accessories</h3>
+
+                  {/* ✅ Reduced margin: mb-6 → mb-3, inner padding p-4 md:p-6 → p-3 */}
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6, delay: 0.3 }}
-                    className="relative mb-6 md:mb-8 group"
+                    className="mb-3"
                   >
-                    <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-4 md:p-6 border border-gray-700/50">
+                    <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-3 border border-gray-700/50">
                       <div className="flex items-center justify-between">
                         <div>
-                          <h4 className="text-lg md:text-xl font-bold mb-1 md:mb-2 flex items-center gap-2">
-                            <Laptop className="h-5 w-5 md:h-6 md:w-6 text-yellow-400" />
+                          <h4 className="text-base font-bold mb-1 flex items-center gap-2">
+                            <Laptop className="h-5 w-5 text-yellow-400" />
                             Premium Laptops
                           </h4>
-                          <p className="text-gray-300 text-sm md:text-base mb-3 md:mb-4">Latest models from top brands</p>
-                          <Link 
+                          <p className="text-gray-300 text-sm mb-2">Latest models from top brands</p>
+                          <Link
                             to="/categories"
-                            className="inline-flex items-center text-yellow-300 hover:text-yellow-200 font-medium text-sm md:text-base"
+                            className="inline-flex items-center text-yellow-300 hover:text-yellow-200 font-medium text-sm"
                           >
                             Explore Collection
-                            <ArrowRight className="ml-2 h-3 w-3 md:h-4 md:w-4" />
+                            <ArrowRight className="ml-1 h-3 w-3" />
                           </Link>
                         </div>
-                        <div className="text-4xl md:text-5xl">💻</div>
+                        <div className="text-4xl">💻</div>
                       </div>
                     </div>
                   </motion.div>
 
-                  <div className="grid grid-cols-3 gap-2 md:gap-4">
+                  {/* ✅ FIXED: Compact accessory cards — p-2, smaller icons, no long names */}
+                  <div className="grid grid-cols-3 gap-2">
                     {accessories.map((item, index) => (
                       <motion.div
                         key={index}
                         initial={{ opacity: 0, scale: 0.8 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.5, delay: 0.4 + index * 0.1 }}
-                        className={`${item.bgClass} backdrop-blur-sm rounded-xl p-2 md:p-4 text-center border border-white/10 cursor-pointer hover:scale-105 transition-transform`}
+                        transition={{ duration: 0.5, delay: 0.4 + index * 0.08 }}
+                        className={`${item.bgClass} backdrop-blur-sm rounded-xl p-2 text-center border border-white/10 cursor-pointer hover:scale-105 transition-transform`}
                       >
-                        <div className="mb-2 md:mb-3 flex justify-center">
-                          <div className={`p-2 md:p-3 rounded-full ${item.bgClass} border border-white/30`}>
-                            {React.cloneElement(item.icon, { className: "h-6 w-6 md:h-8 md:w-8" })}
+                        <div className="mb-1 flex justify-center">
+                          <div className={`p-1.5 rounded-full ${item.bgClass} border border-white/30`}>
+                            {/* ✅ Smaller icon size: h-8 w-8 → h-6 w-6 */}
+                            {React.cloneElement(item.icon, { className: "h-5 w-5" })}
                           </div>
                         </div>
-                        <span className="text-xs md:text-sm font-medium text-white">{item.name}</span>
+                        {/* ✅ Shorter names used from accessories array */}
+                        <span className="text-xs font-medium text-white leading-tight">{item.name}</span>
                       </motion.div>
                     ))}
                   </div>
@@ -1189,11 +1108,8 @@ const HomePage: React.FC = () => {
             <p className="text-gray-300 text-sm md:text-base max-w-2xl mx-auto">Enhance your setup with our top-quality computer accessories</p>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 md:gap-6">
-            {accessories.map((item, index) => (
-              <div
-                key={index}
-                className={`${item.bgClass} rounded-xl p-3 md:p-5 text-center border border-white/10 hover:scale-105 transition-transform`}
-              >
+            {accessoriesFull.map((item, index) => (
+              <div key={index} className={`${item.bgClass} rounded-xl p-3 md:p-5 text-center border border-white/10 hover:scale-105 transition-transform`}>
                 <div className="mb-2 md:mb-4 flex justify-center">
                   <div className={`p-2 md:p-4 rounded-full ${item.bgClass} border border-white/30`}>
                     {React.cloneElement(item.icon, { className: "h-6 w-6 md:h-8 md:w-8" })}
@@ -1204,10 +1120,7 @@ const HomePage: React.FC = () => {
             ))}
           </div>
           <div className="text-center mt-6 md:mt-8">
-            <Link
-              to="/products?category=accessories"
-              className="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 md:py-3 px-6 md:px-8 rounded-lg text-sm md:text-lg transition-colors"
-            >
+            <Link to="/products?category=accessories" className="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 md:py-3 px-6 md:px-8 rounded-lg text-sm md:text-lg transition-colors">
               View All Accessories
               <ArrowRight className="ml-2 h-4 w-4 md:h-5 md:w-5" />
             </Link>
@@ -1227,10 +1140,7 @@ const HomePage: React.FC = () => {
                 </div>
                 <p className="text-sm md:text-base text-gray-600">Handpicked quality products for you</p>
               </div>
-              <Link
-                to="/products?featured=true"
-                className="flex items-center text-blue-600 hover:text-blue-700 font-medium text-sm md:text-base"
-              >
+              <Link to="/products?featured=true" className="flex items-center text-blue-600 hover:text-blue-700 font-medium text-sm md:text-base">
                 View All
                 <ArrowRight className="h-4 w-4 md:h-5 md:w-5 ml-2" />
               </Link>
@@ -1256,10 +1166,7 @@ const HomePage: React.FC = () => {
                 </div>
                 <p className="text-sm md:text-base text-gray-600">Discover our latest products</p>
               </div>
-              <Link
-                to="/products?newArrivals=true"
-                className="flex items-center text-blue-600 hover:text-blue-700 font-medium text-sm md:text-base"
-              >
+              <Link to="/products?newArrivals=true" className="flex items-center text-blue-600 hover:text-blue-700 font-medium text-sm md:text-base">
                 View All
                 <ArrowRight className="h-4 w-4 md:h-5 md:w-5 ml-2" />
               </Link>
@@ -1281,26 +1188,17 @@ const HomePage: React.FC = () => {
             <p className="text-gray-600 text-sm md:text-base max-w-2xl mx-auto">Upgrade your workspace with our bestselling accessories</p>
           </div>
           <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 md:gap-6">
-            {accessories.map((item, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                className="bg-white rounded-xl p-4 md:p-5 text-center border border-gray-200 shadow-lg hover:shadow-xl transition-shadow"
-              >
+            {accessoriesFull.map((item, index) => (
+              <motion.div key={index} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: index * 0.1 }}
+                className="bg-white rounded-xl p-4 md:p-5 text-center border border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
                 <div className="mb-3 md:mb-4 flex justify-center">
                   <div className={`p-3 md:p-4 rounded-full ${item.bgClass}`}>
                     {React.cloneElement(item.icon, { className: "h-8 w-8 md:h-10 md:w-10" })}
                   </div>
                 </div>
                 <h3 className="font-semibold text-gray-800 mb-1 md:mb-2 text-sm md:text-base">{item.name}</h3>
-                <Link 
-                  to="/products"
-                  className="text-blue-600 hover:text-blue-700 text-xs md:text-sm font-medium inline-flex items-center gap-1"
-                >
-                  Shop now
-                  <ArrowRight className="h-3 w-3" />
+                <Link to="/products" className="text-blue-600 hover:text-blue-700 text-xs md:text-sm font-medium inline-flex items-center gap-1">
+                  Shop now <ArrowRight className="h-3 w-3" />
                 </Link>
               </motion.div>
             ))}
@@ -1308,24 +1206,15 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* ✅ Why Choose BlackCart — between Popular Accessories and Trusted by Thousands */}
+      {/* Why Choose BlackCart */}
       <section className="py-12 md:py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-2xl md:text-3xl font-bold text-center mb-8 md:mb-12 text-gray-900">Why Choose BlackCart?</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
             {features.map((feature, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                className="bg-gray-50 rounded-xl p-5 md:p-6 text-center border border-gray-200 shadow-lg"
-              >
-                <div className="mb-3 md:mb-4 flex justify-center">
-                  <div className="p-2 md:p-3 bg-blue-50 rounded-full">
-                    {feature.icon}
-                  </div>
-                </div>
+              <motion.div key={index} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: index * 0.1 }}
+                className="bg-gray-50 rounded-xl p-5 md:p-6 text-center border border-gray-200 shadow-lg">
+                <div className="mb-3 md:mb-4 flex justify-center"><div className="p-2 md:p-3 bg-blue-50 rounded-full">{feature.icon}</div></div>
                 <h3 className="text-lg md:text-xl font-semibold mb-1 md:mb-2 text-gray-800">{feature.title}</h3>
                 <p className="text-sm md:text-base text-gray-600">{feature.description}</p>
               </motion.div>
@@ -1339,31 +1228,17 @@ const HomePage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-6 md:mb-8">
             <h2 className="text-2xl md:text-3xl font-bold mb-3 md:mb-4">Trusted by Thousands</h2>
-            <p className="text-gray-300 text-sm md:text-base max-w-2xl mx-auto">
-              Join our community of satisfied customers across Pakistan
-            </p>
+            <p className="text-gray-300 text-sm md:text-base max-w-2xl mx-auto">Join our community of satisfied customers across Pakistan</p>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
-            <div className="text-center">
-              <Award className="h-10 w-10 md:h-12 md:w-12 text-yellow-400 mx-auto mb-3 md:mb-4" />
-              <div className="text-2xl md:text-3xl font-bold mb-1 md:mb-2">4.8/5</div>
-              <div className="text-gray-300 text-sm md:text-base">Customer Rating</div>
-            </div>
-            <div className="text-center">
-              <Truck className="h-10 w-10 md:h-12 md:w-12 text-green-400 mx-auto mb-3 md:mb-4" />
-              <div className="text-2xl md:text-3xl font-bold mb-1 md:mb-2">50K+</div>
-              <div className="text-gray-300 text-sm md:text-base">Successful Deliveries</div>
-            </div>
-            <div className="text-center">
-              <Shield className="h-10 w-10 md:h-12 md:w-12 text-blue-400 mx-auto mb-3 md:mb-4" />
-              <div className="text-2xl md:text-3xl font-bold mb-1 md:mb-2">100%</div>
-              <div className="text-gray-300 text-sm md:text-base">Secure Payments</div>
-            </div>
-            <div className="text-center">
-              <Users className="h-10 w-10 md:h-12 md:w-12 text-purple-400 mx-auto mb-3 md:mb-4" />
-              <div className="text-2xl md:text-3xl font-bold mb-1 md:mb-2">24/7</div>
-              <div className="text-gray-300 text-sm md:text-base">Customer Support</div>
-            </div>
+            {[
+              { icon: <Award className="h-10 w-10 md:h-12 md:w-12 text-yellow-400 mx-auto mb-3 md:mb-4" />, val: '4.8/5', label: 'Customer Rating' },
+              { icon: <Truck className="h-10 w-10 md:h-12 md:w-12 text-green-400 mx-auto mb-3 md:mb-4" />, val: '50K+', label: 'Successful Deliveries' },
+              { icon: <Shield className="h-10 w-10 md:h-12 md:w-12 text-blue-400 mx-auto mb-3 md:mb-4" />, val: '100%', label: 'Secure Payments' },
+              { icon: <Users className="h-10 w-10 md:h-12 md:w-12 text-purple-400 mx-auto mb-3 md:mb-4" />, val: '24/7', label: 'Customer Support' },
+            ].map((s, i) => (
+              <div key={i} className="text-center">{s.icon}<div className="text-2xl md:text-3xl font-bold mb-1 md:mb-2">{s.val}</div><div className="text-gray-300 text-sm md:text-base">{s.label}</div></div>
+            ))}
           </div>
         </div>
       </section>
@@ -1371,23 +1246,15 @@ const HomePage: React.FC = () => {
       {/* CTA Section */}
       <section className="py-12 md:py-20 bg-gradient-to-r from-blue-600 to-blue-700 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-4 md:mb-6">
-            Ready to Experience the Best Shopping?
-          </h2>
+          <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-4 md:mb-6">Ready to Experience the Best Shopping?</h2>
           <p className="text-base md:text-xl text-white/80 mb-6 md:mb-8 max-w-2xl mx-auto">
             Join thousands of satisfied customers across Pakistan who trust BlackCart for their shopping needs.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center">
-            <Link
-              to="/register"
-              className="bg-white text-blue-700 hover:bg-gray-100 font-bold py-2 md:py-3 px-6 md:px-8 rounded-lg text-base md:text-lg transition-all"
-            >
+            <Link to="/register" className="bg-white text-blue-700 hover:bg-gray-100 font-bold py-2 md:py-3 px-6 md:px-8 rounded-lg text-base md:text-lg transition-all">
               Create Free Account
             </Link>
-            <Link
-              to="/products"
-              className="bg-transparent border-2 border-white hover:bg-white/10 font-bold py-2 md:py-3 px-6 md:px-8 rounded-lg text-base md:text-lg transition-colors"
-            >
+            <Link to="/products" className="bg-transparent border-2 border-white hover:bg-white/10 font-bold py-2 md:py-3 px-6 md:px-8 rounded-lg text-base md:text-lg transition-colors">
               Browse Products
             </Link>
           </div>

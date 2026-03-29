@@ -338,7 +338,6 @@
 // export default ProductsPage
 
 //just fix the size of list product above code is fix
-
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
@@ -355,7 +354,7 @@ const ProductsPage: React.FC = () => {
   const navigate = useNavigate()
   const isInitialMount = useRef(true)
   
-  // ✅ NEW: Filter sidebar state
+  // Filter sidebar state
   const [showFilters, setShowFilters] = useState(true)
   
   // Parse filters from URL — category/brand are now arrays
@@ -368,7 +367,6 @@ const ProductsPage: React.FC = () => {
       brand: params.brand ? params.brand.split(',').filter(Boolean) : [],
       minPrice: params.minPrice ? Number(params.minPrice) : undefined,
       maxPrice: params.maxPrice ? Number(params.maxPrice) : undefined,
-      // rating: params.rating ? Number(params.rating) : undefined,  // ⛔ commented out
       featured: params.featured === 'true',
       newArrivals: params.newArrivals === 'true',
       search: params.search || '',
@@ -412,7 +410,6 @@ const ProductsPage: React.FC = () => {
 
     if (filters.minPrice !== undefined) params.set('minPrice', filters.minPrice.toString())
     if (filters.maxPrice !== undefined) params.set('maxPrice', filters.maxPrice.toString())
-    // if (filters.rating !== undefined && filters.rating > 0) params.set('rating', filters.rating.toString())  // ⛔ commented out
     if (filters.featured) params.set('featured', 'true')
     if (filters.newArrivals) params.set('newArrivals', 'true')
     if (filters.search && filters.search.trim() !== '') params.set('search', filters.search)
@@ -443,7 +440,6 @@ const ProductsPage: React.FC = () => {
     
     if (filters.minPrice !== undefined) params.minPrice = filters.minPrice
     if (filters.maxPrice !== undefined) params.maxPrice = filters.maxPrice
-    // if (filters.rating !== undefined && filters.rating > 0) params.rating = filters.rating  // ⛔ commented out
     if (filters.featured) params.featured = true
     if (filters.newArrivals) params.newArrivals = true
     if (filters.search && filters.search.trim() !== '') params.search = filters.search.trim()
@@ -495,7 +491,6 @@ const ProductsPage: React.FC = () => {
       brand: [],
       minPrice: undefined,
       maxPrice: undefined,
-      // rating: undefined,   // ⛔ commented out
       featured: false,
       newArrivals: false,
       search: '',
@@ -514,7 +509,6 @@ const ProductsPage: React.FC = () => {
     if (brands.length > 0) count += brands.length
     if (filters.minPrice !== undefined) count++
     if (filters.maxPrice !== undefined) count++
-    // if (filters.rating !== undefined && filters.rating > 0) count++  // ⛔ commented out
     if (filters.featured) count++
     if (filters.newArrivals) count++
     if (filters.search && filters.search !== '') count++
@@ -602,17 +596,19 @@ const ProductsPage: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Filters sidebar - with toggle functionality */}
           <div className={`lg:col-span-1 transition-all duration-300 ${showFilters ? 'block' : 'hidden lg:block'}`}>
-            <ProductFilters
-              filters={filters}
-              onFilterChange={handleFilterChange}
-              isLoading={isLoading || isFetching}
-              onClose={() => setShowFilters(false)}
-            />
+            {showFilters && (
+              <ProductFilters
+                filters={filters}
+                onFilterChange={handleFilterChange}
+                isLoading={isLoading || isFetching}
+                onClose={() => setShowFilters(false)}
+              />
+            )}
           </div>
 
           {/* Products Content - adjusts width when filters are hidden */}
           <div className={`transition-all duration-300 ${showFilters ? 'lg:col-span-3' : 'lg:col-span-4'}`}>
-            {/* ✅ NEW: Toggle Filters Button for Desktop */}
+            {/* Toggle Filters Button for Desktop */}
             <div className="hidden lg:flex justify-end mb-4">
               <button
                 onClick={() => setShowFilters(!showFilters)}
@@ -640,8 +636,11 @@ const ProductsPage: React.FC = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 className={
-                  viewMode === 'grid' 
-                    ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'  // ✅ FIXED: 4 columns on desktop
+                  viewMode === 'grid'
+                    // ✅ FIXED: 4 columns when filters hidden, 3 when shown, responsive on mobile
+                    ? showFilters
+                      ? 'grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
+                      : 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4'
                     : 'space-y-4'
                 }
               >

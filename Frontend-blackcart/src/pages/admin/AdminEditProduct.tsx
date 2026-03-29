@@ -1,3 +1,5 @@
+
+
 // // Frontend-blackcart/src/pages/admin/AdminEditProduct.tsx
 // import React, { useState, useEffect } from 'react'
 // import { useParams, useNavigate } from 'react-router-dom'
@@ -10,14 +12,13 @@
 //   Trash2,
 //   Package,
 //   DollarSign,
-//   Hash,
 //   Tag,
 //   BookOpen,
 //   BarChart,
 //   Award,
-//   Check,
-//   X,
-//   Save
+//   Save,
+//   AlertCircle,
+//   Star  // ✅ Added Star icon import
 // } from 'lucide-react'
 // import { adminService } from '../../services/adminServiceMethods'
 // import Loader from '../../components/common/Loader'
@@ -32,6 +33,7 @@
 //   public_id?: string
 //   alt?: string
 //   _id?: string
+//   isPrimary?: boolean
 // }
 
 // interface Category {
@@ -71,10 +73,11 @@
 //   const [existingImages, setExistingImages] = useState<ProductImage[]>([])
 //   const [specifications, setSpecifications] = useState<Specification[]>([{ key: '', value: '' }])
 //   const [features, setFeatures] = useState<string[]>([''])
-//   const [imagesToDelete, setImagesToDelete] = useState<string[]>([])
+//   const [imagesToDelete, setImagesToDelete] = useState<ProductImage[]>([])
 //   const [categories, setCategories] = useState<Category[]>([])
 //   const [loadingCategories, setLoadingCategories] = useState(false)
 //   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('')
+//   const [isInitialLoad, setIsInitialLoad] = useState(true)
 
 //   const { register, handleSubmit, formState: { errors }, setValue, reset, watch } = useForm<ProductFormData>()
 
@@ -104,17 +107,22 @@
 //             const productData = productResponse.data.product || productResponse.data;
 //             setProduct(productData);
             
-//             // Handle image structure
+//             // Improved image structure handling
 //             const images = productData.images || [];
-//             const processedImages: ProductImage[] = images.map((img: any) => {
+//             const processedImages: ProductImage[] = images.map((img: any, index: number) => {
 //               if (typeof img === 'string') {
-//                 return { url: img, alt: 'Product image' };
+//                 return { 
+//                   url: img, 
+//                   alt: 'Product image',
+//                   isPrimary: index === 0 
+//                 };
 //               }
 //               return {
 //                 url: img.url || img.path || '',
 //                 public_id: img.public_id || img.publicId,
 //                 alt: img.alt || 'Product image',
-//                 _id: img._id
+//                 _id: img._id,
+//                 isPrimary: img.isPrimary || index === 0
 //               };
 //             });
 //             setExistingImages(processedImages);
@@ -122,12 +130,9 @@
 //             // Determine category ID
 //             let categoryId = '';
             
-//             // Try multiple ways to get category ID
 //             if (productData.categoryId) {
-//               // Case 1: Direct categoryId field
 //               categoryId = productData.categoryId;
 //             } else if (productData.category) {
-//               // Case 2: Category field (object or string)
 //               if (typeof productData.category === 'object' && productData.category._id) {
 //                 categoryId = productData.category._id;
 //               } else if (typeof productData.category === 'string' && productData.category !== '') {
@@ -147,7 +152,6 @@
 //               }
 //             }
             
-//             // Store selected category ID
 //             setSelectedCategoryId(categoryId);
             
 //             // Set form values
@@ -164,8 +168,12 @@
 //               tags: productData.tags || [],
 //               isFeatured: productData.isFeatured || false,
 //               isActive: productData.isActive !== false,
-//               specifications: productData.specifications || [{ key: '', value: '' }],
-//               features: productData.features || ['']
+//               specifications: productData.specifications && productData.specifications.length > 0 
+//                 ? productData.specifications 
+//                 : [{ key: '', value: '' }],
+//               features: productData.features && productData.features.length > 0 
+//                 ? productData.features 
+//                 : ['']
 //             };
             
 //             reset(formValues);
@@ -173,14 +181,10 @@
 //             // Set specifications and features for local state
 //             if (productData.specifications && productData.specifications.length > 0) {
 //               setSpecifications(productData.specifications);
-//             } else {
-//               setSpecifications([{ key: '', value: '' }]);
 //             }
             
 //             if (productData.features && productData.features.length > 0) {
 //               setFeatures(productData.features);
-//             } else {
-//               setFeatures(['']);
 //             }
             
 //           } else {
@@ -195,6 +199,7 @@
 //       } finally {
 //         setIsLoading(false);
 //         setLoadingCategories(false);
+//         setIsInitialLoad(false);
 //       }
 //     };
     
@@ -247,16 +252,20 @@
 //     setImagePreviews(newPreviews)
 //   }
 
-//   const handleRemoveExistingImage = (index: number) => {
-//     const imageToRemove = existingImages[index]
-    
-//     // Add to delete list if it has a URL
-//     if (imageToRemove.url) {
-//       setImagesToDelete(prev => [...prev, imageToRemove.url])
+//   // Properly handle existing image removal
+//   const handleRemoveExistingImage = (image: ProductImage, index: number) => {
+//     // Confirm deletion
+//     if (!window.confirm(`Are you sure you want to delete this image?`)) {
+//       return;
 //     }
     
-//     // Remove from existing images
+//     // Add to delete list with full image object
+//     setImagesToDelete(prev => [...prev, image])
+    
+//     // Remove from existing images (UI update)
 //     setExistingImages(prev => prev.filter((_, i) => i !== index))
+    
+//     toast.success('Image marked for deletion');
 //   }
 
 //   const addSpecification = () => {
@@ -297,25 +306,7 @@
 //     setValue('features', newFeatures, { shouldValidate: true })
 //   }
 
-//   const safeSplit = (value: any): string[] => {
-//     if (!value) return [];
-    
-//     if (Array.isArray(value)) {
-//       return value
-//         .map(item => String(item).trim())
-//         .filter(item => item.length > 0);
-//     }
-    
-//     if (typeof value === 'string') {
-//       return value
-//         .split(',')
-//         .map(tag => tag.trim())
-//         .filter(tag => tag.length > 0);
-//     }
-    
-//     return [];
-//   }
-
+//   // Main submit handler with proper image deletion
 //   const onSubmit = async (data: ProductFormData) => {
 //     try {
 //       setIsSubmitting(true);
@@ -323,6 +314,14 @@
 //       // Validate category
 //       if (!data.categoryId) {
 //         toast.error('Please select a valid category');
+//         setIsSubmitting(false);
+//         return;
+//       }
+      
+//       // Validate at least one image remains
+//       const totalImagesAfterDeletion = existingImages.length + newImages.length;
+//       if (totalImagesAfterDeletion === 0) {
+//         toast.error('Product must have at least one image');
 //         setIsSubmitting(false);
 //         return;
 //       }
@@ -353,7 +352,7 @@
 //         }
 //       });
       
-//       // Handle discountPrice separately
+//       // Handle discountPrice
 //       if (data.discountPrice === undefined || data.discountPrice === null || data.discountPrice === 0) {
 //         formData.append('discountPrice', '');
 //       } else {
@@ -371,27 +370,50 @@
 //       const validFeatures = features.filter(feature => feature.trim());
 //       formData.append('features', JSON.stringify(validFeatures));
       
-//       // Add images to delete
+//       // Properly handle images to delete - send array of image objects
 //       if (imagesToDelete.length > 0) {
-//         formData.append('imagesToDelete', JSON.stringify(imagesToDelete));
+//         // Create a clean array of image identifiers
+//         const imageIdentifiers = imagesToDelete.map(img => ({
+//           _id: img._id,
+//           url: img.url,
+//           public_id: img.public_id
+//         }));
+//         formData.append('imagesToDelete', JSON.stringify(imageIdentifiers));
+//         console.log('📸 Images to delete:', imageIdentifiers);
 //       }
       
 //       // Add new images
-//       newImages.forEach((image, index) => {
+//       newImages.forEach((image) => {
 //         formData.append('images', image);
 //       });
       
-//       // Add existing images that are not removed
-//       const remainingImages = existingImages.filter(img => !imagesToDelete.includes(img.url));
+//       // Add remaining existing images info (for reference)
+//       const remainingImages = existingImages.map(img => ({
+//         url: img.url,
+//         public_id: img.public_id,
+//         _id: img._id,
+//         isPrimary: img.isPrimary
+//       }));
+      
 //       if (remainingImages.length > 0) {
 //         formData.append('existingImages', JSON.stringify(remainingImages));
 //       }
+      
+//       console.log('📤 Submitting update with:', {
+//         imagesToDelete: imagesToDelete.length,
+//         newImages: newImages.length,
+//         remainingImages: remainingImages.length
+//       });
       
 //       // Use admin service to update product
 //       const response = await adminService.updateProduct(id!, formData);
       
 //       if (response.success) {
 //         toast.success('✅ Product updated successfully!');
+//         // Clear state
+//         setImagesToDelete([]);
+//         setNewImages([]);
+//         setImagePreviews([]);
 //         navigate('/admin/products');
 //       } else {
 //         toast.error(response.message || 'Failed to update product');
@@ -402,6 +424,8 @@
 //       if (error.response?.data?.message) {
 //         if (error.response.data.message.includes('category')) {
 //           toast.error('Invalid category selected');
+//         } else if (error.response.data.message.includes('image')) {
+//           toast.error('Error processing images: ' + error.response.data.message);
 //         } else {
 //           toast.error(error.response.data.message);
 //         }
@@ -419,6 +443,15 @@
 //     }
 //   }
 
+//   // Set primary image
+//   const setPrimaryImage = (index: number) => {
+//     const updatedImages = [...existingImages];
+//     updatedImages.forEach((img, i) => {
+//       img.isPrimary = i === index;
+//     });
+//     setExistingImages(updatedImages);
+//   }
+
 //   if (isLoading) {
 //     return (
 //       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -427,13 +460,13 @@
 //     )
 //   }
 
-//   if (!product) {
+//   if (!product && !isInitialLoad) {
 //     return (
 //       <div className="min-h-screen bg-gray-50 p-6">
 //         <div className="max-w-6xl mx-auto">
 //           <div className="bg-red-50 border border-red-200 rounded-lg p-6">
 //             <div className="flex items-center">
-//               <X className="h-6 w-6 text-red-500 mr-3" />
+//               <AlertCircle className="h-6 w-6 text-red-500 mr-3" />
 //               <div>
 //                 <h3 className="text-lg font-medium text-red-800">Product not found</h3>
 //                 <p className="text-red-700 mt-1">The product you're trying to edit does not exist.</p>
@@ -451,11 +484,6 @@
 //     )
 //   }
 
-//   const allImagePreviews = [
-//     ...existingImages.map(img => img.url),
-//     ...imagePreviews
-//   ]
-
 //   const price = watch('price')
 //   const discountPrice = watch('discountPrice')
 
@@ -464,7 +492,7 @@
 //       <div className="max-w-6xl mx-auto">
 //         {/* Header */}
 //         <div className="mb-6 md:mb-8">
-//           <div className="flex items-center justify-between">
+//           <div className="flex items-center justify-between flex-wrap gap-4">
 //             <div className="flex items-center">
 //               <button
 //                 onClick={() => navigate('/admin/products')}
@@ -474,11 +502,11 @@
 //               </button>
 //               <div>
 //                 <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Edit Product</h1>
-//                 <p className="text-gray-600 mt-2">Update product details</p>
+//                 <p className="text-gray-600 mt-2">Update product details and images</p>
 //               </div>
 //             </div>
-//             <div className="text-sm text-gray-500">
-//               ID: {product._id || id}
+//             <div className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-lg">
+//               ID: {product?._id || id}
 //             </div>
 //           </div>
 //         </div>
@@ -821,32 +849,67 @@
 //             <div className="space-y-6">
 //               {/* Images */}
 //               <div className="bg-white rounded-xl border border-gray-200 p-6">
-//                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Product Images</h2>
+//                 <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
+//                   <span>Product Images</span>
+//                   <span className="text-xs text-gray-500">First image is main display</span>
+//                 </h2>
                 
 //                 <div className="space-y-4">
 //                   <div className="grid grid-cols-2 gap-4">
-//                     {allImagePreviews.map((image, index) => (
-//                       <div key={index} className="relative group">
+//                     {existingImages.map((image, index) => (
+//                       <div key={image._id || index} className="relative group">
 //                         <img
-//                           src={image}
-//                           alt={`Product ${index + 1}`}
+//                           src={image.url}
+//                           alt={image.alt || `Product ${index + 1}`}
+//                           className={`w-full h-32 object-cover rounded-lg ${image.isPrimary ? 'ring-2 ring-blue-500 ring-offset-2' : ''}`}
+//                         />
+//                         <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-200 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
+//                           <button
+//                             type="button"
+//                             onClick={() => handleRemoveExistingImage(image, index)}
+//                             className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition transform scale-0 group-hover:scale-100 mr-2"
+//                             title="Remove image"
+//                           >
+//                             <Trash2 className="h-4 w-4" />
+//                           </button>
+//                           {!image.isPrimary && (
+//                             <button
+//                               type="button"
+//                               onClick={() => setPrimaryImage(index)}
+//                               className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition transform scale-0 group-hover:scale-100"
+//                               title="Set as primary"
+//                             >
+//                               <Star className="h-4 w-4" />
+//                             </button>
+//                           )}
+//                         </div>
+//                         {image.isPrimary && (
+//                           <div className="absolute top-2 left-2 bg-blue-500 text-white text-xs px-2 py-1 rounded">
+//                             Primary
+//                           </div>
+//                         )}
+//                       </div>
+//                     ))}
+                    
+//                     {imagePreviews.map((preview, index) => (
+//                       <div key={`new-${index}`} className="relative group">
+//                         <img
+//                           src={preview}
+//                           alt={`New ${index + 1}`}
 //                           className="w-full h-32 object-cover rounded-lg"
 //                         />
 //                         <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-200 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
 //                           <button
 //                             type="button"
-//                             onClick={() => {
-//                               if (index < existingImages.length) {
-//                                 handleRemoveExistingImage(index)
-//                               } else {
-//                                 handleRemoveNewImage(index - existingImages.length)
-//                               }
-//                             }}
+//                             onClick={() => handleRemoveNewImage(index)}
 //                             className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition transform scale-0 group-hover:scale-100"
 //                             title="Remove image"
 //                           >
 //                             <Trash2 className="h-4 w-4" />
 //                           </button>
+//                         </div>
+//                         <div className="absolute top-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded">
+//                           New
 //                         </div>
 //                       </div>
 //                     ))}
@@ -865,18 +928,20 @@
 //                     </label>
 //                   </div>
                   
-//                   <div className="text-sm">
-//                     <p className="text-gray-500">
-//                       First image will be the main display image.
-//                     </p>
+//                   <div className="text-sm space-y-1">
 //                     {imagesToDelete.length > 0 && (
-//                       <p className="text-orange-600 mt-1">
-//                         {imagesToDelete.length} image(s) marked for deletion
+//                       <p className="text-orange-600 font-medium">
+//                         ⚠️ {imagesToDelete.length} image(s) will be permanently deleted
 //                       </p>
 //                     )}
 //                     {newImages.length > 0 && (
-//                       <p className="text-green-600 mt-1">
-//                         {newImages.length} new image(s) to upload
+//                       <p className="text-green-600">
+//                         ✓ {newImages.length} new image(s) ready to upload
+//                       </p>
+//                     )}
+//                     {existingImages.length === 0 && newImages.length === 0 && (
+//                       <p className="text-red-500">
+//                         Please add at least one image
 //                       </p>
 //                     )}
 //                   </div>
@@ -909,7 +974,7 @@
 //                         }
 //                       }
 //                     })}
-//                     defaultValue={product.tags ? (Array.isArray(product.tags) ? product.tags.join(', ') : product.tags) : ''}
+//                     defaultValue={product?.tags ? (Array.isArray(product.tags) ? product.tags.join(', ') : product.tags) : ''}
 //                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
 //                     placeholder="tag1, tag2, tag3"
 //                   />
@@ -955,7 +1020,7 @@
 //               </div>
 
 //               {/* Submit Button */}
-//               <div className="bg-white rounded-xl border border-gray-200 p-6">
+//               <div className="bg-white rounded-xl border border-gray-200 p-6 sticky top-6">
 //                 <div className="space-y-3">
 //                   {isSubmitting ? (
 //                     <div className="flex items-center justify-center py-3">
@@ -966,7 +1031,7 @@
 //                     <>
 //                       <button
 //                         type="submit"
-//                         disabled={isSubmitting}
+//                         disabled={isSubmitting || (existingImages.length === 0 && newImages.length === 0)}
 //                         className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center justify-center font-medium disabled:opacity-70 disabled:cursor-not-allowed"
 //                       >
 //                         <Save className="h-5 w-5 mr-2" />
@@ -993,9 +1058,7 @@
 
 // export default AdminEditProduct
 
-
-//fix the proper deletion 
-
+//abvoe code is fix and correct but below one we just add drag and drop and solve the mobile touch issue for deleting the image 
 
 // Frontend-blackcart/src/pages/admin/AdminEditProduct.tsx
 import React, { useState, useEffect } from 'react'
@@ -1015,7 +1078,9 @@ import {
   Award,
   Save,
   AlertCircle,
-  Star  // ✅ Added Star icon import
+  Star,
+  GripVertical,
+  X
 } from 'lucide-react'
 import { adminService } from '../../services/adminServiceMethods'
 import Loader from '../../components/common/Loader'
@@ -1075,6 +1140,8 @@ const AdminEditProduct: React.FC = () => {
   const [loadingCategories, setLoadingCategories] = useState(false)
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('')
   const [isInitialLoad, setIsInitialLoad] = useState(true)
+  const [draggedImageIndex, setDraggedImageIndex] = useState<number | null>(null)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState<string | null>(null)
 
   const { register, handleSubmit, formState: { errors }, setValue, reset, watch } = useForm<ProductFormData>()
 
@@ -1263,6 +1330,107 @@ const AdminEditProduct: React.FC = () => {
     setExistingImages(prev => prev.filter((_, i) => i !== index))
     
     toast.success('Image marked for deletion');
+    setMobileMenuOpen(null);
+  }
+
+  // ✅ NEW: Drag and drop handlers for reordering
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedImageIndex(index)
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/html', String(index))
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+  }
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault()
+    
+    if (draggedImageIndex === null || draggedImageIndex === dropIndex) {
+      return
+    }
+    
+    // Reorder existing images
+    const reorderedImages = [...existingImages]
+    const [draggedImage] = reorderedImages.splice(draggedImageIndex, 1)
+    reorderedImages.splice(dropIndex, 0, draggedImage)
+    
+    // Update primary status (first image becomes primary)
+    const updatedImages = reorderedImages.map((img, idx) => ({
+      ...img,
+      isPrimary: idx === 0
+    }))
+    
+    setExistingImages(updatedImages)
+    setDraggedImageIndex(null)
+    toast.success('Image order updated')
+  }
+
+  const handleDragEnd = () => {
+    setDraggedImageIndex(null)
+  }
+
+  // ✅ NEW: Touch handlers for mobile drag and drop
+  let touchStartIndex: number | null = null
+  let touchStartY: number = 0
+
+  const handleTouchStart = (e: React.TouchEvent, index: number) => {
+    touchStartIndex = index
+    touchStartY = e.touches[0].clientY
+    e.currentTarget.classList.add('opacity-50')
+  }
+
+  const handleTouchMove = (e: React.TouchEvent, index: number) => {
+    if (touchStartIndex === null) return
+    
+    const touchY = e.touches[0].clientY
+    const deltaY = touchY - touchStartY
+    
+    // If moved more than 30px, consider reorder
+    if (Math.abs(deltaY) > 30) {
+      const direction = deltaY > 0 ? 'down' : 'up'
+      const targetIndex = direction === 'down' 
+        ? Math.min(index + 1, existingImages.length - 1)
+        : Math.max(index - 1, 0)
+      
+      if (targetIndex !== touchStartIndex) {
+        const reorderedImages = [...existingImages]
+        const [draggedImage] = reorderedImages.splice(touchStartIndex, 1)
+        reorderedImages.splice(targetIndex, 0, draggedImage)
+        
+        const updatedImages = reorderedImages.map((img, idx) => ({
+          ...img,
+          isPrimary: idx === 0
+        }))
+        
+        setExistingImages(updatedImages)
+        touchStartIndex = targetIndex
+        touchStartY = touchY
+      }
+    }
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    e.currentTarget.classList.remove('opacity-50')
+    touchStartIndex = null
+  }
+
+  // ✅ NEW: Mobile action menu handlers
+  const toggleMobileMenu = (imageId: string) => {
+    setMobileMenuOpen(mobileMenuOpen === imageId ? null : imageId)
+  }
+
+  // Set primary image (works for both desktop and mobile)
+  const setPrimaryImage = (index: number) => {
+    const updatedImages = [...existingImages];
+    updatedImages.forEach((img, i) => {
+      img.isPrimary = i === index;
+    });
+    setExistingImages(updatedImages);
+    setMobileMenuOpen(null);
+    toast.success('Primary image updated');
   }
 
   const addSpecification = () => {
@@ -1438,15 +1606,6 @@ const AdminEditProduct: React.FC = () => {
     if (window.confirm('Are you sure you want to cancel? Any unsaved changes will be lost.')) {
       navigate('/admin/products')
     }
-  }
-
-  // Set primary image
-  const setPrimaryImage = (index: number) => {
-    const updatedImages = [...existingImages];
-    updatedImages.forEach((img, i) => {
-      img.isPrimary = i === index;
-    });
-    setExistingImages(updatedImages);
   }
 
   if (isLoading) {
@@ -1844,47 +2003,127 @@ const AdminEditProduct: React.FC = () => {
 
             {/* Right Column - Images & Settings */}
             <div className="space-y-6">
-              {/* Images */}
+              {/* Images - UPDATED with drag & drop and mobile support */}
               <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
                   <span>Product Images</span>
-                  <span className="text-xs text-gray-500">First image is main display</span>
+                  <span className="text-xs text-gray-500">
+                    <span className="hidden md:inline">Drag to reorder • </span>
+                    First image is main display
+                  </span>
                 </h2>
                 
                 <div className="space-y-4">
+                  {/* Mobile instruction hint */}
+                  <div className="md:hidden text-xs text-blue-600 bg-blue-50 p-2 rounded-lg text-center">
+                    💡 Tap and hold to reorder images • Tap ••• for options
+                  </div>
+                  
                   <div className="grid grid-cols-2 gap-4">
                     {existingImages.map((image, index) => (
-                      <div key={image._id || index} className="relative group">
-                        <img
-                          src={image.url}
-                          alt={image.alt || `Product ${index + 1}`}
-                          className={`w-full h-32 object-cover rounded-lg ${image.isPrimary ? 'ring-2 ring-blue-500 ring-offset-2' : ''}`}
-                        />
-                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-200 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveExistingImage(image, index)}
-                            className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition transform scale-0 group-hover:scale-100 mr-2"
-                            title="Remove image"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                          {!image.isPrimary && (
+                      <div 
+                        key={image._id || index} 
+                        className="relative group"
+                        draggable={true}
+                        onDragStart={(e) => handleDragStart(e, index)}
+                        onDragOver={handleDragOver}
+                        onDrop={(e) => handleDrop(e, index)}
+                        onDragEnd={handleDragEnd}
+                        onTouchStart={(e) => handleTouchStart(e, index)}
+                        onTouchMove={(e) => handleTouchMove(e, index)}
+                        onTouchEnd={handleTouchEnd}
+                      >
+                        <div className="relative">
+                          <img
+                            src={image.url}
+                            alt={image.alt || `Product ${index + 1}`}
+                            className={`w-full h-32 object-cover rounded-lg transition-all ${
+                              image.isPrimary ? 'ring-2 ring-blue-500 ring-offset-2' : ''
+                            } ${draggedImageIndex === index ? 'opacity-50 scale-95' : ''}`}
+                          />
+                          
+                          {/* Drag handle (desktop) */}
+                          <div className="absolute top-2 left-2 hidden md:block">
+                            <div className="bg-black/50 rounded-full p-1 cursor-grab active:cursor-grabbing">
+                              <GripVertical className="h-4 w-4 text-white" />
+                            </div>
+                          </div>
+                          
+                          {/* Primary badge */}
+                          {image.isPrimary && (
+                            <div className="absolute top-2 right-2 bg-blue-500 text-white text-xs px-2 py-1 rounded-lg shadow-md">
+                              Primary
+                            </div>
+                          )}
+                          
+                          {/* Desktop hover buttons */}
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all duration-200 rounded-lg hidden md:flex items-center justify-center gap-2">
                             <button
                               type="button"
-                              onClick={() => setPrimaryImage(index)}
-                              className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition transform scale-0 group-hover:scale-100"
-                              title="Set as primary"
+                              onClick={() => handleRemoveExistingImage(image, index)}
+                              className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition transform hover:scale-110"
+                              title="Remove image"
                             >
-                              <Star className="h-4 w-4" />
+                              <Trash2 className="h-4 w-4" />
                             </button>
-                          )}
+                            {!image.isPrimary && (
+                              <button
+                                type="button"
+                                onClick={() => setPrimaryImage(index)}
+                                className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition transform hover:scale-110"
+                                title="Set as primary"
+                              >
+                                <Star className="h-4 w-4" />
+                              </button>
+                            )}
+                          </div>
+                          
+                          {/* Mobile action menu button */}
+                          <div className="absolute bottom-2 right-2 md:hidden">
+                            <button
+                              type="button"
+                              onClick={() => toggleMobileMenu(image._id || String(index))}
+                              className="bg-black/50 rounded-full p-2 backdrop-blur-sm"
+                            >
+                              <div className="w-4 h-4 bg-white rounded-full" />
+                            </button>
+                          </div>
                         </div>
-                        {image.isPrimary && (
-                          <div className="absolute top-2 left-2 bg-blue-500 text-white text-xs px-2 py-1 rounded">
-                            Primary
+                        
+                        {/* Mobile action menu */}
+                        {mobileMenuOpen === (image._id || String(index)) && (
+                          <div className="absolute inset-0 bg-black/70 rounded-lg flex flex-col items-center justify-center gap-3 z-10">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPrimaryImage(index);
+                                setMobileMenuOpen(null);
+                              }}
+                              className="w-32 py-2 bg-blue-500 text-white rounded-lg font-medium text-sm"
+                            >
+                              {image.isPrimary ? '✓ Primary' : 'Set as Primary'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveExistingImage(image, index)}
+                              className="w-32 py-2 bg-red-500 text-white rounded-lg font-medium text-sm"
+                            >
+                              Delete Image
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setMobileMenuOpen(null)}
+                              className="w-32 py-2 bg-gray-500 text-white rounded-lg font-medium text-sm"
+                            >
+                              Cancel
+                            </button>
                           </div>
                         )}
+                        
+                        {/* Mobile drag instruction overlay */}
+                        <div className="absolute top-2 left-2 md:hidden bg-black/50 rounded-full px-2 py-0.5">
+                          <span className="text-white text-[10px]">⋮⋮ Drag</span>
+                        </div>
                       </div>
                     ))}
                     
@@ -1895,11 +2134,11 @@ const AdminEditProduct: React.FC = () => {
                           alt={`New ${index + 1}`}
                           className="w-full h-32 object-cover rounded-lg"
                         />
-                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-200 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all duration-200 rounded-lg flex items-center justify-center">
                           <button
                             type="button"
                             onClick={() => handleRemoveNewImage(index)}
-                            className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition transform scale-0 group-hover:scale-100"
+                            className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition transform hover:scale-110"
                             title="Remove image"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -1939,6 +2178,11 @@ const AdminEditProduct: React.FC = () => {
                     {existingImages.length === 0 && newImages.length === 0 && (
                       <p className="text-red-500">
                         Please add at least one image
+                      </p>
+                    )}
+                    {existingImages.length > 1 && (
+                      <p className="text-gray-500 text-xs text-center mt-2 hidden md:block">
+                        💡 Drag and drop images to reorder • First image becomes primary
                       </p>
                     )}
                   </div>

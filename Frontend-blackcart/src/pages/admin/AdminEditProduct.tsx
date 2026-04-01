@@ -67,7 +67,7 @@ const AdminEditProduct: React.FC = () => {
   const navigate = useNavigate()
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isUpdatingImages, setIsUpdatingImages] = useState(false)
+  const [isSavingImages, setIsSavingImages] = useState(false) // Track image saving state
   const [product, setProduct] = useState<any>(null)
   const [newImages, setNewImages] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
@@ -83,18 +83,20 @@ const AdminEditProduct: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   
+  // Ref for touch drag
   const touchStartRef = useRef<{ index: number; y: number } | null>(null)
 
   const { register, handleSubmit, formState: { errors }, setValue, reset, watch } = useForm<ProductFormData>()
 
   // Fetch product data from backend
-  const loadProductData = async () => {
+  const fetchProductData = async () => {
     if (!id) return;
     
     try {
-      const response = await adminService.getAdminProductById(id);
-      if (response.success && response.data) {
-        const productData = response.data.product || response.data;
+      const productResponse = await adminService.getAdminProductById(id);
+      
+      if (productResponse.success && productResponse.data) {
+        const productData = productResponse.data.product || productResponse.data;
         setProduct(productData);
         
         // Process images from backend
@@ -116,11 +118,9 @@ const AdminEditProduct: React.FC = () => {
           };
         });
         setExistingImages(processedImages);
-        return processedImages;
       }
     } catch (error) {
-      console.error('Error loading product:', error);
-      return null;
+      console.error('Error fetching product:', error);
     }
   };
 
@@ -130,22 +130,27 @@ const AdminEditProduct: React.FC = () => {
       try {
         setIsLoading(true);
         
-        // Fetch categories
+        // Fetch categories first
+        console.log('📡 Fetching categories...');
         const categoriesResponse = await adminService.getCategories();
         
         if (categoriesResponse.success) {
+          console.log(`✅ Loaded ${categoriesResponse.data?.categories?.length || 0} categories`);
           setCategories(categoriesResponse.data?.categories || []);
+        } else {
+          toast.error('Failed to load categories');
         }
         
-        // Fetch product data
+        // Then fetch product data
         if (id) {
+          console.log('📦 Fetching product data...');
           const productResponse = await adminService.getAdminProductById(id);
           
           if (productResponse.success && productResponse.data) {
             const productData = productResponse.data.product || productResponse.data;
             setProduct(productData);
             
-            // Process images
+            // Improved image structure handling
             const images = productData.images || [];
             const processedImages: ProductImage[] = images.map((img: any, index: number) => {
               if (typeof img === 'string') {
@@ -167,19 +172,33 @@ const AdminEditProduct: React.FC = () => {
             
             // Determine category ID
             let categoryId = '';
+            
             if (productData.categoryId) {
               categoryId = productData.categoryId;
             } else if (productData.category) {
               if (typeof productData.category === 'object' && productData.category._id) {
                 categoryId = productData.category._id;
-              } else if (typeof productData.category === 'string') {
+              } else if (typeof productData.category === 'string' && productData.category !== '') {
                 categoryId = productData.category;
               }
             }
+            
+            // Verify category exists
+            if (categoryId && categoriesResponse.success && categoriesResponse.data?.categories) {
+              const categoryExists = categoriesResponse.data.categories.some(
+                (cat: Category) => cat._id === categoryId
+              );
+              
+              if (!categoryExists) {
+                console.warn(`⚠️ Category ID ${categoryId} not found in available categories`);
+                categoryId = '';
+              }
+            }
+            
             setSelectedCategoryId(categoryId);
             
             // Set form values
-            reset({
+            const formValues: Partial<ProductFormData> = {
               name: productData.name,
               description: productData.description || '',
               shortDescription: productData.shortDescription || '',
@@ -198,21 +217,31 @@ const AdminEditProduct: React.FC = () => {
               features: productData.features && productData.features.length > 0 
                 ? productData.features 
                 : ['']
-            });
+            };
             
-            if (productData.specifications?.length) setSpecifications(productData.specifications);
-            if (productData.features?.length) setFeatures(productData.features);
+            reset(formValues);
+            
+            // Set specifications and features for local state
+            if (productData.specifications && productData.specifications.length > 0) {
+              setSpecifications(productData.specifications);
+            }
+            
+            if (productData.features && productData.features.length > 0) {
+              setFeatures(productData.features);
+            }
+            
           } else {
             toast.error('Failed to load product');
             navigate('/admin/products');
           }
         }
       } catch (error: any) {
-        console.error('Error fetching data:', error);
+        console.error('❌ Error fetching data:', error);
         toast.error(error.message || 'Failed to load product data');
         navigate('/admin/products');
       } finally {
         setIsLoading(false);
+        setLoadingCategories(false);
         setIsInitialLoad(false);
       }
     };
@@ -220,18 +249,17 @@ const AdminEditProduct: React.FC = () => {
     fetchData();
   }, [id, reset, navigate]);
 
-  // ✅ CRITICAL FIX: Function to save images to backend with proper API call
-  const saveImagesToBackend = async (updatedImages: ProductImage[], imagesToDeleteList: ProductImage[] = [], newImagesList: File[] = []) => {
-    if (!id) return false;
+  // ✅ NEW: Function to save images to backend immediately
+  const saveImagesToBackend = async (updatedImages: ProductImage[]) => {
+    if (!id || isSavingImages) return;
     
     try {
-      setIsUpdatingImages(true);
+      setIsSavingImages(true);
       
-      // Create FormData for the update
       const formData = new FormData();
       
-      // Prepare the updated images data with order and primary status
-      const imagesData = updatedImages.map((img, idx) => ({
+      // Prepare remaining images with order and primary status
+      const remainingImages = updatedImages.map((img, idx) => ({
         _id: img._id,
         url: img.url,
         public_id: img.public_id,
@@ -239,392 +267,14 @@ const AdminEditProduct: React.FC = () => {
         order: idx
       }));
       
-      formData.append('existingImages', JSON.stringify(imagesData));
+      formData.append('existingImages', JSON.stringify(remainingImages));
       
-      // Add images to delete
-      if (imagesToDeleteList.length > 0) {
-        const toDelete = imagesToDeleteList.map(img => ({
-          _id: img._id,
-          url: img.url,
-          public_id: img.public_id
-        }));
-        formData.append('imagesToDelete', JSON.stringify(toDelete));
-      }
-      
-      // Add new images
-      newImagesList.forEach((image) => {
+      // Add new images if any
+      newImages.forEach((image) => {
         formData.append('images', image);
       });
       
-      // Also send a flag to indicate this is an image-only update
-      formData.append('isImageUpdate', 'true');
-      
-      console.log('💾 Saving images to backend:', {
-        totalImages: updatedImages.length,
-        newImages: newImagesList.length,
-        toDelete: imagesToDeleteList.length,
-        primaryImageId: updatedImages[0]?._id
-      });
-      
-      // Make the API call
-      const response = await adminService.updateProduct(id, formData);
-      
-      if (response.success) {
-        console.log('✅ Images saved successfully');
-        toast.success('Image changes saved!', { duration: 2000 });
-        return true;
-      } else {
-        throw new Error(response.message || 'Failed to save images');
-      }
-    } catch (error: any) {
-      console.error('Error saving images:', error);
-      toast.error('Failed to save image changes. Please try again.');
-      return false;
-    } finally {
-      setIsUpdatingImages(false);
-    }
-  };
-
-  // ✅ FIXED: Set primary image with immediate backend save
-  const setPrimaryImage = async (index: number) => {
-    if (!id || isUpdatingImages) return;
-    
-    try {
-      // Create updated images array with new primary
-      const updatedImages = existingImages.map((img, i) => ({
-        ...img,
-        isPrimary: i === index
-      }));
-      
-      // Update UI immediately for better UX
-      setExistingImages(updatedImages);
-      
-      // Save to backend immediately
-      const success = await saveImagesToBackend(updatedImages, imagesToDelete, newImages);
-      
-      if (success) {
-        setMobileMenuOpen(null);
-        toast.success(`Image ${index + 1} set as primary and saved!`);
-      } else {
-        // Revert on failure
-        await loadProductData();
-        toast.error('Failed to set primary image');
-      }
-    } catch (error) {
-      console.error('Error setting primary image:', error);
-      toast.error('Failed to set primary image');
-      await loadProductData(); // Reload to revert
-    }
-  };
-
-  // ✅ FIXED: Handle image deletion with immediate backend save
-  const handleRemoveExistingImage = async (image: ProductImage, index: number) => {
-    if (!id || isUpdatingImages) return;
-    
-    if (!window.confirm('Are you sure you want to delete this image?')) {
-      return;
-    }
-    
-    try {
-      // Add to delete list and remove from existing
-      const updatedImages = existingImages.filter((_, i) => i !== index);
-      const updatedDeleteList = [...imagesToDelete, image];
-      
-      // Update UI immediately
-      setExistingImages(updatedImages);
-      setImagesToDelete(updatedDeleteList);
-      
-      // Save to backend immediately
-      const success = await saveImagesToBackend(updatedImages, updatedDeleteList, newImages);
-      
-      if (success) {
-        setMobileMenuOpen(null);
-        toast.success('Image deleted successfully!');
-      } else {
-        // Revert on failure
-        await loadProductData();
-        setImagesToDelete([]);
-        toast.error('Failed to delete image');
-      }
-    } catch (error) {
-      console.error('Error deleting image:', error);
-      toast.error('Failed to delete image');
-      await loadProductData();
-    }
-  };
-
-  // ✅ FIXED: Desktop drag and drop with immediate backend save
-  const handleDragStart = (e: React.DragEvent, index: number) => {
-    setDraggedImageIndex(index);
-    setIsDragging(true);
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', String(index));
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  };
-
-  const handleDrop = async (e: React.DragEvent, dropIndex: number) => {
-    e.preventDefault();
-    
-    if (draggedImageIndex === null || draggedImageIndex === dropIndex || isUpdatingImages) {
-      setIsDragging(false);
-      return;
-    }
-    
-    try {
-      // Reorder images
-      const reorderedImages = [...existingImages];
-      const [draggedImage] = reorderedImages.splice(draggedImageIndex, 1);
-      reorderedImages.splice(dropIndex, 0, draggedImage);
-      
-      // Update UI immediately
-      setExistingImages(reorderedImages);
-      setDraggedImageIndex(null);
-      setIsDragging(false);
-      
-      // Save to backend immediately
-      const success = await saveImagesToBackend(reorderedImages, imagesToDelete, newImages);
-      
-      if (success) {
-        toast.success('Image order updated and saved!');
-      } else {
-        // Revert on failure
-        await loadProductData();
-        toast.error('Failed to update image order');
-      }
-    } catch (error) {
-      console.error('Error reordering images:', error);
-      await loadProductData();
-      toast.error('Failed to reorder images');
-    }
-  };
-
-  const handleDragEnd = () => {
-    setDraggedImageIndex(null);
-    setIsDragging(false);
-  };
-
-  // ✅ FIXED: Mobile drag and drop with immediate backend save
-  const handleTouchStart = (e: React.TouchEvent, index: number) => {
-    e.preventDefault();
-    const touch = e.touches[0];
-    touchStartRef.current = {
-      index: index,
-      y: touch.clientY
-    };
-    
-    const target = e.currentTarget as HTMLElement;
-    target.style.opacity = '0.7';
-    target.style.transform = 'scale(0.98)';
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!touchStartRef.current || isUpdatingImages) return;
-    
-    const touch = e.touches[0];
-    const deltaY = touch.clientY - touchStartRef.current.y;
-    const itemHeight = 128;
-    const moveSteps = Math.round(deltaY / itemHeight);
-    
-    if (moveSteps !== 0) {
-      const targetIndex = Math.min(
-        Math.max(touchStartRef.current.index + moveSteps, 0),
-        existingImages.length - 1
-      );
-      
-      if (targetIndex !== touchStartRef.current.index) {
-        const reorderedImages = [...existingImages];
-        const [draggedImage] = reorderedImages.splice(touchStartRef.current.index, 1);
-        reorderedImages.splice(targetIndex, 0, draggedImage);
-        
-        setExistingImages(reorderedImages);
-        
-        touchStartRef.current = {
-          index: targetIndex,
-          y: touch.clientY
-        };
-        
-        if (window.navigator && window.navigator.vibrate) {
-          window.navigator.vibrate(50);
-        }
-      }
-    }
-  };
-
-  const handleTouchEnd = async (e: React.TouchEvent) => {
-    const target = e.currentTarget as HTMLElement;
-    target.style.opacity = '1';
-    target.style.transform = 'scale(1)';
-    
-    if (touchStartRef.current && !isUpdatingImages) {
-      // Save the final order to backend
-      const success = await saveImagesToBackend(existingImages, imagesToDelete, newImages);
-      if (success) {
-        toast.success('Image order updated!', { duration: 1500 });
-      }
-    }
-    
-    touchStartRef.current = null;
-  };
-
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || !id || isUpdatingImages) return;
-    
-    const files = Array.from(e.target.files);
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-    const maxSize = 5 * 1024 * 1024;
-    
-    const validFiles: File[] = [];
-    
-    files.forEach(file => {
-      if (!allowedTypes.includes(file.type)) {
-        toast.error(`Invalid file type: ${file.name}`);
-        return;
-      }
-      if (file.size > maxSize) {
-        toast.error(`File too large: ${file.name}`);
-        return;
-      }
-      validFiles.push(file);
-    });
-    
-    if (validFiles.length === 0) return;
-    
-    // Update state
-    const updatedNewImages = [...newImages, ...validFiles];
-    setNewImages(updatedNewImages);
-    
-    // Create previews
-    const newPreviews: string[] = [];
-    validFiles.forEach(file => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        newPreviews.push(reader.result as string);
-        if (newPreviews.length === validFiles.length) {
-          setImagePreviews(prev => [...prev, ...newPreviews]);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
-    
-    // Save to backend immediately
-    await saveImagesToBackend(existingImages, imagesToDelete, updatedNewImages);
-  };
-
-  const handleRemoveNewImage = async (index: number) => {
-    const updatedNewImages = newImages.filter((_, i) => i !== index);
-    const updatedPreviews = imagePreviews.filter((_, i) => i !== index);
-    
-    setNewImages(updatedNewImages);
-    setImagePreviews(updatedPreviews);
-    
-    // Save to backend immediately
-    await saveImagesToBackend(existingImages, imagesToDelete, updatedNewImages);
-  };
-
-  const addSpecification = () => {
-    setSpecifications([...specifications, { key: '', value: '' }]);
-  };
-
-  const removeSpecification = (index: number) => {
-    if (specifications.length > 1) {
-      const newSpecs = specifications.filter((_, i) => i !== index);
-      setSpecifications(newSpecs);
-      setValue('specifications', newSpecs);
-    }
-  };
-
-  const updateSpecification = (index: number, field: 'key' | 'value', value: string) => {
-    const newSpecs = [...specifications];
-    newSpecs[index][field] = value;
-    setSpecifications(newSpecs);
-    setValue('specifications', newSpecs, { shouldValidate: true });
-  };
-
-  const addFeature = () => {
-    setFeatures([...features, '']);
-  };
-
-  const removeFeature = (index: number) => {
-    if (features.length > 1) {
-      const newFeatures = features.filter((_, i) => i !== index);
-      setFeatures(newFeatures);
-      setValue('features', newFeatures, { shouldValidate: true });
-    }
-  };
-
-  const updateFeature = (index: number, value: string) => {
-    const newFeatures = [...features];
-    newFeatures[index] = value;
-    setFeatures(newFeatures);
-    setValue('features', newFeatures, { shouldValidate: true });
-  };
-
-  // Main submit handler for other product details
-  const onSubmit = async (data: ProductFormData) => {
-    try {
-      setIsSubmitting(true);
-      
-      if (!data.categoryId) {
-        toast.error('Please select a valid category');
-        setIsSubmitting(false);
-        return;
-      }
-      
-      if (existingImages.length === 0 && newImages.length === 0) {
-        toast.error('Product must have at least one image');
-        setIsSubmitting(false);
-        return;
-      }
-      
-      const formData = new FormData();
-      
-      let tagsArray = [];
-      if (data.tags) {
-        if (Array.isArray(data.tags)) {
-          tagsArray = data.tags;
-        } else if (typeof data.tags === 'string') {
-          tagsArray = data.tags.split(',').map(tag => tag.trim()).filter(Boolean);
-        }
-      }
-      
-      const fields = ['name', 'description', 'shortDescription', 'price', 'discountPrice', 'categoryId', 'brand', 'sku', 'stock', 'isFeatured', 'isActive'];
-      
-      fields.forEach(field => {
-        const value = data[field as keyof ProductFormData];
-        if (value !== undefined && value !== null) {
-          formData.append(field, value.toString());
-        }
-      });
-      
-      if (!data.discountPrice) {
-        formData.append('discountPrice', '');
-      }
-      
-      formData.append('tags', JSON.stringify(tagsArray));
-      
-      const validSpecs = specifications.filter(spec => spec.key.trim() && spec.value.trim());
-      formData.append('specifications', JSON.stringify(validSpecs));
-      
-      const validFeatures = features.filter(feature => feature.trim());
-      formData.append('features', JSON.stringify(validFeatures));
-      
-      // Add remaining images with order and primary status
-      const remainingImages = existingImages.map((img, idx) => ({
-        url: img.url,
-        public_id: img.public_id,
-        _id: img._id,
-        isPrimary: idx === 0,
-        order: idx
-      }));
-      
-      if (remainingImages.length > 0) {
-        formData.append('existingImages', JSON.stringify(remainingImages));
-      }
-      
+      // Add images to delete if any
       if (imagesToDelete.length > 0) {
         const imageIdentifiers = imagesToDelete.map(img => ({
           _id: img._id,
@@ -634,21 +284,440 @@ const AdminEditProduct: React.FC = () => {
         formData.append('imagesToDelete', JSON.stringify(imageIdentifiers));
       }
       
+      console.log('💾 Saving images to backend:', {
+        totalImages: remainingImages.length,
+        newImages: newImages.length,
+        toDelete: imagesToDelete.length,
+        primaryImage: remainingImages[0]?._id
+      });
+      
+      const response = await adminService.updateProduct(id, formData);
+      
+      if (response.success) {
+        console.log('✅ Images saved successfully');
+        
+        // Clear temporary states after successful save
+        setImagesToDelete([]);
+        setNewImages([]);
+        setImagePreviews([]);
+        
+        // Show success toast
+        toast.success('Image changes saved!', { duration: 2000 });
+      } else {
+        throw new Error(response.message || 'Failed to save images');
+      }
+    } catch (error: any) {
+      console.error('❌ Error saving images:', error);
+      toast.error('Failed to save image changes');
+      
+      // Revert to original images from backend on error
+      await fetchProductData();
+    } finally {
+      setIsSavingImages(false);
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return
+    
+    const files = Array.from(e.target.files)
+    
+    // Validate file types and sizes
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+    const maxSize = 5 * 1024 * 1024 // 5MB
+    
+    const validFiles: File[] = []
+    
+    files.forEach(file => {
+      if (!allowedTypes.includes(file.type)) {
+        toast.error(`Invalid file type: ${file.name}. Only JPEG, PNG, WebP, and GIF are allowed.`)
+        return
+      }
+      
+      if (file.size > maxSize) {
+        toast.error(`File too large: ${file.name}. Maximum size is 5MB.`)
+        return
+      }
+      
+      validFiles.push(file)
+    })
+    
+    if (validFiles.length === 0) return
+    
+    setNewImages(prev => [...prev, ...validFiles])
+    
+    // Create previews
+    const newPreviews: string[] = []
+    validFiles.forEach(file => {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        newPreviews.push(reader.result as string)
+        if (newPreviews.length === validFiles.length) {
+          setImagePreviews(prev => [...prev, ...newPreviews])
+        }
+      }
+      reader.readAsDataURL(file)
+    })
+    
+    // Wait for all previews to be created, then save
+    setTimeout(() => {
+      if (validFiles.length > 0) {
+        saveImagesToBackend(existingImages);
+      }
+    }, 100);
+  }
+
+  const handleRemoveNewImage = async (index: number) => {
+    const newImagesList = newImages.filter((_, i) => i !== index)
+    const newPreviews = imagePreviews.filter((_, i) => i !== index)
+    setNewImages(newImagesList)
+    setImagePreviews(newPreviews)
+    
+    // Save changes to backend
+    await saveImagesToBackend(existingImages);
+  }
+
+  // ✅ FIXED: Handle existing image removal with immediate backend save
+  const handleRemoveExistingImage = async (image: ProductImage, index: number) => {
+    // Confirm deletion
+    if (!window.confirm(`Are you sure you want to delete this image?`)) {
+      return;
+    }
+    
+    // Add to delete list
+    setImagesToDelete(prev => [...prev, image])
+    
+    // Remove from existing images (UI update)
+    const updatedImages = existingImages.filter((_, i) => i !== index)
+    setExistingImages(updatedImages)
+    
+    // Immediately save to backend
+    await saveImagesToBackend(updatedImages);
+    
+    toast.success('Image deleted successfully');
+    setMobileMenuOpen(null);
+  }
+
+  // ✅ FIXED: Desktop drag and drop with immediate backend save
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedImageIndex(index)
+    setIsDragging(true)
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', String(index))
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+  }
+
+  const handleDrop = async (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault()
+    
+    if (draggedImageIndex === null || draggedImageIndex === dropIndex) {
+      setIsDragging(false)
+      return
+    }
+    
+    // Reorder existing images
+    const reorderedImages = [...existingImages]
+    const [draggedImage] = reorderedImages.splice(draggedImageIndex, 1)
+    reorderedImages.splice(dropIndex, 0, draggedImage)
+    
+    // Update primary status (first image becomes primary)
+    const updatedImages = reorderedImages.map((img, idx) => ({
+      ...img,
+      isPrimary: idx === 0
+    }))
+    
+    // Update UI immediately
+    setExistingImages(updatedImages)
+    setDraggedImageIndex(null)
+    setIsDragging(false)
+    
+    // Immediately save to backend
+    await saveImagesToBackend(updatedImages);
+    
+    toast.success('Image order updated and saved!');
+  }
+
+  const handleDragEnd = () => {
+    setDraggedImageIndex(null)
+    setIsDragging(false)
+  }
+
+  // ✅ FIXED: Mobile drag and drop with immediate backend save
+  const handleTouchStart = (e: React.TouchEvent, index: number) => {
+    e.preventDefault()
+    const touch = e.touches[0]
+    touchStartRef.current = {
+      index: index,
+      y: touch.clientY
+    }
+    
+    // Add visual feedback
+    const target = e.currentTarget as HTMLElement
+    target.style.opacity = '0.7'
+    target.style.transform = 'scale(0.98)'
+  }
+
+  const handleTouchMove = (e: React.TouchEvent, currentIndex: number) => {
+    if (!touchStartRef.current) return
+    
+    const touch = e.touches[0]
+    const deltaY = touch.clientY - touchStartRef.current.y
+    
+    // Calculate target index based on movement
+    const itemHeight = 128 // Approximate height of each image card
+    const moveSteps = Math.round(deltaY / itemHeight)
+    
+    if (moveSteps !== 0) {
+      const targetIndex = Math.min(
+        Math.max(touchStartRef.current.index + moveSteps, 0),
+        existingImages.length - 1
+      )
+      
+      if (targetIndex !== touchStartRef.current.index) {
+        // Reorder images
+        const reorderedImages = [...existingImages]
+        const [draggedImage] = reorderedImages.splice(touchStartRef.current.index, 1)
+        reorderedImages.splice(targetIndex, 0, draggedImage)
+        
+        // Update primary status
+        const updatedImages = reorderedImages.map((img, idx) => ({
+          ...img,
+          isPrimary: idx === 0
+        }))
+        
+        // Update UI
+        setExistingImages(updatedImages)
+        
+        // Update touch start reference
+        touchStartRef.current = {
+          index: targetIndex,
+          y: touch.clientY
+        }
+        
+        // Provide haptic feedback if available
+        if (window.navigator && window.navigator.vibrate) {
+          window.navigator.vibrate(50)
+        }
+        
+        // Debounce save to backend to avoid too many requests
+        if (imageUpdateTimeoutRef.current) {
+          clearTimeout(imageUpdateTimeoutRef.current);
+        }
+        imageUpdateTimeoutRef.current = setTimeout(() => {
+          saveImagesToBackend(updatedImages);
+        }, 500);
+      }
+    }
+  }
+
+  const handleTouchEnd = async (e: React.TouchEvent) => {
+    // Reset visual feedback
+    const target = e.currentTarget as HTMLElement
+    target.style.opacity = '1'
+    target.style.transform = 'scale(1)'
+    
+    touchStartRef.current = null
+    
+    // Clear any pending timeout
+    if (imageUpdateTimeoutRef.current) {
+      clearTimeout(imageUpdateTimeoutRef.current);
+    }
+    
+    // Final save to backend
+    await saveImagesToBackend(existingImages);
+    
+    toast.success('Image order updated!', { duration: 1500 });
+  }
+
+  // ✅ FIXED: Set primary image with immediate backend save
+  const setPrimaryImage = async (index: number) => {
+    try {
+      const updatedImages = [...existingImages];
+      updatedImages.forEach((img, i) => {
+        img.isPrimary = i === index;
+      });
+      
+      // Update UI immediately
+      setExistingImages(updatedImages);
+      setMobileMenuOpen(null);
+      
+      // Immediately save to backend
+      await saveImagesToBackend(updatedImages);
+      
+      toast.success('Primary image updated and saved!');
+    } catch (error) {
+      console.error('Error setting primary image:', error);
+      toast.error('Failed to set primary image');
+    }
+  }
+
+  const addSpecification = () => {
+    setSpecifications([...specifications, { key: '', value: '' }])
+  }
+
+  const removeSpecification = (index: number) => {
+    if (specifications.length > 1) {
+      const newSpecs = specifications.filter((_, i) => i !== index)
+      setSpecifications(newSpecs)
+      setValue('specifications', newSpecs)
+    }
+  }
+
+  const updateSpecification = (index: number, field: 'key' | 'value', value: string) => {
+    const newSpecs = [...specifications]
+    newSpecs[index][field] = value
+    setSpecifications(newSpecs)
+    setValue('specifications', newSpecs, { shouldValidate: true })
+  }
+
+  const addFeature = () => {
+    setFeatures([...features, ''])
+  }
+
+  const removeFeature = (index: number) => {
+    if (features.length > 1) {
+      const newFeatures = features.filter((_, i) => i !== index)
+      setFeatures(newFeatures)
+      setValue('features', newFeatures, { shouldValidate: true })
+    }
+  }
+
+  const updateFeature = (index: number, value: string) => {
+    const newFeatures = [...features]
+    newFeatures[index] = value
+    setFeatures(newFeatures)
+    setValue('features', newFeatures, { shouldValidate: true })
+  }
+
+  // Main submit handler for other product details
+  const onSubmit = async (data: ProductFormData) => {
+    try {
+      setIsSubmitting(true);
+      
+      // Validate category
+      if (!data.categoryId) {
+        toast.error('Please select a valid category');
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Validate at least one image remains
+      if (existingImages.length === 0 && newImages.length === 0) {
+        toast.error('Product must have at least one image');
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Prepare form data
+      const formData = new FormData();
+      
+      // Handle tags
+      let tagsArray = [];
+      if (data.tags) {
+        if (Array.isArray(data.tags)) {
+          tagsArray = data.tags;
+        } else if (typeof data.tags === 'string') {
+          tagsArray = data.tags.split(',').map(tag => tag.trim()).filter(Boolean);
+        }
+      }
+      
+      // Basic fields
+      const fields = [
+        'name', 'description', 'shortDescription', 'price', 'discountPrice',
+        'categoryId', 'brand', 'sku', 'stock', 'isFeatured', 'isActive'
+      ];
+      
+      fields.forEach(field => {
+        const value = data[field as keyof ProductFormData];
+        if (value !== undefined && value !== null) {
+          formData.append(field, value.toString());
+        }
+      });
+      
+      // Handle discountPrice
+      if (data.discountPrice === undefined || data.discountPrice === null || data.discountPrice === 0) {
+        formData.append('discountPrice', '');
+      } else {
+        formData.append('discountPrice', data.discountPrice.toString());
+      }
+      
+      // Add tags as JSON string
+      formData.append('tags', JSON.stringify(tagsArray));
+      
+      // Add specifications
+      const validSpecs = specifications.filter(spec => spec.key.trim() && spec.value.trim());
+      formData.append('specifications', JSON.stringify(validSpecs));
+      
+      // Add features
+      const validFeatures = features.filter(feature => feature.trim());
+      formData.append('features', JSON.stringify(validFeatures));
+      
+      // Add remaining existing images info with order and primary status
+      const remainingImages = existingImages.map((img, idx) => ({
+        url: img.url,
+        public_id: img.public_id,
+        _id: img._id,
+        isPrimary: idx === 0, // First image is primary
+        order: idx
+      }));
+      
+      if (remainingImages.length > 0) {
+        formData.append('existingImages', JSON.stringify(remainingImages));
+      }
+      
+      // Add images to delete if any
+      if (imagesToDelete.length > 0) {
+        const imageIdentifiers = imagesToDelete.map(img => ({
+          _id: img._id,
+          url: img.url,
+          public_id: img.public_id
+        }));
+        formData.append('imagesToDelete', JSON.stringify(imageIdentifiers));
+      }
+      
+      // Add new images
       newImages.forEach((image) => {
         formData.append('images', image);
       });
       
+      console.log('📤 Submitting final update with:', {
+        imagesToDelete: imagesToDelete.length,
+        newImages: newImages.length,
+        remainingImages: remainingImages.length,
+        primaryImage: remainingImages[0]?._id
+      });
+      
+      // Use admin service to update product
       const response = await adminService.updateProduct(id!, formData);
       
       if (response.success) {
         toast.success('✅ Product updated successfully!');
+        // Clear states
+        setImagesToDelete([]);
+        setNewImages([]);
+        setImagePreviews([]);
         navigate('/admin/products');
       } else {
         toast.error(response.message || 'Failed to update product');
       }
     } catch (error: any) {
-      console.error('Update error:', error);
-      toast.error(error.response?.data?.message || error.message || 'Failed to update product');
+      console.error('❌ Update error:', error);
+      
+      if (error.response?.data?.message) {
+        if (error.response.data.message.includes('category')) {
+          toast.error('Invalid category selected');
+        } else if (error.response.data.message.includes('image')) {
+          toast.error('Error processing images: ' + error.response.data.message);
+        } else {
+          toast.error(error.response.data.message);
+        }
+      } else {
+        toast.error(error.message || 'Failed to update product');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -656,16 +725,16 @@ const AdminEditProduct: React.FC = () => {
 
   const handleCancel = () => {
     if (window.confirm('Are you sure you want to cancel? Any unsaved changes will be lost.')) {
-      navigate('/admin/products');
+      navigate('/admin/products')
     }
-  };
+  }
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Loader size="lg" />
       </div>
-    );
+    )
   }
 
   if (!product && !isInitialLoad) {
@@ -689,10 +758,11 @@ const AdminEditProduct: React.FC = () => {
           </div>
         </div>
       </div>
-    );
+    )
   }
 
-  const price = watch('price');
+  const price = watch('price')
+  const discountPrice = watch('discountPrice')
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
@@ -719,10 +789,10 @@ const AdminEditProduct: React.FC = () => {
         </div>
 
         {/* Saving indicator */}
-        {isUpdatingImages && (
+        {isSavingImages && (
           <div className="fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 flex items-center gap-2">
             <Loader size="sm" />
-            <span>Saving image changes...</span>
+            <span>Saving changes...</span>
           </div>
         )}
 
@@ -746,7 +816,8 @@ const AdminEditProduct: React.FC = () => {
                       type="text"
                       {...register('name', { 
                         required: 'Product name is required',
-                        minLength: { value: 3, message: 'Name must be at least 3 characters' }
+                        minLength: { value: 3, message: 'Name must be at least 3 characters' },
+                        maxLength: { value: 200, message: 'Name must be less than 200 characters' }
                       })}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
                       placeholder="Enter product name"
@@ -785,7 +856,8 @@ const AdminEditProduct: React.FC = () => {
                       <input
                         type="text"
                         {...register('brand', { 
-                          required: 'Brand is required'
+                          required: 'Brand is required',
+                          maxLength: { value: 100, message: 'Brand must be less than 100 characters' }
                         })}
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
                         placeholder="Enter brand name"
@@ -801,26 +873,47 @@ const AdminEditProduct: React.FC = () => {
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Category *
                       </label>
-                      <select
-                        {...register('categoryId', { required: 'Category is required' })}
-                        value={selectedCategoryId || watch('categoryId') || ''}
-                        onChange={(e) => {
-                          setSelectedCategoryId(e.target.value);
-                          setValue('categoryId', e.target.value, { shouldValidate: true });
-                        }}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                      >
-                        <option value="">Select a category</option>
-                        {categories
-                          .filter(cat => cat.isActive)
-                          .map(cat => (
-                            <option key={cat._id} value={cat._id}>
-                              {cat.name}
-                            </option>
-                          ))}
-                      </select>
+                      <div className="relative">
+                        {loadingCategories || isLoading ? (
+                          <div className="flex items-center px-4 py-3 border border-gray-300 rounded-lg bg-gray-50">
+                            <Loader size="sm" />
+                            <span className="ml-2 text-gray-500">Loading categories...</span>
+                          </div>
+                        ) : (
+                          <select
+                            {...register('categoryId', { 
+                              required: 'Category is required'
+                            })}
+                            value={selectedCategoryId || watch('categoryId') || ''}
+                            onChange={(e) => {
+                              setSelectedCategoryId(e.target.value);
+                              setValue('categoryId', e.target.value, { shouldValidate: true });
+                            }}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition appearance-none"
+                          >
+                            <option value="">Select a category</option>
+                            {categories
+                              .filter(cat => cat.isActive)
+                              .map(cat => (
+                                <option key={cat._id} value={cat._id}>
+                                  {cat.name} {cat.productCount ? `(${cat.productCount})` : ''}
+                                </option>
+                              ))}
+                          </select>
+                        )}
+                        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                          <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                          </svg>
+                        </div>
+                      </div>
                       {errors.categoryId && (
                         <p className="mt-1 text-sm text-red-600">{errors.categoryId.message}</p>
+                      )}
+                      {product?.category && selectedCategoryId && (
+                        <p className="mt-1 text-sm text-green-600">
+                          Current: {typeof product.category === 'object' ? product.category.name : product.category}
+                        </p>
                       )}
                     </div>
 
@@ -886,9 +979,9 @@ const AdminEditProduct: React.FC = () => {
                             valueAsNumber: true,
                             validate: (value) => {
                               if (value && value >= price) {
-                                return 'Discount price must be less than regular price';
+                                return 'Discount price must be less than regular price'
                               }
-                              return true;
+                              return true
                             }
                           })}
                           className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
@@ -933,11 +1026,16 @@ const AdminEditProduct: React.FC = () => {
                       Full Description
                     </label>
                     <textarea
-                      {...register('description')}
+                      {...register('description', {
+                        maxLength: { value: 5000, message: 'Description must be less than 5000 characters' }
+                      })}
                       rows={6}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
                       placeholder="Detailed product description..."
                     />
+                    {errors.description && (
+                      <p className="mt-1 text-sm text-red-600">{errors.description.message}</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -967,20 +1065,21 @@ const AdminEditProduct: React.FC = () => {
                         value={spec.key}
                         onChange={(e) => updateSpecification(index, 'key', e.target.value)}
                         className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                        placeholder="Specification name"
+                        placeholder="Specification name (e.g., Color, Weight)"
                       />
                       <input
                         type="text"
                         value={spec.value}
                         onChange={(e) => updateSpecification(index, 'value', e.target.value)}
                         className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                        placeholder="Value"
+                        placeholder="Value (e.g., Black, 1.5kg)"
                       />
                       <button
                         type="button"
                         onClick={() => removeSpecification(index)}
                         disabled={specifications.length === 1}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition disabled:opacity-50"
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Remove specification"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -1014,13 +1113,14 @@ const AdminEditProduct: React.FC = () => {
                         value={feature}
                         onChange={(e) => updateFeature(index, e.target.value)}
                         className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                        placeholder="Product feature"
+                        placeholder="Product feature (e.g., Water resistant, Wireless)"
                       />
                       <button
                         type="button"
                         onClick={() => removeFeature(index)}
                         disabled={features.length === 1}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition disabled:opacity-50"
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Remove feature"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -1032,7 +1132,7 @@ const AdminEditProduct: React.FC = () => {
 
             {/* Right Column - Images & Settings */}
             <div className="space-y-6">
-              {/* Images */}
+              {/* Images - FIXED with immediate backend persistence */}
               <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
                   <span>Product Images</span>
@@ -1043,6 +1143,7 @@ const AdminEditProduct: React.FC = () => {
                 </h2>
                 
                 <div className="space-y-4">
+                  {/* Mobile instruction hint */}
                   <div className="md:hidden text-xs text-blue-600 bg-blue-50 p-2 rounded-lg text-center">
                     💡 Long press and drag to reorder images • Tap ⋮⋮ for options
                   </div>
@@ -1068,11 +1169,18 @@ const AdminEditProduct: React.FC = () => {
                             draggable="false"
                           />
                           
-                          {/* Drag handle */}
+                          {/* Drag handle (desktop) */}
+                          <div className="absolute top-2 left-2 hidden md:block cursor-move">
+                            <div className="bg-black/50 rounded-full p-1 hover:bg-black/70 transition">
+                              <GripVertical className="h-4 w-4 text-white" />
+                            </div>
+                          </div>
+                          
+                          {/* Mobile drag handle */}
                           <div 
-                            className="absolute top-2 left-2 cursor-move"
+                            className="absolute top-2 left-2 md:hidden cursor-move touch-manipulation"
                             onTouchStart={(e) => handleTouchStart(e, index)}
-                            onTouchMove={handleTouchMove}
+                            onTouchMove={(e) => handleTouchMove(e, index)}
                             onTouchEnd={handleTouchEnd}
                           >
                             <div className="bg-black/50 rounded-full p-1">
@@ -1087,8 +1195,8 @@ const AdminEditProduct: React.FC = () => {
                             </div>
                           )}
                           
-                          {/* Action buttons */}
-                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all duration-200 rounded-lg flex items-center justify-center gap-2">
+                          {/* Desktop hover buttons */}
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all duration-200 rounded-lg hidden md:flex items-center justify-center gap-2">
                             <button
                               type="button"
                               onClick={() => handleRemoveExistingImage(image, index)}
@@ -1113,7 +1221,7 @@ const AdminEditProduct: React.FC = () => {
                           <div className="absolute bottom-2 right-2 md:hidden">
                             <button
                               type="button"
-                              onClick={() => setMobileMenuOpen(mobileMenuOpen === (image._id || String(index)) ? null : (image._id || String(index)))}
+                              onClick={() => toggleMobileMenu(image._id || String(index))}
                               className="bg-black/50 rounded-full p-2 backdrop-blur-sm"
                             >
                               <div className="w-4 h-1 bg-white rounded-full mb-1" />
@@ -1171,7 +1279,8 @@ const AdminEditProduct: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => handleRemoveNewImage(index)}
-                            className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition"
+                            className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition transform hover:scale-110"
+                            title="Remove image"
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
@@ -1207,6 +1316,16 @@ const AdminEditProduct: React.FC = () => {
                         ✓ {newImages.length} new image(s) ready to upload
                       </p>
                     )}
+                    {existingImages.length === 0 && newImages.length === 0 && (
+                      <p className="text-red-500">
+                        Please add at least one image
+                      </p>
+                    )}
+                    {existingImages.length > 1 && (
+                      <p className="text-gray-500 text-xs text-center mt-2 hidden md:block">
+                        💡 Drag and drop images to reorder • First image becomes primary
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1219,9 +1338,24 @@ const AdminEditProduct: React.FC = () => {
                 </h2>
                 
                 <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Product Tags
+                  </label>
                   <input
                     type="text"
-                    {...register('tags')}
+                    {...register('tags', {
+                      setValueAs: (value) => {
+                        if (!value) return [];
+                        
+                        if (typeof value === 'string') {
+                          return value.split(',').map(tag => tag.trim()).filter(Boolean);
+                        } else if (Array.isArray(value)) {
+                          return value;
+                        } else {
+                          return [String(value).trim()];
+                        }
+                      }
+                    })}
                     defaultValue={product?.tags ? (Array.isArray(product.tags) ? product.tags.join(', ') : product.tags) : ''}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
                     placeholder="tag1, tag2, tag3"
@@ -1269,30 +1403,32 @@ const AdminEditProduct: React.FC = () => {
 
               {/* Submit Button */}
               <div className="bg-white rounded-xl border border-gray-200 p-6 sticky top-6">
-                <button
-                  type="submit"
-                  disabled={isSubmitting || isUpdatingImages}
-                  className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center justify-center font-medium disabled:opacity-70 disabled:cursor-not-allowed"
-                >
+                <div className="space-y-3">
                   {isSubmitting ? (
-                    <>
-                      <Loader size="sm" />
-                      <span className="ml-2">Updating...</span>
-                    </>
+                    <div className="flex items-center justify-center py-3">
+                      <Loader size="md" />
+                      <span className="ml-3 text-gray-600">Updating product...</span>
+                    </div>
                   ) : (
                     <>
-                      <Save className="h-5 w-5 mr-2" />
-                      Update Product
+                      <button
+                        type="submit"
+                        disabled={isSubmitting || (existingImages.length === 0 && newImages.length === 0) || isSavingImages}
+                        className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center justify-center font-medium disabled:opacity-70 disabled:cursor-not-allowed"
+                      >
+                        <Save className="h-5 w-5 mr-2" />
+                        Update Product
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleCancel}
+                        className="w-full py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
+                      >
+                        Cancel
+                      </button>
                     </>
                   )}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCancel}
-                  className="w-full mt-3 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
-                >
-                  Cancel
-                </button>
+                </div>
               </div>
             </div>
           </div>

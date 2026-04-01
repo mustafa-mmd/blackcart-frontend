@@ -261,173 +261,39 @@ export const adminService = {
 
   
 
-// updateProduct: async (id: string, data: any): Promise<ApiResponse<Product>> => {
-//   try {
-//     console.log('📤 [SERVICE] Updating product:', id);
-//     console.log('📤 Data type:', data instanceof FormData ? 'FormData' : typeof data);
-    
-//     // If it's FormData, log its contents for debugging
-//     if (data instanceof FormData) {
-//       console.log('📋 FormData contents:');
-//       for (let pair of data.entries()) {
-//         if (pair[1] instanceof File) {
-//           console.log(`  ${pair[0]}: File - ${pair[1].name}`);
-//         } else {
-//           console.log(`  ${pair[0]}: ${pair[1]}`);
-//         }
-//       }
-//     }
-    
-//     // Make the API request
-//     const response = await api.put(`/admin/products/${id}`, data, {
-//       headers: data instanceof FormData 
-//         ? { 'Content-Type': 'multipart/form-data' }
-//         : { 'Content-Type': 'application/json' }
-//     });
-    
-//     console.log('✅ [SERVICE] Product updated successfully:', response.data);
-//     return response.data;
-//   } catch (error: any) {
-//     console.error('❌ [SERVICE] Error updating product:', {
-//       id,
-//       status: error.response?.status,
-//       data: error.response?.data,
-//       message: error.message
-//     });
-//     throw error;
-//   }
-// },
-
 updateProduct: async (id: string, data: any): Promise<ApiResponse<Product>> => {
   try {
     console.log('📤 [SERVICE] Updating product:', id);
+    console.log('📤 Data type:', data instanceof FormData ? 'FormData' : typeof data);
     
-    // Validate inputs
-    if (!id) {
-      throw new Error('Product ID is required');
-    }
-    
-    // Check authentication
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-    if (!token) {
-      throw new Error('Authentication required. Please login again.');
-    }
-    
-    const isFormData = data instanceof FormData;
-    console.log('📤 Data type:', isFormData ? 'FormData' : typeof data);
-    
-    // Log FormData contents for debugging
-    if (isFormData) {
+    // If it's FormData, log its contents for debugging
+    if (data instanceof FormData) {
       console.log('📋 FormData contents:');
-      let hasImages = false;
-      let existingImagesCount = 0;
-      let imagesToDeleteCount = 0;
-      
       for (let pair of data.entries()) {
-        const [key, value] = pair;
-        if (value instanceof File) {
-          console.log(`  📸 ${key}: File - "${value.name}" (${value.size} bytes, ${value.type})`);
-          hasImages = true;
-        } else if (key === 'existingImages') {
-          try {
-            const parsed = JSON.parse(value as string);
-            existingImagesCount = parsed.length;
-            console.log(`  🖼️ ${key}: ${existingImagesCount} images with order/primary status`);
-          } catch {
-            console.log(`  🖼️ ${key}: ${value}`);
-          }
-        } else if (key === 'imagesToDelete') {
-          try {
-            const parsed = JSON.parse(value as string);
-            imagesToDeleteCount = parsed.length;
-            console.log(`  🗑️ ${key}: ${imagesToDeleteCount} images to delete`);
-          } catch {
-            console.log(`  🗑️ ${key}: ${value}`);
-          }
+        if (pair[1] instanceof File) {
+          console.log(`  ${pair[0]}: File - ${pair[1].name}`);
         } else {
-          const displayValue = typeof value === 'string' && value.length > 100 
-            ? value.substring(0, 100) + '...' 
-            : value;
-          console.log(`  📝 ${key}: ${displayValue}`);
+          console.log(`  ${pair[0]}: ${pair[1]}`);
         }
       }
-      
-      console.log(`📊 Summary: ${hasImages ? 'Has new images' : 'No new images'}, ${existingImagesCount} existing images, ${imagesToDeleteCount} to delete`);
     }
     
-    // ✅ CRITICAL: DO NOT set Content-Type for FormData
-    // The browser automatically sets multipart/form-data with correct boundary
-    const config: any = {
-      timeout: 60000, // 60 second timeout for large uploads
-    };
-    
-    // Only add custom headers for non-FormData requests
-    if (!isFormData) {
-      config.headers = { 'Content-Type': 'application/json' };
-    }
-    
-    // Add upload progress tracking for FormData
-    if (isFormData) {
-      config.onUploadProgress = (progressEvent: any) => {
-        if (progressEvent.total) {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          console.log(`📤 Upload progress: ${percentCompleted}%`);
-        }
-      };
-    }
-    
-    console.log('🚀 Making API request to:', `/admin/products/${id}`);
-    
-    const response = await api.put(`/admin/products/${id}`, data, config);
-    
-    console.log('✅ [SERVICE] Product updated successfully:', {
-      success: response.data.success,
-      productId: response.data.data?._id,
-      productName: response.data.data?.name,
-      imagesCount: response.data.data?.images?.length,
-      primaryImage: response.data.data?.images?.find((img: any) => img.isPrimary)?.url?.substring(0, 50)
+    // Make the API request
+    const response = await api.put(`/admin/products/${id}`, data, {
+      headers: data instanceof FormData 
+        ? { 'Content-Type': 'multipart/form-data' }
+        : { 'Content-Type': 'application/json' }
     });
     
+    console.log('✅ [SERVICE] Product updated successfully:', response.data);
     return response.data;
-    
   } catch (error: any) {
     console.error('❌ [SERVICE] Error updating product:', {
       id,
       status: error.response?.status,
-      statusText: error.response?.statusText,
       data: error.response?.data,
-      message: error.message,
-      stack: error.stack
+      message: error.message
     });
-    
-    // Handle specific error codes with user-friendly messages
-    if (error.code === 'ECONNABORTED') {
-      toast.error('Request timeout. The image upload is taking too long. Please try with smaller images.');
-    } else if (error.response?.status === 401) {
-      toast.error('Session expired. Please login again.');
-      // Optionally redirect to login
-      // window.location.href = '/admin/login';
-    } else if (error.response?.status === 403) {
-      toast.error('You do not have permission to perform this action.');
-    } else if (error.response?.status === 404) {
-      toast.error('Product not found. It may have been deleted.');
-    } else if (error.response?.status === 413) {
-      toast.error('File too large. Maximum size is 5MB per image.');
-    } else if (error.response?.status === 415) {
-      toast.error('Invalid file type. Only images (JPEG, PNG, WebP, GIF) are allowed.');
-    } else if (error.response?.status === 500) {
-      toast.error('Server error. Please try again later.');
-      console.error('Server error details:', error.response?.data);
-    } else if (error.response?.data?.error) {
-      toast.error(error.response.data.error);
-    } else if (error.response?.data?.message) {
-      toast.error(error.response.data.message);
-    } else if (error.message === 'Network Error') {
-      toast.error('Network error. Please check your internet connection.');
-    } else {
-      toast.error('Failed to update product. Please try again.');
-    }
-    
     throw error;
   }
 },

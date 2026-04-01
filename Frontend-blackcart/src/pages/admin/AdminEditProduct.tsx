@@ -67,7 +67,6 @@ const AdminEditProduct: React.FC = () => {
   const navigate = useNavigate()
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isSavingImages, setIsSavingImages] = useState(false) // Track image saving state
   const [product, setProduct] = useState<any>(null)
   const [newImages, setNewImages] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
@@ -87,42 +86,6 @@ const AdminEditProduct: React.FC = () => {
   const touchStartRef = useRef<{ index: number; y: number } | null>(null)
 
   const { register, handleSubmit, formState: { errors }, setValue, reset, watch } = useForm<ProductFormData>()
-
-  // Fetch product data from backend
-  const fetchProductData = async () => {
-    if (!id) return;
-    
-    try {
-      const productResponse = await adminService.getAdminProductById(id);
-      
-      if (productResponse.success && productResponse.data) {
-        const productData = productResponse.data.product || productResponse.data;
-        setProduct(productData);
-        
-        // Process images from backend
-        const images = productData.images || [];
-        const processedImages: ProductImage[] = images.map((img: any, index: number) => {
-          if (typeof img === 'string') {
-            return { 
-              url: img, 
-              alt: 'Product image',
-              isPrimary: index === 0 
-            };
-          }
-          return {
-            url: img.url || img.path || '',
-            public_id: img.public_id || img.publicId,
-            alt: img.alt || 'Product image',
-            _id: img._id,
-            isPrimary: img.isPrimary || index === 0
-          };
-        });
-        setExistingImages(processedImages);
-      }
-    } catch (error) {
-      console.error('Error fetching product:', error);
-    }
-  };
 
   // Fetch data when component mounts
   useEffect(() => {
@@ -249,75 +212,7 @@ const AdminEditProduct: React.FC = () => {
     fetchData();
   }, [id, reset, navigate]);
 
-  // ✅ NEW: Function to save images to backend immediately
-  const saveImagesToBackend = async (updatedImages: ProductImage[]) => {
-    if (!id || isSavingImages) return;
-    
-    try {
-      setIsSavingImages(true);
-      
-      const formData = new FormData();
-      
-      // Prepare remaining images with order and primary status
-      const remainingImages = updatedImages.map((img, idx) => ({
-        _id: img._id,
-        url: img.url,
-        public_id: img.public_id,
-        isPrimary: idx === 0, // First image is always primary
-        order: idx
-      }));
-      
-      formData.append('existingImages', JSON.stringify(remainingImages));
-      
-      // Add new images if any
-      newImages.forEach((image) => {
-        formData.append('images', image);
-      });
-      
-      // Add images to delete if any
-      if (imagesToDelete.length > 0) {
-        const imageIdentifiers = imagesToDelete.map(img => ({
-          _id: img._id,
-          url: img.url,
-          public_id: img.public_id
-        }));
-        formData.append('imagesToDelete', JSON.stringify(imageIdentifiers));
-      }
-      
-      console.log('💾 Saving images to backend:', {
-        totalImages: remainingImages.length,
-        newImages: newImages.length,
-        toDelete: imagesToDelete.length,
-        primaryImage: remainingImages[0]?._id
-      });
-      
-      const response = await adminService.updateProduct(id, formData);
-      
-      if (response.success) {
-        console.log('✅ Images saved successfully');
-        
-        // Clear temporary states after successful save
-        setImagesToDelete([]);
-        setNewImages([]);
-        setImagePreviews([]);
-        
-        // Show success toast
-        toast.success('Image changes saved!', { duration: 2000 });
-      } else {
-        throw new Error(response.message || 'Failed to save images');
-      }
-    } catch (error: any) {
-      console.error('❌ Error saving images:', error);
-      toast.error('Failed to save image changes');
-      
-      // Revert to original images from backend on error
-      await fetchProductData();
-    } finally {
-      setIsSavingImages(false);
-    }
-  };
-
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return
     
     const files = Array.from(e.target.files)
@@ -347,58 +242,40 @@ const AdminEditProduct: React.FC = () => {
     setNewImages(prev => [...prev, ...validFiles])
     
     // Create previews
-    const newPreviews: string[] = []
     validFiles.forEach(file => {
       const reader = new FileReader()
       reader.onloadend = () => {
-        newPreviews.push(reader.result as string)
-        if (newPreviews.length === validFiles.length) {
-          setImagePreviews(prev => [...prev, ...newPreviews])
-        }
+        setImagePreviews(prev => [...prev, reader.result as string])
       }
       reader.readAsDataURL(file)
     })
-    
-    // Wait for all previews to be created, then save
-    setTimeout(() => {
-      if (validFiles.length > 0) {
-        saveImagesToBackend(existingImages);
-      }
-    }, 100);
   }
 
-  const handleRemoveNewImage = async (index: number) => {
+  const handleRemoveNewImage = (index: number) => {
     const newImagesList = newImages.filter((_, i) => i !== index)
     const newPreviews = imagePreviews.filter((_, i) => i !== index)
     setNewImages(newImagesList)
     setImagePreviews(newPreviews)
-    
-    // Save changes to backend
-    await saveImagesToBackend(existingImages);
   }
 
-  // ✅ FIXED: Handle existing image removal with immediate backend save
-  const handleRemoveExistingImage = async (image: ProductImage, index: number) => {
+  // Properly handle existing image removal
+  const handleRemoveExistingImage = (image: ProductImage, index: number) => {
     // Confirm deletion
     if (!window.confirm(`Are you sure you want to delete this image?`)) {
       return;
     }
     
-    // Add to delete list
+    // Add to delete list with full image object
     setImagesToDelete(prev => [...prev, image])
     
     // Remove from existing images (UI update)
-    const updatedImages = existingImages.filter((_, i) => i !== index)
-    setExistingImages(updatedImages)
+    setExistingImages(prev => prev.filter((_, i) => i !== index))
     
-    // Immediately save to backend
-    await saveImagesToBackend(updatedImages);
-    
-    toast.success('Image deleted successfully');
+    toast.success('Image marked for deletion');
     setMobileMenuOpen(null);
   }
 
-  // ✅ FIXED: Desktop drag and drop with immediate backend save
+  // ✅ FIXED: Desktop drag and drop handlers with persistence
   const handleDragStart = (e: React.DragEvent, index: number) => {
     setDraggedImageIndex(index)
     setIsDragging(true)
@@ -411,7 +288,7 @@ const AdminEditProduct: React.FC = () => {
     e.dataTransfer.dropEffect = 'move'
   }
 
-  const handleDrop = async (e: React.DragEvent, dropIndex: number) => {
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
     e.preventDefault()
     
     if (draggedImageIndex === null || draggedImageIndex === dropIndex) {
@@ -430,15 +307,10 @@ const AdminEditProduct: React.FC = () => {
       isPrimary: idx === 0
     }))
     
-    // Update UI immediately
     setExistingImages(updatedImages)
     setDraggedImageIndex(null)
     setIsDragging(false)
-    
-    // Immediately save to backend
-    await saveImagesToBackend(updatedImages);
-    
-    toast.success('Image order updated and saved!');
+    toast.success('Image order updated')
   }
 
   const handleDragEnd = () => {
@@ -446,7 +318,7 @@ const AdminEditProduct: React.FC = () => {
     setIsDragging(false)
   }
 
-  // ✅ FIXED: Mobile drag and drop with immediate backend save
+  // ✅ FIXED: Mobile drag and drop with better touch handling
   const handleTouchStart = (e: React.TouchEvent, index: number) => {
     e.preventDefault()
     const touch = e.touches[0]
@@ -489,7 +361,6 @@ const AdminEditProduct: React.FC = () => {
           isPrimary: idx === 0
         }))
         
-        // Update UI
         setExistingImages(updatedImages)
         
         // Update touch start reference
@@ -502,19 +373,11 @@ const AdminEditProduct: React.FC = () => {
         if (window.navigator && window.navigator.vibrate) {
           window.navigator.vibrate(50)
         }
-        
-        // Debounce save to backend to avoid too many requests
-        if (imageUpdateTimeoutRef.current) {
-          clearTimeout(imageUpdateTimeoutRef.current);
-        }
-        imageUpdateTimeoutRef.current = setTimeout(() => {
-          saveImagesToBackend(updatedImages);
-        }, 500);
       }
     }
   }
 
-  const handleTouchEnd = async (e: React.TouchEvent) => {
+  const handleTouchEnd = (e: React.TouchEvent) => {
     // Reset visual feedback
     const target = e.currentTarget as HTMLElement
     target.style.opacity = '1'
@@ -522,33 +385,25 @@ const AdminEditProduct: React.FC = () => {
     
     touchStartRef.current = null
     
-    // Clear any pending timeout
-    if (imageUpdateTimeoutRef.current) {
-      clearTimeout(imageUpdateTimeoutRef.current);
-    }
-    
-    // Final save to backend
-    await saveImagesToBackend(existingImages);
-    
-    toast.success('Image order updated!', { duration: 1500 });
+    // Show success message only once
+    toast.success('Image order updated', { duration: 1500 })
   }
 
-  // ✅ FIXED: Set primary image with immediate backend save
+  // ✅ FIXED: Set primary image with persistence
   const setPrimaryImage = async (index: number) => {
     try {
       const updatedImages = [...existingImages];
       updatedImages.forEach((img, i) => {
         img.isPrimary = i === index;
       });
-      
-      // Update UI immediately
       setExistingImages(updatedImages);
       setMobileMenuOpen(null);
       
-      // Immediately save to backend
-      await saveImagesToBackend(updatedImages);
+      // Show success message
+      toast.success('Primary image updated');
       
-      toast.success('Primary image updated and saved!');
+      // Note: The actual persistence to backend happens when the form is submitted
+      // This ensures the change is saved when the user clicks "Update Product"
     } catch (error) {
       console.error('Error setting primary image:', error);
       toast.error('Failed to set primary image');
@@ -593,7 +448,7 @@ const AdminEditProduct: React.FC = () => {
     setValue('features', newFeatures, { shouldValidate: true })
   }
 
-  // Main submit handler for other product details
+  // ✅ FIXED: Main submit handler with proper image deletion and ordering
   const onSubmit = async (data: ProductFormData) => {
     try {
       setIsSubmitting(true);
@@ -606,7 +461,8 @@ const AdminEditProduct: React.FC = () => {
       }
       
       // Validate at least one image remains
-      if (existingImages.length === 0 && newImages.length === 0) {
+      const totalImagesAfterDeletion = existingImages.length + newImages.length;
+      if (totalImagesAfterDeletion === 0) {
         toast.error('Product must have at least one image');
         setIsSubmitting(false);
         return;
@@ -656,27 +512,16 @@ const AdminEditProduct: React.FC = () => {
       const validFeatures = features.filter(feature => feature.trim());
       formData.append('features', JSON.stringify(validFeatures));
       
-      // Add remaining existing images info with order and primary status
-      const remainingImages = existingImages.map((img, idx) => ({
-        url: img.url,
-        public_id: img.public_id,
-        _id: img._id,
-        isPrimary: idx === 0, // First image is primary
-        order: idx
-      }));
-      
-      if (remainingImages.length > 0) {
-        formData.append('existingImages', JSON.stringify(remainingImages));
-      }
-      
-      // Add images to delete if any
+      // ✅ FIXED: Properly handle images to delete
       if (imagesToDelete.length > 0) {
+        // Create a clean array of image identifiers
         const imageIdentifiers = imagesToDelete.map(img => ({
           _id: img._id,
           url: img.url,
           public_id: img.public_id
         }));
         formData.append('imagesToDelete', JSON.stringify(imageIdentifiers));
+        console.log('📸 Images to delete:', imageIdentifiers);
       }
       
       // Add new images
@@ -684,11 +529,24 @@ const AdminEditProduct: React.FC = () => {
         formData.append('images', image);
       });
       
-      console.log('📤 Submitting final update with:', {
+      // ✅ FIXED: Include updated image order and primary status
+      const remainingImages = existingImages.map((img, idx) => ({
+        url: img.url,
+        public_id: img.public_id,
+        _id: img._id,
+        isPrimary: img.isPrimary || idx === 0, // Ensure primary status is properly set
+        order: idx // Add order index for backend
+      }));
+      
+      if (remainingImages.length > 0) {
+        formData.append('existingImages', JSON.stringify(remainingImages));
+      }
+      
+      console.log('📤 Submitting update with:', {
         imagesToDelete: imagesToDelete.length,
         newImages: newImages.length,
         remainingImages: remainingImages.length,
-        primaryImage: remainingImages[0]?._id
+        primaryImage: remainingImages.find(img => img.isPrimary)
       });
       
       // Use admin service to update product
@@ -696,7 +554,7 @@ const AdminEditProduct: React.FC = () => {
       
       if (response.success) {
         toast.success('✅ Product updated successfully!');
-        // Clear states
+        // Clear state
         setImagesToDelete([]);
         setNewImages([]);
         setImagePreviews([]);
@@ -787,14 +645,6 @@ const AdminEditProduct: React.FC = () => {
             </div>
           </div>
         </div>
-
-        {/* Saving indicator */}
-        {isSavingImages && (
-          <div className="fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 flex items-center gap-2">
-            <Loader size="sm" />
-            <span>Saving changes...</span>
-          </div>
-        )}
 
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1132,7 +982,7 @@ const AdminEditProduct: React.FC = () => {
 
             {/* Right Column - Images & Settings */}
             <div className="space-y-6">
-              {/* Images - FIXED with immediate backend persistence */}
+              {/* Images - FIXED with improved drag & drop and mobile support */}
               <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
                   <span>Product Images</span>
@@ -1413,7 +1263,7 @@ const AdminEditProduct: React.FC = () => {
                     <>
                       <button
                         type="submit"
-                        disabled={isSubmitting || (existingImages.length === 0 && newImages.length === 0) || isSavingImages}
+                        disabled={isSubmitting || (existingImages.length === 0 && newImages.length === 0)}
                         className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center justify-center font-medium disabled:opacity-70 disabled:cursor-not-allowed"
                       >
                         <Save className="h-5 w-5 mr-2" />

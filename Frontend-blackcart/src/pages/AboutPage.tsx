@@ -210,7 +210,7 @@ const AboutPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Team */}
+      {/* Team
       <section className="py-16 bg-gray-50">
         <div className="container-lg section-padding">
           <div className="text-center mb-12">
@@ -242,7 +242,7 @@ const AboutPage: React.FC = () => {
             ))}
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* Milestones */}
       <section className="py-16">

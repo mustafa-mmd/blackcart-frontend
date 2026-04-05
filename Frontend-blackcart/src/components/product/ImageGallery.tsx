@@ -395,7 +395,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
   const renderMainImage = useCallback((isFullscreenMode: boolean = false) => {
     const containerClasses = isFullscreenMode 
       ? 'w-full h-full'
-      : 'aspect-square';
+      : 'h-64 md:h-80';
     
     return (
       <div

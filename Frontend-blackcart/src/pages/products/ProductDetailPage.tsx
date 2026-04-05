@@ -468,7 +468,7 @@ const ProductDetailPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Breadcrumb */}
-      <div className="container mx-auto px-4 py-4">
+      <div className="container mx-auto px-4 py-2">
         <Breadcrumb items={breadcrumbItems} />
       </div>
 
@@ -492,8 +492,8 @@ const ProductDetailPage: React.FC = () => {
       </AnimatePresence>
 
       {/* Main Product Section */}
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+      <div className="container mx-auto px-4 py-3">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Left Column - Images */}
           <div>
             <ImageGallery

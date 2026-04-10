@@ -1,3 +1,4 @@
+// src/services/settingService.ts
 import api from './api';
 
 export interface Logo {
@@ -7,10 +8,7 @@ export interface Logo {
 }
 
 export interface SiteSettings {
-  // Logo
   logo: Logo;
-  
-  // General settings
   general: {
     storeName: string;
     storeEmail: string;
@@ -20,8 +18,6 @@ export interface SiteSettings {
     timezone: string;
     dateFormat: string;
   };
-  
-  // Payment settings
   payment: {
     codEnabled: boolean;
     easypaisaEnabled: boolean;
@@ -32,8 +28,6 @@ export interface SiteSettings {
     codCharges: number;
     bankTransferInstructions: string;
   };
-  
-  // Shipping settings
   shipping: {
     freeShippingThreshold: number;
     standardShippingCharges: number;
@@ -46,8 +40,6 @@ export interface SiteSettings {
       deliveryDays: string;
     }>;
   };
-  
-  // Notification settings
   notifications: {
     newOrder: boolean;
     newUser: boolean;
@@ -57,8 +49,6 @@ export interface SiteSettings {
     pushNotifications: boolean;
     smsNotifications: boolean;
   };
-  
-  // Security settings
   security: {
     requireEmailVerification: boolean;
     requireStrongPasswords: boolean;
@@ -69,14 +59,32 @@ export interface SiteSettings {
   };
 }
 
+// ─── Helper: is this URL safe to display? ────────────────────────────────────
+// Returns false for local /uploads/ paths (they 404 on Render after restart)
+// Returns true for Cloudinary URLs and empty/null values
+export function isValidLogoUrl(url: string | undefined | null): boolean {
+  if (!url || url.trim() === '') return false;
+  // Cloudinary URL — always valid
+  if (url.startsWith('https://res.cloudinary.com')) return true;
+  // Any other absolute HTTPS URL — valid
+  if (url.startsWith('https://') || url.startsWith('http://')) return true;
+  // Local /uploads/ paths are NOT reliable on Render — treat as invalid
+  if (url.startsWith('/uploads/')) return false;
+  return false;
+}
+
 class SettingService {
   private cache: SiteSettings | null = null;
   private cacheTime: number = 0;
-  private cacheDuration: number = 5 * 60 * 1000; // 5 minutes
+  private readonly cacheDuration: number = 5 * 60 * 1000; // 5 minutes
 
-  // Get public settings (with caching)
+  // ── Get public settings (with caching) ──────────────────────────────────────
   async getSettings(forceRefresh = false): Promise<SiteSettings> {
-    if (!forceRefresh && this.cache && (Date.now() - this.cacheTime) < this.cacheDuration) {
+    if (
+      !forceRefresh &&
+      this.cache &&
+      Date.now() - this.cacheTime < this.cacheDuration
+    ) {
       console.log('📦 Using cached settings:', this.cache.logo?.url);
       return this.cache;
     }
@@ -84,16 +92,28 @@ class SettingService {
     try {
       console.log('📡 Fetching settings from API...');
       const response = await api.get('/settings/public');
-      console.log('✅ API Response:', response.data);
-      
-      this.cache = response.data.data;
+
+      const data: SiteSettings = response.data.data;
+
+      // ── Sanitize logo URL ──────────────────────────────────────────────────
+      // If the stored URL is a local /uploads/ path it will 404 on Render.
+      // Clear it so the frontend falls back to the text/initial placeholder.
+      if (data.logo && !isValidLogoUrl(data.logo.url)) {
+        console.warn(
+          '⚠️  Logo URL is a local path — clearing so fallback renders:',
+          data.logo.url
+        );
+        data.logo = { ...data.logo, url: '' };
+      }
+
+      this.cache = data;
       this.cacheTime = Date.now();
-      
+
       console.log('💾 Settings cached:', {
         logoUrl: this.cache.logo?.url,
-        storeName: this.cache.general?.storeName
+        storeName: this.cache.general?.storeName,
       });
-      
+
       return this.cache;
     } catch (error) {
       console.error('❌ Error fetching settings:', error);
@@ -101,12 +121,14 @@ class SettingService {
     }
   }
 
-  // Get default settings
+  // ── Default settings ────────────────────────────────────────────────────────
   getDefaultSettings(): SiteSettings {
     return {
+      // Empty URL — Header.tsx already handles this gracefully by showing
+      // the text/initial fallback when logo.url is falsy.
       logo: {
-        url: '/uploads/logo/default-logo.png',
-        alt: 'BlackCart Logo'
+        url: '',
+        alt: 'BlackCart Logo',
       },
       general: {
         storeName: 'BlackCart',
@@ -125,7 +147,8 @@ class SettingService {
         cardEnabled: false,
         codMaxAmount: 50000,
         codCharges: 200,
-        bankTransferInstructions: 'Please transfer the exact amount to HBL Bank: 1234567890',
+        bankTransferInstructions:
+          'Please transfer the exact amount to HBL Bank: 1234567890',
       },
       shipping: {
         freeShippingThreshold: 5000,
@@ -155,40 +178,60 @@ class SettingService {
     };
   }
 
-  // Admin: Get all settings
+  // ── Admin: Get all settings ──────────────────────────────────────────────────
   async getAllSettings(): Promise<any> {
     const response = await api.get('/admin/settings');
     return response.data.data;
   }
 
-  // Admin: Update settings
+  // ── Admin: Update settings section ──────────────────────────────────────────
   async updateSettings(section: string, data: any): Promise<any> {
     const response = await api.put('/admin/settings', { section, data });
     this.cache = null; // Invalidate cache
     return response.data.data;
   }
 
-  // Admin: Upload logo
+  // ── Admin: Upload logo ───────────────────────────────────────────────────────
+  // ROOT CAUSE OF 400 WAS HERE:
+  // The old code passed { headers: { 'Content-Type': 'multipart/form-data' } }
+  // which sets the header WITHOUT the required boundary string, making busboy
+  // unable to parse the request body → req.file is undefined → 400 "Please upload logo".
+  //
+  // FIX: Do NOT set Content-Type manually for FormData. Let axios + the browser
+  // generate it automatically with the correct boundary, e.g.:
+  //   Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryXYZ
+  // The api.ts interceptor already handles this (it deletes Content-Type for
+  // FormData), so no extra headers object is needed here at all.
   async uploadLogo(file: File, alt?: string): Promise<Logo> {
     const formData = new FormData();
     formData.append('logo', file);
     if (alt) formData.append('alt', alt);
 
-    const response = await api.post('/admin/settings/logo', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    // ✅ NO explicit Content-Type header — axios sets it automatically with boundary
+    const response = await api.post('/admin/settings/logo', formData);
 
-    this.cache = null; // Invalidate cache
+    this.cache = null; // Invalidate cache so next read gets fresh data
     return response.data.data;
   }
 
-  // Admin: Reset section
+  // ── Admin: Remove logo ───────────────────────────────────────────────────────
+  async removeLogo(): Promise<any> {
+    const response = await api.delete('/admin/settings/logo');
+    this.cache = null;
+    return response.data;
+  }
+
+  // ── Admin: Reset section ────────────────────────────────────────────────────
   async resetSection(section: string): Promise<any> {
     const response = await api.post(`/admin/settings/reset/${section}`);
     this.cache = null;
     return response.data.data;
+  }
+
+  // ── Invalidate cache manually (call after any mutation) ─────────────────────
+  invalidateCache(): void {
+    this.cache = null;
+    this.cacheTime = 0;
   }
 }
 

@@ -1,7 +1,4 @@
 
-
-//making real complete
-
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { ChevronDown, Grid, List, ArrowUp, ArrowDown } from 'lucide-react'

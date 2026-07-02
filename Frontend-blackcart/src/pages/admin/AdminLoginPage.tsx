@@ -97,6 +97,7 @@ const AdminLoginPage: React.FC = () => {
             </div>
           </div>
           
+          {/* ⚠️ AUTH TEMPORARILY DISABLED — User Login & Forgot Password links commented out
           <div className="flex items-center justify-between">
             <div className="text-sm">
               <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">
@@ -109,6 +110,7 @@ const AdminLoginPage: React.FC = () => {
               </Link>
             </div>
           </div>
+          */}
           
           <div>
             <button

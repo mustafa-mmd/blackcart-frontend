@@ -751,12 +751,14 @@ const HomePage: React.FC = () => {
             BlackCart for their shopping needs.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center">
+            {/* ⚠️ AUTH TEMPORARILY DISABLED — Create Free Account button commented out
             <Link
               to="/register"
               className="bg-white text-blue-700 hover:bg-gray-100 font-bold py-2 md:py-3 px-6 md:px-8 rounded-lg text-base md:text-lg transition-all"
             >
               Create Free Account
             </Link>
+            */}
             <Link
               to="/products"
               className="bg-transparent border-2 border-white hover:bg-white/10 font-bold py-2 md:py-3 px-6 md:px-8 rounded-lg text-base md:text-lg transition-colors"

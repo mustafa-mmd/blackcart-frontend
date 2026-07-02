@@ -218,28 +218,13 @@ useEffect(() => {
                       <Route path="shipping-policy" element={<ShippingPolicy />} />
                       <Route path="returns-policy" element={<ReturnsPolicy />} />
                       
-                      {/* Auth Routes */}
+                      {/* ⚠️ AUTH TEMPORARILY DISABLED — Auth Routes commented out
                       <Route path="login" element={<LoginPage />} />
                       <Route path="register" element={<RegisterPage />} />
                       <Route path="forgot-password" element={<ForgotPasswordPage />} />
-
-                      {/*
-                        ── FIX: reset-password ────────────────────────────────────────────
-                        Email sends: /reset-password?token=abc  (query string)
-                        OLD route:   reset-password/:token      (path segment — never matched)
-                        NEW route:   reset-password             (no segment; component reads
-                                                                 ?token= via useSearchParams)
-                      */}
                       <Route path="reset-password" element={<ResetPasswordPage />} />
-
-                      {/*
-                        ── FIX: verify-email ──────────────────────────────────────────────
-                        Route was missing entirely — every click on the verification email
-                        link fell through to the wildcard * → 404 page.
-                        Email sends: /verify-email?token=abc  (query string)
-                        Component reads ?token= via useSearchParams and auto-verifies.
-                      */}
                       <Route path="verify-email" element={<VerifyEmailPage />} />
+                      */}
                       
                       {/* Product Routes */}
                       <Route path="products" element={<ProductsPage />} />

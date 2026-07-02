@@ -11,14 +11,38 @@ interface PrivateRouteProps {
 }
 
 // ============================================================
-// ⚠️  AUTH TEMPORARILY DISABLED — restore by removing bypass
-//     and uncommenting the original block below.
+// ⚠️  AUTH TEMPORARILY BYPASSED FOR GUESTS
+//     Authentication is bypassed for regular pages, but
+//     enforced for Admin routes so the admin can still log in and manage.
 // ============================================================
-const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
-  // BYPASS: render all protected routes without authentication check
+const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, adminOnly = false, requireAdmin = false }) => {
+  const { user, loading } = useAuth()
+  const location = useLocation()
+
+  // Enforce auth ONLY if admin-level access is required
+  if (adminOnly || requireAdmin) {
+    if (loading) {
+      return (
+        <div className="min-h-screen flex items-center justify-center">
+          <Loader size="lg" />
+        </div>
+      )
+    }
+
+    if (!user) {
+      // Redirect to admin login page
+      return <Navigate to="/admin/login" state={{ from: location }} replace />
+    }
+
+    if (user.role !== 'admin') {
+      return <Navigate to="/" replace />
+    }
+  }
+
+  // Otherwise, bypass authentication for regular pages (guest mode)
   return <>{children}</>
 
-  /* ---------- ORIGINAL AUTH GUARD (do not delete) ----------
+  /* ---------- ORIGINAL FULL AUTH GUARD (do not delete) ----------
   const { user, loading } = useAuth()
   const location = useLocation()
 

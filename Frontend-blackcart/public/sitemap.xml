@@ -2,42 +2,42 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <!-- Homepage -->
   <url>
-    <loc>https://blackcart.store/</loc>
+    <loc>https://www.blackcart.store/</loc>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
 
   <!-- Products listing -->
   <url>
-    <loc>https://blackcart.store/products</loc>
+    <loc>https://www.blackcart.store/products</loc>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
 
   <!-- Categories listing -->
   <url>
-    <loc>https://blackcart.store/categories</loc>
+    <loc>https://www.blackcart.store/categories</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <!-- About -->
   <url>
-    <loc>https://blackcart.store/about</loc>
+    <loc>https://www.blackcart.store/about</loc>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
 
   <!-- Contact -->
   <url>
-    <loc>https://blackcart.store/contact</loc>
+    <loc>https://www.blackcart.store/contact</loc>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
 
   <!-- FAQ -->
   <url>
-    <loc>https://blackcart.store/faq</loc>
+    <loc>https://www.blackcart.store/faq</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>

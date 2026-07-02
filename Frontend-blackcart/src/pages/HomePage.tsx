@@ -1115,6 +1115,7 @@ const HomePage: React.FC = () => {
         <meta property="og:type" content="website" />
         <link rel="canonical" href="https://blackcart.store/" />
       </Helmet>
+
       {/* ─── HERO SLIDER SECTION ──────────────────────────────────────────────────── */}
       <section
         className="relative overflow-hidden text-white w-full h-screen min-h-screen sm:h-[50vh] sm:min-h-[360px] md:h-[calc(100vh-80px)] md:min-h-[480px]"
@@ -1140,14 +1141,25 @@ const HomePage: React.FC = () => {
                 }}
                 transition={{ duration: 0.8, ease: "easeInOut" }}
               >
-                {/* Background Banner Image */}
+                {/* Blurred background layer - always visible behind the image */}
+                <img
+                  src={bannerImgUrl}
+                  alt=""
+                  aria-hidden="true"
+                  className="absolute inset-0 w-full h-full object-cover blur-xl scale-110 select-none"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
+                />
+
+                {/* Main Banner Image - object-cover on all devices */}
                 <img
                   src={bannerImgUrl}
                   alt={banner.title || "Promotional Banner"}
-                  className="w-full h-full object-contain sm:object-cover select-none"
+                  className="relative w-full h-full object-cover select-none"
                   onError={(e) => {
                     e.currentTarget.src =
-                      "https://placehold.co/1920x600?text=Computer+Accessories+Offer";
+                      "https://placehold.co/1920x1080?text=Computer+Accessories+Offer";
                   }}
                 />
 
@@ -1501,14 +1513,7 @@ const HomePage: React.FC = () => {
             BlackCart for their shopping needs.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center">
-            {/* ⚠️ AUTH TEMPORARILY DISABLED — Create Free Account button commented out
-            <Link
-              to="/register"
-              className="bg-white text-blue-700 hover:bg-gray-100 font-bold py-2 md:py-3 px-6 md:px-8 rounded-lg text-base md:text-lg transition-all"
-            >
-              Create Free Account
-            </Link>
-            */}
+            {/* ⚠️ AUTH TEMPORARILY DISABLED — Create Free Account button commented out */}
             <Link
               to="/products"
               className="bg-transparent border-2 border-white hover:bg-white/10 font-bold py-2 md:py-3 px-6 md:px-8 rounded-lg text-base md:text-lg transition-colors"

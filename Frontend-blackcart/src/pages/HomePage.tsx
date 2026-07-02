@@ -319,9 +319,6 @@
 //     );
 //   }
 
-
-
-
 //   /* ══════════════════════════════════════════════════════════════════════════
 //      ✨ PREMIUM HERO — main render
 //   ══════════════════════════════════════════════════════════════════════════ */
@@ -346,8 +343,8 @@
 //       >
 //         <div className="relative w-full h-full">
 //           {activeBanners.map((banner, index) => {
-//             const bannerImgUrl = banner.url.startsWith('http') 
-//               ? banner.url 
+//             const bannerImgUrl = banner.url.startsWith('http')
+//               ? banner.url
 //               : `${import.meta.env.VITE_API_URL || 'https://blackcart-backend.onrender.com'}${banner.url}`;
 
 //             return (
@@ -355,7 +352,7 @@
 //                 key={banner._id}
 //                 className="absolute inset-0 w-full h-full"
 //                 initial={{ opacity: 0 }}
-//                 animate={{ 
+//                 animate={{
 //                   opacity: index === currentSlide ? 1 : 0,
 //                   zIndex: index === currentSlide ? 10 : 0
 //                 }}
@@ -374,22 +371,22 @@
 //                 {/* Banner Click Link Overlay */}
 //                 {banner.link && (
 //                   banner.link.startsWith('http') ? (
-//                     <a 
-//                       href={banner.link} 
-//                       target="_blank" 
-//                       rel="noopener noreferrer" 
+//                     <a
+//                       href={banner.link}
+//                       target="_blank"
+//                       rel="noopener noreferrer"
 //                       className="absolute inset-0 w-full h-full cursor-pointer z-20"
 //                     />
 //                   ) : (
-//                     <Link 
-//                       to={banner.link} 
+//                     <Link
+//                       to={banner.link}
 //                       className="absolute inset-0 w-full h-full cursor-pointer z-20"
 //                     />
 //                   )
 //                 )}
 
 //                 {/* Premium Dark Gradient Overlay */}
-//                 <div 
+//                 <div
 //                   className="absolute inset-0 pointer-events-none z-10"
 //                   style={{
 //                     background: "linear-gradient(to top, rgba(2, 8, 23, 0.7) 0%, rgba(2, 8, 23, 0.2) 50%, rgba(2, 8, 23, 0.4) 100%)"
@@ -433,8 +430,8 @@
 //                     key={index}
 //                     onClick={() => setCurrentSlide(index)}
 //                     className={`h-2.5 rounded-full transition-all duration-300 ${
-//                       index === currentSlide 
-//                         ? 'bg-blue-600 w-6' 
+//                       index === currentSlide
+//                         ? 'bg-blue-600 w-6'
 //                         : 'bg-white/40 hover:bg-white/70 w-2.5'
 //                     }`}
 //                     aria-label={`Go to slide ${index + 1}`}
@@ -450,7 +447,7 @@
 //       {allProducts.length === 0 && (
 //         <section className="py-12 bg-gray-50 flex items-center justify-center">
 //           <div className="max-w-4xl mx-auto px-4 w-full">
-//             <div 
+//             <div
 //               className="rounded-2xl p-6 md:p-10 text-white shadow-xl relative overflow-hidden"
 //               style={{
 //                 background: "linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%)",
@@ -461,7 +458,7 @@
 //               <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-blue-500 rounded-full opacity-30 blur-2xl pointer-events-none" />
 
 //               <div className="text-center max-w-2xl mx-auto space-y-6">
-//                 <div 
+//                 <div
 //                   className="inline-flex items-center justify-center p-3 rounded-xl mb-2 backdrop-blur-sm"
 //                   style={{ background: "rgba(255, 255, 255, 0.1)", border: "1px solid rgba(255, 255, 255, 0.15)" }}
 //                 >
@@ -774,9 +771,6 @@
 
 // export default HomePage;
 
-
-
-
 import React, { useEffect, useRef } from "react";
 import { Helmet } from "react-helmet-async";
 import { motion } from "framer-motion";
@@ -892,16 +886,14 @@ const defaultBanners = [
     link: "/products",
     isActive: true,
     order: 2,
-  }
+  },
 ];
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const [currentSlide, setCurrentSlide] = React.useState(0);
 
-  const {
-    data: banners = [],
-  } = useQuery({
+  const { data: banners = [] } = useQuery({
     queryKey: ["banners"],
     queryFn: () => bannerService.getBanners(),
     staleTime: 5 * 60 * 1000,
@@ -1098,19 +1090,27 @@ const HomePage: React.FC = () => {
     );
   }
 
-
-
-
   /* ══════════════════════════════════════════════════════════════════════════
      ✨ PREMIUM HERO — main render
   ══════════════════════════════════════════════════════════════════════════ */
   return (
     <div>
       <Helmet>
-        <title>BlackCart — Premium Computer &amp; Gaming Accessories in Pakistan</title>
-        <meta name="description" content="Shop gaming mice, mechanical keyboards, headphones and computer accessories at BlackCart. Fast delivery across Pakistan. 14-day easy returns. Order now!" />
-        <meta property="og:title" content="BlackCart — Premium Computer & Gaming Accessories in Pakistan" />
-        <meta property="og:description" content="Shop gaming mice, mechanical keyboards, headphones and computer accessories at BlackCart. Fast delivery across Pakistan." />
+        <title>
+          BlackCart — Premium Computer &amp; Gaming Accessories in Pakistan
+        </title>
+        <meta
+          name="description"
+          content="Shop gaming mice, mechanical keyboards, headphones and computer accessories at BlackCart. Fast delivery across Pakistan. 14-day easy returns. Order now!"
+        />
+        <meta
+          property="og:title"
+          content="BlackCart — Premium Computer & Gaming Accessories in Pakistan"
+        />
+        <meta
+          property="og:description"
+          content="Shop gaming mice, mechanical keyboards, headphones and computer accessories at BlackCart. Fast delivery across Pakistan."
+        />
         <meta property="og:url" content="https://blackcart.store/" />
         <meta property="og:type" content="website" />
         <link rel="canonical" href="https://blackcart.store/" />
@@ -1120,14 +1120,14 @@ const HomePage: React.FC = () => {
         className="relative overflow-hidden text-white w-full h-screen min-h-screen sm:h-[50vh] sm:min-h-[360px] md:h-[calc(100vh-80px)] md:min-h-[480px]"
         style={{
           fontFamily: "'DM Sans', sans-serif",
-          background: "#020817"
+          background: "#020817",
         }}
       >
         <div className="relative w-full h-full">
           {activeBanners.map((banner, index) => {
-            const bannerImgUrl = banner.url.startsWith('http')
+            const bannerImgUrl = banner.url.startsWith("http")
               ? banner.url
-              : `${import.meta.env.VITE_API_URL || 'https://blackcart-backend.onrender.com'}${banner.url}`;
+              : `${import.meta.env.VITE_API_URL || "https://blackcart-backend.onrender.com"}${banner.url}`;
 
             return (
               <motion.div
@@ -1136,7 +1136,7 @@ const HomePage: React.FC = () => {
                 initial={{ opacity: 0 }}
                 animate={{
                   opacity: index === currentSlide ? 1 : 0,
-                  zIndex: index === currentSlide ? 10 : 0
+                  zIndex: index === currentSlide ? 10 : 0,
                 }}
                 transition={{ duration: 0.8, ease: "easeInOut" }}
               >
@@ -1144,15 +1144,16 @@ const HomePage: React.FC = () => {
                 <img
                   src={bannerImgUrl}
                   alt={banner.title || "Promotional Banner"}
-                  className="w-full h-full object-cover select-none"
+                  className="w-full h-full object-contain sm:object-cover select-none"
                   onError={(e) => {
-                    e.currentTarget.src = 'https://placehold.co/1920x600?text=Computer+Accessories+Offer';
+                    e.currentTarget.src =
+                      "https://placehold.co/1920x600?text=Computer+Accessories+Offer";
                   }}
                 />
 
                 {/* Banner Click Link Overlay */}
-                {banner.link && (
-                  banner.link.startsWith('http') ? (
+                {banner.link &&
+                  (banner.link.startsWith("http") ? (
                     <a
                       href={banner.link}
                       target="_blank"
@@ -1164,14 +1165,14 @@ const HomePage: React.FC = () => {
                       to={banner.link}
                       className="absolute inset-0 w-full h-full cursor-pointer z-20"
                     />
-                  )
-                )}
+                  ))}
 
                 {/* Premium Dark Gradient Overlay */}
                 <div
                   className="absolute inset-0 pointer-events-none z-10"
                   style={{
-                    background: "linear-gradient(to top, rgba(2, 8, 23, 0.7) 0%, rgba(2, 8, 23, 0.2) 50%, rgba(2, 8, 23, 0.4) 100%)"
+                    background:
+                      "linear-gradient(to top, rgba(2, 8, 23, 0.7) 0%, rgba(2, 8, 23, 0.2) 50%, rgba(2, 8, 23, 0.4) 100%)",
                   }}
                 />
 
@@ -1191,14 +1192,21 @@ const HomePage: React.FC = () => {
           {activeBanners.length > 1 && (
             <>
               <button
-                onClick={() => setCurrentSlide((prev) => (prev - 1 + activeBanners.length) % activeBanners.length)}
+                onClick={() =>
+                  setCurrentSlide(
+                    (prev) =>
+                      (prev - 1 + activeBanners.length) % activeBanners.length,
+                  )
+                }
                 className="absolute left-4 md:left-6 top-1/2 -translate-y-1/2 z-30 p-3 rounded-full bg-black/30 hover:bg-black/60 text-white backdrop-blur-sm border border-white/10 transition-all hover:scale-105 active:scale-95"
                 aria-label="Previous Slide"
               >
                 <ChevronLeft className="h-6 w-6" />
               </button>
               <button
-                onClick={() => setCurrentSlide((prev) => (prev + 1) % activeBanners.length)}
+                onClick={() =>
+                  setCurrentSlide((prev) => (prev + 1) % activeBanners.length)
+                }
                 className="absolute right-4 md:right-6 top-1/2 -translate-y-1/2 z-30 p-3 rounded-full bg-black/30 hover:bg-black/60 text-white backdrop-blur-sm border border-white/10 transition-all hover:scale-105 active:scale-95"
                 aria-label="Next Slide"
               >
@@ -1211,10 +1219,11 @@ const HomePage: React.FC = () => {
                   <button
                     key={index}
                     onClick={() => setCurrentSlide(index)}
-                    className={`h-2.5 rounded-full transition-all duration-300 ${index === currentSlide
-                        ? 'bg-blue-600 w-6'
-                        : 'bg-white/40 hover:bg-white/70 w-2.5'
-                      }`}
+                    className={`h-2.5 rounded-full transition-all duration-300 ${
+                      index === currentSlide
+                        ? "bg-blue-600 w-6"
+                        : "bg-white/40 hover:bg-white/70 w-2.5"
+                    }`}
                     aria-label={`Go to slide ${index + 1}`}
                   />
                 ))}
@@ -1232,7 +1241,7 @@ const HomePage: React.FC = () => {
               className="rounded-2xl p-6 md:p-10 text-white shadow-xl relative overflow-hidden"
               style={{
                 background: "linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%)",
-                border: "1px solid rgba(59,130,246,0.3)"
+                border: "1px solid rgba(59,130,246,0.3)",
               }}
             >
               {/* background ambient shape */}
@@ -1241,15 +1250,22 @@ const HomePage: React.FC = () => {
               <div className="text-center max-w-2xl mx-auto space-y-6">
                 <div
                   className="inline-flex items-center justify-center p-3 rounded-xl mb-2 backdrop-blur-sm"
-                  style={{ background: "rgba(255, 255, 255, 0.1)", border: "1px solid rgba(255, 255, 255, 0.15)" }}
+                  style={{
+                    background: "rgba(255, 255, 255, 0.1)",
+                    border: "1px solid rgba(255, 255, 255, 0.15)",
+                  }}
                 >
                   <AlertCircle className="h-8 w-8 text-yellow-400" />
                 </div>
-                <h3 className="text-2xl md:text-3xl font-bold tracking-wide" style={{ fontFamily: "'Syne', sans-serif" }}>
+                <h3
+                  className="text-2xl md:text-3xl font-bold tracking-wide"
+                  style={{ fontFamily: "'Syne', sans-serif" }}
+                >
                   Admin Notice
                 </h3>
                 <p className="text-gray-300 text-sm md:text-base leading-relaxed">
-                  No products found in the database. Please add products to start displaying your store products.
+                  No products found in the database. Please add products to
+                  start displaying your store products.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center pt-2">
                   <Link

@@ -198,7 +198,8 @@ import {
   Folder,
   Star,
   Tag,
-  CreditCard
+  CreditCard,
+  Image
 } from 'lucide-react';
 
 const AdminLayout: React.FC = () => {
@@ -213,6 +214,7 @@ const AdminLayout: React.FC = () => {
     { name: 'Categories', href: '/admin/categories', icon: Folder },
     { name: 'Orders', href: '/admin/orders', icon: ShoppingCart },
     { name: 'Payment Proofs', href: '/admin/payment-proofs', icon: CreditCard },
+    { name: 'Banners', href: '/admin/banners', icon: Image },
     { name: 'Reviews', href: '/admin/reviews', icon: Star },
     { name: 'Coupons', href: '/admin/coupons', icon: Tag },
     { name: 'Analytics', href: '/admin/analytics', icon: BarChart3 },

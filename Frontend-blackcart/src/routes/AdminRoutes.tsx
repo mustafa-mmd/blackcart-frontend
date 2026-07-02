@@ -167,6 +167,7 @@ const AdminCreateProduct = lazy(() => import('../pages/admin/AdminCreateProduct'
 const AdminEditProduct = lazy(() => import('../pages/admin/AdminEditProduct'))
 const AdminOrderDetails = lazy(() => import('../pages/admin/AdminOrderDetails'))
 const AdminEditOrder = lazy(() => import('../pages/admin/AdminEditOrder'))
+const AdminBanners = lazy(() => import('../pages/admin/AdminBanners'))
 
 const AdminPageLoader = () => (
   <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -299,6 +300,11 @@ const AdminRoutes: React.FC = () => {
           <Route path="payment-proofs" element={
             <Suspense fallback={<AdminPageLoader />}>
               <AdminPaymentProofsPage />
+            </Suspense>
+          } />
+          <Route path="banners" element={
+            <Suspense fallback={<AdminPageLoader />}>
+              <AdminBanners />
             </Suspense>
           } />
 

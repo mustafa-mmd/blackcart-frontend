@@ -339,11 +339,8 @@ const HomePage: React.FC = () => {
       <FontInjector />
       {/* ─── HERO SLIDER SECTION ──────────────────────────────────────────────────── */}
       <section
-        className="relative overflow-hidden text-white w-full"
+        className="relative overflow-hidden text-white w-full h-[40vh] min-h-[260px] sm:h-[50vh] sm:min-h-[360px] md:h-[calc(100vh-80px)] md:min-h-[480px]"
         style={{
-          height: "calc(100vh - 80px)",
-          minHeight: "480px",
-          maxHeight: "100vh",
           fontFamily: "'DM Sans', sans-serif",
           background: "#020817"
         }}

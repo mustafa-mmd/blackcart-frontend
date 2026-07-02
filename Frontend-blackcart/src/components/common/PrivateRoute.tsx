@@ -7,9 +7,18 @@ import Loader from './Loader'
 interface PrivateRouteProps {
   children: React.ReactNode
   adminOnly?: boolean
+  requireAdmin?: boolean // alias used in App.tsx
 }
 
-const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, adminOnly = false }) => {
+// ============================================================
+// ⚠️  AUTH TEMPORARILY DISABLED — restore by removing bypass
+//     and uncommenting the original block below.
+// ============================================================
+const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
+  // BYPASS: render all protected routes without authentication check
+  return <>{children}</>
+
+  /* ---------- ORIGINAL AUTH GUARD (do not delete) ----------
   const { user, loading } = useAuth()
   const location = useLocation()
 
@@ -31,6 +40,7 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, adminOnly = false
   }
 
   return <>{children}</>
+  ---------------------------------------------------------- */
 }
 
 export default PrivateRoute

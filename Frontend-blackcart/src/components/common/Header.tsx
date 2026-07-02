@@ -479,13 +479,14 @@ const Header: React.FC = () => {
                 <Search className="h-6 w-6" />
               </button>
 
+              {/* ⚠️ AUTH DISABLED — wishlist & notifications hidden until auth is restored
               {user && (
                 <Link to="/wishlist" className="relative p-2 text-gray-600 hover:text-primary-600">
                   <Heart className="h-6 w-6" />
                 </Link>
               )}
-
               {user && <NotificationBell />}
+              */}
 
               <Link to="/cart" className="relative p-2 text-gray-600 hover:text-primary-600">
                 <ShoppingCart className="h-6 w-6" />
@@ -496,6 +497,7 @@ const Header: React.FC = () => {
                 )}
               </Link>
 
+              {/* ⚠️ AUTH DISABLED — user dropdown & login buttons hidden until auth is restored
               {user ? (
                 <div className="relative group">
                   <button
@@ -506,54 +508,17 @@ const Header: React.FC = () => {
                     <span className="hidden md:inline font-medium">{user.name}</span>
                   </button>
                   <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                    <Link to="/profile" className="flex items-center space-x-2 px-4 py-3 hover:bg-gray-50">
-                      <User className="h-4 w-4" />
-                      <span>Profile</span>
-                    </Link>
-                    <Link to="/dashboard" className="flex items-center space-x-2 px-4 py-3 hover:bg-gray-50">
-                      <div className="w-4 h-4 bg-blue-100 rounded flex items-center justify-center">
-                        <span className="text-blue-600 text-xs font-bold">D</span>
-                      </div>
-                      <span>Dashboard</span>
-                    </Link>
-                    <Link to="/orders" className="flex items-center space-x-2 px-4 py-3 hover:bg-gray-50">
-                      <div className="w-4 h-4 bg-green-100 rounded flex items-center justify-center">
-                        <span className="text-green-600 text-xs font-bold">O</span>
-                      </div>
-                      <span>My Orders</span>
-                    </Link>
-                    <Link to="/wishlist" className="flex items-center space-x-2 px-4 py-3 hover:bg-gray-50">
-                      <Heart className="h-4 w-4 text-red-500" />
-                      <span>Wishlist</span>
-                    </Link>
-                    <Link to="/address-book" className="flex items-center space-x-2 px-4 py-3 hover:bg-gray-50">
-                      <MapPin className="h-4 w-4 text-purple-500" />
-                      <span>Address Book</span>
-                    </Link>
-                    <Link to="/notifications" className="flex items-center space-x-2 px-4 py-3 hover:bg-gray-50">
-                      <div className="w-4 h-4 bg-yellow-100 rounded flex items-center justify-center">
-                        <span className="text-yellow-600 text-xs font-bold">N</span>
-                      </div>
-                      <span>Notifications</span>
-                    </Link>
+                    <Link to="/profile" className="flex items-center space-x-2 px-4 py-3 hover:bg-gray-50"><User className="h-4 w-4" /><span>Profile</span></Link>
+                    <Link to="/dashboard" className="flex items-center space-x-2 px-4 py-3 hover:bg-gray-50"><div className="w-4 h-4 bg-blue-100 rounded flex items-center justify-center"><span className="text-blue-600 text-xs font-bold">D</span></div><span>Dashboard</span></Link>
+                    <Link to="/orders" className="flex items-center space-x-2 px-4 py-3 hover:bg-gray-50"><div className="w-4 h-4 bg-green-100 rounded flex items-center justify-center"><span className="text-green-600 text-xs font-bold">O</span></div><span>My Orders</span></Link>
+                    <Link to="/wishlist" className="flex items-center space-x-2 px-4 py-3 hover:bg-gray-50"><Heart className="h-4 w-4 text-red-500" /><span>Wishlist</span></Link>
+                    <Link to="/address-book" className="flex items-center space-x-2 px-4 py-3 hover:bg-gray-50"><MapPin className="h-4 w-4 text-purple-500" /><span>Address Book</span></Link>
+                    <Link to="/notifications" className="flex items-center space-x-2 px-4 py-3 hover:bg-gray-50"><div className="w-4 h-4 bg-yellow-100 rounded flex items-center justify-center"><span className="text-yellow-600 text-xs font-bold">N</span></div><span>Notifications</span></Link>
                     <div className="border-t border-gray-200">
                       {user.role === 'admin' && (
-                        <Link to="/admin" className="flex items-center space-x-2 px-4 py-3 hover:bg-gray-50 text-blue-600">
-                          <div className="w-4 h-4 bg-blue-100 rounded flex items-center justify-center">
-                            <span className="text-blue-600 text-xs font-bold">A</span>
-                          </div>
-                          <span>Admin Dashboard</span>
-                        </Link>
+                        <Link to="/admin" className="flex items-center space-x-2 px-4 py-3 hover:bg-gray-50 text-blue-600"><div className="w-4 h-4 bg-blue-100 rounded flex items-center justify-center"><span className="text-blue-600 text-xs font-bold">A</span></div><span>Admin Dashboard</span></Link>
                       )}
-                      <button
-                        onClick={handleLogout}
-                        className="flex items-center space-x-2 w-full text-left px-4 py-3 hover:bg-gray-50 text-red-600"
-                      >
-                        <div className="w-4 h-4 bg-red-100 rounded flex items-center justify-center">
-                          <span className="text-red-600 text-xs font-bold">L</span>
-                        </div>
-                        <span>Logout</span>
-                      </button>
+                      <button onClick={handleLogout} className="flex items-center space-x-2 w-full text-left px-4 py-3 hover:bg-gray-50 text-red-600"><div className="w-4 h-4 bg-red-100 rounded flex items-center justify-center"><span className="text-red-600 text-xs font-bold">L</span></div><span>Logout</span></button>
                     </div>
                   </div>
                 </div>
@@ -563,6 +528,7 @@ const Header: React.FC = () => {
                   <Link to="/register" className="btn-primary px-4 py-2">Sign Up</Link>
                 </div>
               )}
+              */}
 
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -585,6 +551,7 @@ const Header: React.FC = () => {
                 <Link to="/contact" className="block py-2 text-gray-700 hover:text-primary-600" onClick={() => setIsMenuOpen(false)}>Contact</Link>
                 <Link to="/faq" className="block py-2 text-gray-700 hover:text-primary-600" onClick={() => setIsMenuOpen(false)}>FAQ</Link>
 
+                {/* ⚠️ AUTH DISABLED — user menu items hidden until auth is restored
                 {user ? (
                   <>
                     <Link to="/dashboard" className="block py-2 text-gray-700 hover:text-primary-600" onClick={() => setIsMenuOpen(false)}>Dashboard</Link>
@@ -608,6 +575,7 @@ const Header: React.FC = () => {
                     <Link to="/register" className="block py-2 text-primary-600 font-medium" onClick={() => setIsMenuOpen(false)}>Sign Up</Link>
                   </>
                 )}
+                */}
               </nav>
             </div>
           )}

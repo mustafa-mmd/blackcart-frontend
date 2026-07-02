@@ -7,9 +7,13 @@
     {
       "source": "/sitemap.xml",
       "headers": [{ "key": "Content-Type", "value": "application/xml" }]
+    },
+    {
+      "source": "/google(.*).html",
+      "headers": [{ "key": "Content-Type", "value": "text/html" }]
     }
   ],
   "rewrites": [
-    { "source": "/((?!robots.txt|sitemap.xml).*)", "destination": "/index.html" }
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

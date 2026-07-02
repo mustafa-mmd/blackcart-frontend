@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
@@ -238,6 +239,17 @@ const CategoryProductsPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Helmet>
+        <title>{category.name} Products in Pakistan — Buy Online | BlackCart</title>
+        <meta
+          name="description"
+          content={`Shop ${category.name} products at BlackCart Pakistan. ${category.description ? category.description.slice(0, 100) + '.' : 'Browse our selection of ' + category.name + ' accessories with fast nationwide delivery.'} Best prices guaranteed.`}
+        />
+        <meta property="og:title" content={`${category.name} | BlackCart Pakistan`} />
+        <meta property="og:description" content={`Buy ${category.name} online in Pakistan at the best prices. Fast delivery. BlackCart.`} />
+        <meta property="og:url" content={`https://blackcart.store/categories/${slug}`} />
+        <link rel="canonical" href={`https://blackcart.store/categories/${slug}`} />
+      </Helmet>
       {/* ✅ FIXED: Header — reduced py-8 md:py-12 → py-1 md:py-2 so filters + products are visible */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white">
         <div className="container mx-auto px-4 py-1 md:py-2">

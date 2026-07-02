@@ -2,6 +2,7 @@
 
 // src/pages/products/ProductDetailPage.tsx 
 import React, { useState, useEffect } from 'react'
+import { Helmet } from 'react-helmet-async'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
@@ -465,8 +466,68 @@ const ProductDetailPage: React.FC = () => {
     )
   }
 
+  const productUrl = `https://blackcart.store/products/${identifier}`
+  const productImage = productImages[0] || 'https://blackcart.store/BlackCart.png'
+  const categoryName = typeof product.category === 'object'
+    ? product.category?.name || 'Electronics'
+    : product.category || 'Electronics'
+  const productPrice = product.discountPrice || product.price
+  const schemaStockAvailability = product.stock > 0
+    ? 'https://schema.org/InStock'
+    : 'https://schema.org/OutOfStock'
+  const shortDescription = product.description
+    ? product.description.replace(/<[^>]+>/g, '').slice(0, 150)
+    : `Buy ${product.name} in Pakistan at the best price.`
+
+  const productSchema = {
+    '@context': 'https://schema.org/',
+    '@type': 'Product',
+    name: product.name,
+    image: productImages.length > 0 ? productImages : [productImage],
+    description: product.description || `${product.name} available at BlackCart Pakistan.`,
+    sku: product.sku,
+    brand: {
+      '@type': 'Brand',
+      name: product.brand || 'BlackCart',
+    },
+    offers: {
+      '@type': 'Offer',
+      url: productUrl,
+      priceCurrency: 'PKR',
+      price: productPrice,
+      availability: schemaStockAvailability,
+      seller: {
+        '@type': 'Organization',
+        name: 'BlackCart',
+      },
+    },
+    ...(product.rating && product.numReviews
+      ? {
+          aggregateRating: {
+            '@type': 'AggregateRating',
+            ratingValue: product.rating,
+            reviewCount: product.numReviews,
+          },
+        }
+      : {}),
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
+      <Helmet>
+        <title>{product.name} — Buy in Pakistan | BlackCart</title>
+        <meta name="description" content={`Buy ${product.name} in Pakistan at the best price. ${shortDescription}. Fast nationwide delivery. Order now at BlackCart.`} />
+        <meta property="og:title" content={`${product.name} | BlackCart Pakistan`} />
+        <meta property="og:description" content={`Buy ${product.name} online in Pakistan. ${shortDescription}`} />
+        <meta property="og:image" content={productImage} />
+        <meta property="og:url" content={productUrl} />
+        <meta property="og:type" content="product" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={`${product.name} | BlackCart`} />
+        <meta name="twitter:image" content={productImage} />
+        <link rel="canonical" href={productUrl} />
+        <script type="application/ld+json">{JSON.stringify(productSchema)}</script>
+      </Helmet>
       {/* Breadcrumb */}
       <div className="container mx-auto px-4 py-2">
         <Breadcrumb items={breadcrumbItems} />

@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
 import { Package, Grid, List } from 'lucide-react';
 import { categoryService } from '../services/categoryService';
@@ -88,6 +89,14 @@ const CategoriesPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Helmet>
+        <title>Shop by Category — Computer Accessories | BlackCart Pakistan</title>
+        <meta name="description" content="Browse gaming peripherals, keyboards, mice, monitors, headphones and more by category at BlackCart — Pakistan's trusted computer accessories store." />
+        <meta property="og:title" content="Product Categories | BlackCart Pakistan" />
+        <meta property="og:description" content="Browse all computer and gaming accessory categories at BlackCart." />
+        <meta property="og:url" content="https://blackcart.store/categories" />
+        <link rel="canonical" href="https://blackcart.store/categories" />
+      </Helmet>
       {/* ✅ FIXED: Header — reduced py-12 → py-4 so cards are visible without scrolling */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-4 md:py-6">
         <div className="container mx-auto px-4">

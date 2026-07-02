@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { Helmet } from 'react-helmet-async'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Search, 
@@ -168,6 +169,14 @@ const FaqPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Helmet>
+        <title>Frequently Asked Questions | BlackCart Pakistan</title>
+        <meta name="description" content="Find answers to common questions about shopping at BlackCart: orders, payments, delivery, returns, and account management. Quick help for Pakistani customers." />
+        <meta property="og:title" content="FAQ | BlackCart Pakistan" />
+        <meta property="og:description" content="Answers to your questions about BlackCart orders, payments, delivery across Pakistan, and easy returns." />
+        <meta property="og:url" content="https://blackcart.store/faq" />
+        <link rel="canonical" href="https://blackcart.store/faq" />
+      </Helmet>
       {/* Hero Section */}
       <section className="bg-gradient-to-r from-blue-600 to-blue-800 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">

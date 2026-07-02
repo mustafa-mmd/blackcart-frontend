@@ -1,4 +1,5 @@
 import React from 'react'
+import { Helmet } from 'react-helmet-async'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Home, Search, AlertTriangle } from 'lucide-react'
@@ -6,6 +7,10 @@ import { Home, Search, AlertTriangle } from 'lucide-react'
 const NotFoundPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+      <Helmet>
+        <title>404 — Page Not Found | BlackCart</title>
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
       <div className="text-center px-4">
         <motion.div
           initial={{ scale: 0.5, opacity: 0 }}

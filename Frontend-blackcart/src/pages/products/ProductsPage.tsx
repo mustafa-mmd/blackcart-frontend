@@ -1,6 +1,7 @@
 
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { Helmet } from 'react-helmet-async'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
@@ -219,6 +220,31 @@ const ProductsPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
+      <Helmet>
+        <title>
+          {filters.search
+            ? `Search: "${filters.search}" | BlackCart Pakistan`
+            : Array.isArray(filters.category) && filters.category.length > 0
+            ? `${filters.category.join(', ')} Products in Pakistan | BlackCart`
+            : filters.featured
+            ? 'Featured Products | BlackCart Pakistan'
+            : filters.newArrivals
+            ? 'New Arrivals | BlackCart Pakistan'
+            : 'Buy Computer Accessories Online in Pakistan | BlackCart'}
+        </title>
+        <meta
+          name="description"
+          content={
+            filters.search
+              ? `Search results for "${filters.search}" at BlackCart. Find computer accessories and gaming gear in Pakistan.`
+              : 'Explore 100+ computer and gaming accessories at unbeatable prices. Genuine products, secure payments, and nationwide delivery across Pakistan.'
+          }
+        />
+        <meta property="og:title" content="Computer Accessories Online Pakistan | BlackCart" />
+        <meta property="og:description" content="Shop gaming mice, keyboards, headphones and more. Fast delivery across Pakistan." />
+        <meta property="og:url" content="https://blackcart.store/products" />
+        <link rel="canonical" href="https://blackcart.store/products" />
+      </Helmet>
       <div className="container-lg section-padding">
         {/* Page Header */}
         <div className="mb-8">

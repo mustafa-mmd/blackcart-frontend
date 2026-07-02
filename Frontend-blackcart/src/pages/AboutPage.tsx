@@ -1,4 +1,5 @@
 import React from 'react'
+import { Helmet } from 'react-helmet-async'
 import { motion } from 'framer-motion'
 import { 
   Target, Users, Globe, Award, Shield, Heart,
@@ -74,6 +75,14 @@ const AboutPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Helmet>
+        <title>About BlackCart — Pakistan's Computer Accessories Store</title>
+        <meta name="description" content="Learn about BlackCart, Pakistan's trusted online store for premium computer accessories and gaming peripherals. Our mission, story, and commitment to quality." />
+        <meta property="og:title" content="About BlackCart | Pakistan's Computer Accessories Store" />
+        <meta property="og:description" content="BlackCart is Pakistan's dedicated online store for computer accessories and gaming peripherals. Learn about our story and mission." />
+        <meta property="og:url" content="https://blackcart.store/about" />
+        <link rel="canonical" href="https://blackcart.store/about" />
+      </Helmet>
       {/* Hero Section */}
       <section className="relative bg-gradient-to-r from-primary-600 to-primary-800 text-white py-20">
         <div className="container-lg section-padding">

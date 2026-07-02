@@ -1,0 +1,34 @@
+User-agent: *
+Allow: /
+
+# Block private / non-indexable routes
+Disallow: /admin/
+Disallow: /admin
+Disallow: /dashboard/
+Disallow: /dashboard
+Disallow: /checkout/
+Disallow: /checkout
+Disallow: /cart/
+Disallow: /cart
+Disallow: /payment/
+Disallow: /payment
+Disallow: /orders/
+Disallow: /orders
+Disallow: /notifications/
+Disallow: /notifications
+Disallow: /wishlist/
+Disallow: /wishlist
+Disallow: /user/
+Disallow: /user
+Disallow: /auth/
+Disallow: /auth
+
+# Allow important public pages explicitly
+Allow: /products
+Allow: /categories
+Allow: /about
+Allow: /contact
+Allow: /faq
+
+# Sitemap location
+Sitemap: https://blackcart.store/sitemap.xml

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from "react";
+import { Helmet } from "react-helmet-async";
 import { motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -34,17 +35,7 @@ import bannerService from "../services/bannerService";
 import ProductCard from "../components/product/ProductCard";
 import Loader from "../components/common/Loader";
 
-/* ─── Google Fonts injection ─────────────────────────────────────────────── */
-const FontInjector: React.FC = () => {
-  useEffect(() => {
-    const link = document.createElement("link");
-    link.href =
-      "https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500;600&display=swap";
-    link.rel = "stylesheet";
-    document.head.appendChild(link);
-  }, []);
-  return null;
-};
+/* ─── Google Fonts now loaded in index.html <head> — no JS injection needed ─ */
 
 /* ─── Animated canvas starfield ─────────────────────────────────────────── */
 const StarCanvas: React.FC = () => {
@@ -336,7 +327,15 @@ const HomePage: React.FC = () => {
   ══════════════════════════════════════════════════════════════════════════ */
   return (
     <div>
-      <FontInjector />
+      <Helmet>
+        <title>BlackCart — Premium Computer &amp; Gaming Accessories in Pakistan</title>
+        <meta name="description" content="Shop gaming mice, mechanical keyboards, headphones and computer accessories at BlackCart. Fast delivery across Pakistan. 14-day easy returns. Order now!" />
+        <meta property="og:title" content="BlackCart — Premium Computer & Gaming Accessories in Pakistan" />
+        <meta property="og:description" content="Shop gaming mice, mechanical keyboards, headphones and computer accessories at BlackCart. Fast delivery across Pakistan." />
+        <meta property="og:url" content="https://blackcart.store/" />
+        <meta property="og:type" content="website" />
+        <link rel="canonical" href="https://blackcart.store/" />
+      </Helmet>
       {/* ─── HERO SLIDER SECTION ──────────────────────────────────────────────────── */}
       <section
         className="relative overflow-hidden text-white w-full h-[40vh] min-h-[260px] sm:h-[50vh] sm:min-h-[360px] md:h-[calc(100vh-80px)] md:min-h-[480px]"

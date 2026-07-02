@@ -1,4 +1,5 @@
 import React from 'react'
+import { Helmet } from 'react-helmet-async'
 import { motion } from 'framer-motion'
 import { 
   Mail, 
@@ -102,6 +103,14 @@ const ContactPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Helmet>
+        <title>Contact BlackCart — Customer Support Pakistan</title>
+        <meta name="description" content="Get in touch with BlackCart's customer support team. We're here to help with your orders, returns, and product questions across Pakistan. Contact us today." />
+        <meta property="og:title" content="Contact BlackCart | Customer Support" />
+        <meta property="og:description" content="Contact BlackCart for order support, returns, and product enquiries. Fast response for customers across Pakistan." />
+        <meta property="og:url" content="https://blackcart.store/contact" />
+        <link rel="canonical" href="https://blackcart.store/contact" />
+      </Helmet>
       {/* Hero Section */}
       <section className="bg-gradient-to-r from-blue-600 to-blue-800 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">

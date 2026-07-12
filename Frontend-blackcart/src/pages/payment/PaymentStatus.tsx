@@ -333,16 +333,16 @@ const PaymentStatus: React.FC = () => {
             <h4 className="font-medium text-gray-900 mb-3 text-center">Need Help?</h4>
             <div className="flex flex-col sm:flex-row justify-center gap-4 text-sm">
               <a
-                href="mailto:support@blackcart.com"
+                href="mailto:blackcart.ak25@gmail.com"
                 className="text-blue-600 hover:text-blue-700"
               >
-                support@blackcart.com
+                blackcart.ak25@gmail.com
               </a>
               <a
                 href="tel:+9242111222333"
                 className="text-blue-600 hover:text-blue-700"
               >
-                042-111-222-333
+                +92 3146965599
               </a>
             </div>
           </div>

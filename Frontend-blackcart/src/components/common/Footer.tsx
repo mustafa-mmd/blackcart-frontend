@@ -13,7 +13,7 @@ const Footer: React.FC = () => {
               <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
                 <span className="text-gray-900 font-bold text-xl">BC</span>
               </div>
-              <span className="text-2xl font-bold">BlackCart</span>
+              <span className="text-2xl font-bold">BlackCart.store</span>
             </div>
             <p className="text-gray-400 mb-6">
               Pakistan's premier e-commerce destination for laptops & computer accessories. 
@@ -52,11 +52,6 @@ const Footer: React.FC = () => {
               <li>
                 <Link to="/categories" className="text-gray-400 hover:text-white transition-colors">
                   Categories
-                </Link>
-              </li>
-              <li>
-                <Link to="/about" className="text-gray-400 hover:text-white transition-colors">
-                  About Us
                 </Link>
               </li>
               <li>
@@ -116,16 +111,16 @@ const Footer: React.FC = () => {
               <li className="flex items-center space-x-3">
                 <MapPin className="h-5 w-5 text-gray-400" />
                 <span className="text-gray-400">
-                  123 Tech Street, Phase 5, DHA, Karachi, Pakistan
+                  Islamia Town Street# 3rd, Peshawar, Khyber Pakhtunkhwa, Pakistan
                 </span>
               </li>
               <li className="flex items-center space-x-3">
                 <Phone className="h-5 w-5 text-gray-400" />
-                <span className="text-gray-400">+92 300 1234567</span>
+                <a href="tel:+923146965599" className="text-gray-400 hover:text-white">+92 3146965599</a>
               </li>
               <li className="flex items-center space-x-3">
                 <Mail className="h-5 w-5 text-gray-400" />
-                <span className="text-gray-400">support@blackcart.pk</span>
+                <a href="mailto:blackcart.ak25@gmail.com" className="text-gray-400 hover:text-white">blackcart.ak25@gmail.com</a>
               </li>
             </ul>
             <div className="mt-6">
@@ -151,7 +146,7 @@ const Footer: React.FC = () => {
         <div className="border-t border-gray-800 mt-8 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p className="text-gray-400 text-sm mb-4 md:mb-0">
-              &copy; {new Date().getFullYear()} BlackCart Pvt. Ltd. All rights reserved.
+              &copy; {new Date().getFullYear()} BlackCart.store. All rights reserved.
             </p>
             <div className="flex flex-wrap gap-4 justify-center">
               <Link to="/privacy-policy" className="text-gray-400 hover:text-white text-sm transition-colors">

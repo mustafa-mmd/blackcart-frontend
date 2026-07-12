@@ -78,7 +78,7 @@ const GeneralSettings: React.FC = () => {
                   value={formData.storeName}
                   onChange={(e) => handleInputChange('storeName', e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-                  placeholder="BlackCart Store"
+                  placeholder="BlackCart.store"
                   required
                 />
               </div>
@@ -95,7 +95,7 @@ const GeneralSettings: React.FC = () => {
                   value={formData.storeEmail}
                   onChange={(e) => handleInputChange('storeEmail', e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-                  placeholder="admin@blackcart.com"
+                  placeholder="blackcart.ak25@gmail.com"
                 />
               </div>
             </div>
@@ -111,7 +111,7 @@ const GeneralSettings: React.FC = () => {
                   value={formData.storePhone}
                   onChange={(e) => handleInputChange('storePhone', e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-                  placeholder="+92 300 1234567"
+                  placeholder="+92 3146965599"
                 />
               </div>
             </div>
@@ -127,7 +127,7 @@ const GeneralSettings: React.FC = () => {
                   value={formData.storeAddress}
                   onChange={(e) => handleInputChange('storeAddress', e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-                  placeholder="123 Main Street, City"
+                  placeholder="Islamia Town Street# 3rd, Peshawar, Khyber Pakhtunkhwa, Pakistan"
                 />
               </div>
             </div>

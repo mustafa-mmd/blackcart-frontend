@@ -480,7 +480,7 @@ const AdminSettings: React.FC = () => {
               value={settings.general.storeName}
               onChange={(e) => handleInputChange('general', 'storeName', e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-              placeholder="BlackCart Store"
+      placeholder="BlackCart.store"
             />
           </div>
           
@@ -493,7 +493,7 @@ const AdminSettings: React.FC = () => {
               value={settings.general.storeEmail}
               onChange={(e) => handleInputChange('general', 'storeEmail', e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-              placeholder="admin@blackcart.com"
+              placeholder="blackcart.ak25@gmail.com"
             />
           </div>
           
@@ -506,7 +506,7 @@ const AdminSettings: React.FC = () => {
               value={settings.general.storePhone}
               onChange={(e) => handleInputChange('general', 'storePhone', e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-              placeholder="+92 300 1234567"
+              placeholder="+92 3146965599"
             />
           </div>
           
@@ -519,7 +519,7 @@ const AdminSettings: React.FC = () => {
               value={settings.general.storeAddress}
               onChange={(e) => handleInputChange('general', 'storeAddress', e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-              placeholder="123 Main Street, City"
+              placeholder="Islamia Town Street# 3rd, Peshawar, Khyber Pakhtunkhwa, Pakistan"
             />
           </div>
           

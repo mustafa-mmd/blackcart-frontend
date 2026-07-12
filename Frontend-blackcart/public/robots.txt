@@ -26,7 +26,6 @@ Disallow: /auth
 # Allow important public pages explicitly
 Allow: /products
 Allow: /categories
-Allow: /about
 Allow: /contact
 Allow: /faq
 

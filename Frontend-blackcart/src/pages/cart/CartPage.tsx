@@ -304,11 +304,6 @@
 //   }
 
 //   const handleProceedToCheckout = () => {
-//     if (!user) {
-//       toast.error('Please login to proceed to checkout')
-//       navigate('/login', { state: { from: '/checkout' } })
-//       return
-//     }
 
 //     if (validCartItems.length === 0) {
 //       toast.error('Your cart is empty')
@@ -812,7 +807,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   ShoppingCart, Trash2, Plus, Minus, ArrowLeft,
-  Package, Shield, Truck, AlertCircle, Heart
+  Package, Shield, Truck, AlertCircle
 } from 'lucide-react'
 import { useCart } from '../../context/CartContext'
 import { useAuth } from '../../context/AuthContext'
@@ -1112,13 +1107,6 @@ const CartPage: React.FC = () => {
   }
 
   const handleProceedToCheckout = () => {
-    // Login requirement disabled - route kept open, proceed straight to checkout
-    // if (!user) {
-    //   toast.error('Please login to proceed to checkout')
-    //   navigate('/login', { state: { from: '/checkout' } })
-    //   return
-    // }
-
     if (validCartItems.length === 0) {
       toast.error('Your cart is empty')
       return
@@ -1575,19 +1563,6 @@ const CartPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Save for Later */}
-              {validCartItems.length > 0 && (
-                <div className="bg-white p-6 rounded-lg shadow mt-6">
-                  <h3 className="font-medium text-gray-900 mb-4">Save for Later</h3>
-                  <p className="text-sm text-gray-600 mb-4">
-                    Items you're not ready to buy yet? Save them for later.
-                  </p>
-                  <button className="w-full border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center">
-                    <Heart className="h-4 w-4 mr-2" />
-                    Move All to Wishlist
-                  </button>
-                </div>
-              )}
             </div>
           </div>
         )}

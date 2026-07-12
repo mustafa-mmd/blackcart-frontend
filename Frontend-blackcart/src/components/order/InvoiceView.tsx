@@ -184,12 +184,12 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({
               Seller Information
             </h3>
             <div className="bg-gray-50 rounded-lg p-4">
-              <p className="font-bold text-gray-900 text-lg mb-2">BlackCart Store</p>
-              <p className="text-gray-600 mb-1">123 Main Street, Gulberg</p>
-              <p className="text-gray-600 mb-1">Lahore, Punjab 54000</p>
+              <p className="font-bold text-gray-900 text-lg mb-2">BlackCart.store</p>
+              <p className="text-gray-600 mb-1">Islamia Town Street# 3rd</p>
+              <p className="text-gray-600 mb-1">Peshawar, Khyber Pakhtunkhwa, Pakistan</p>
               <p className="text-gray-600 mb-1">Pakistan</p>
-              <p className="text-gray-600">Email: support@blackcart.com</p>
-              <p className="text-gray-600">Phone: 042-111-222-333</p>
+              <p className="text-gray-600">Email: blackcart.ak25@gmail.com</p>
+              <p className="text-gray-600">Phone: +92 3146965599</p>
               <p className="text-gray-600 mt-2">GST: PK1234567890123</p>
             </div>
           </div>
@@ -375,7 +375,7 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({
           <ul className="text-xs text-gray-600 space-y-1">
             <li>• This is a computer-generated invoice and does not require a signature.</li>
             <li>• Goods once sold will not be taken back unless found defective.</li>
-            <li>• All disputes are subject to Lahore jurisdiction only.</li>
+            <li>• All disputes are subject to Peshawar jurisdiction only.</li>
             <li>• Prices are inclusive of all applicable taxes.</li>
             <li>• E. & O.E.</li>
           </ul>

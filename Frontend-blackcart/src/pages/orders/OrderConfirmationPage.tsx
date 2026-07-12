@@ -26,7 +26,7 @@ const OrderConfirmationPage: React.FC = () => {
   useEffect(() => {
     if (error) {
       toast.error('Failed to load order details')
-      navigate('/orders')
+      navigate('/')
     }
   }, [error, navigate])
 
@@ -93,11 +93,11 @@ const OrderConfirmationPage: React.FC = () => {
         
         <div class="company-details">
           <h3>Seller:</h3>
-          <p><strong>BlackCart Store</strong></p>
-          <p>123 Main Street, Gulberg</p>
-          <p>Lahore, Punjab 54000, Pakistan</p>
-          <p>Email: support@blackcart.com</p>
-          <p>Phone: 042-111-222-333</p>
+          <p><strong>BlackCart.store</strong></p>
+          <p>Islamia Town Street# 3rd</p>
+          <p>Peshawar, Khyber Pakhtunkhwa, Pakistan</p>
+          <p>Email: blackcart.ak25@gmail.com</p>
+          <p>Phone: +92 3146965599</p>
         </div>
         
         <div class="customer-details">
@@ -178,10 +178,10 @@ const OrderConfirmationPage: React.FC = () => {
         <div className="container-lg section-padding text-center">
           <h1 className="text-3xl font-bold text-gray-900 mb-4">Order Not Found</h1>
           <button
-            onClick={() => navigate('/orders')}
+            onClick={() => navigate('/')}
             className="btn-primary"
           >
-            View All Orders
+            Return Home
           </button>
         </div>
       </div>
@@ -218,10 +218,10 @@ const OrderConfirmationPage: React.FC = () => {
             <CheckCircle className="h-10 w-10 text-green-600" />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Order Confirmed!
+            Your order was placed successfully!
           </h1>
           <p className="text-gray-600 mb-4">
-            Thank you for your purchase. Your order has been received.
+            Thank you for shopping with BlackCart.store. We have received your order.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-4">
             <button
@@ -246,10 +246,10 @@ const OrderConfirmationPage: React.FC = () => {
               Share
             </button>
             <button
-              onClick={() => navigate('/orders')}
+              onClick={() => navigate('/')}
               className="btn-primary"
             >
-              View All Orders
+              Return Home
             </button>
             <button
               onClick={() => navigate('/products')}
@@ -487,25 +487,6 @@ const OrderConfirmationPage: React.FC = () => {
                   <Share2 className="h-5 w-5 mr-2" />
                   Share Order
                 </button>
-                {order.isCancellable && (
-                  <button
-                    onClick={() => {
-                      if (window.confirm('Are you sure you want to cancel this order?')) {
-                        orderService.cancelOrder(order._id)
-                          .then(() => {
-                            toast.success('Order cancelled successfully')
-                            window.location.reload()
-                          })
-                          .catch((error) => {
-                            toast.error(error.message)
-                          })
-                      }
-                    }}
-                    className="w-full flex items-center justify-center py-3 border border-red-600 text-red-600 rounded-lg hover:bg-red-50"
-                  >
-                    Cancel Order
-                  </button>
-                )}
               </div>
             </motion.div>
           </div>

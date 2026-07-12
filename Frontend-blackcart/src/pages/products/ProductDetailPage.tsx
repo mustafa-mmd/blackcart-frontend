@@ -903,7 +903,7 @@ import { Helmet } from 'react-helmet-async'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Star, Truck, Shield, RefreshCw, ShoppingCart, Heart,
+  Star, Truck, Shield, RefreshCw, ShoppingCart,
   Minus, Plus, Share2, Package, Check, AlertCircle,
   TrendingUp, Clock, Tag, Users, Award, CheckCircle,
   MapPin, Phone, Mail, Globe, Battery, Camera, Cpu,
@@ -913,9 +913,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { productService } from '../../services/productService'
 import { reviewService } from '../../services/reviewService';
-import { userService } from '../../services/userService'
 import { useCart } from '../../context/CartContext'
-import { useAuth } from '../../context/AuthContext'
 import toast from 'react-hot-toast'
 import ReviewForm from '../../components/reviews/ReviewForm';
 import Breadcrumb from '../../components/common/Breadcrumb'
@@ -929,7 +927,6 @@ import { getImageUrl } from '../../utils/imageUtils'
 const ProductDetailPage: React.FC = () => {
   const { identifier } = useParams<{ identifier: string }>()
   const navigate = useNavigate()
-  const { user, isAuthenticated } = useAuth()
   const { addToCart, isInCart, cartItems } = useCart()
   const queryClient = useQueryClient()
 
@@ -938,9 +935,7 @@ const ProductDetailPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'description' | 'specifications' | 'reviews' | 'shipping'>('description')
   const [showReviewForm, setShowReviewForm] = useState(false)
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([])
-  const [isWishlisted, setIsWishlisted] = useState(false)
   const [productImages, setProductImages] = useState<string[]>([])
-  const [wishlistLoading, setWishlistLoading] = useState(false)
 
   // Fetch product data
   const { data: productData, isLoading, error, refetch } = useQuery({
@@ -1021,69 +1016,6 @@ const ProductDetailPage: React.FC = () => {
   }, [product]);
 
   // ✅ FIXED: Check wishlist status
-  useEffect(() => {
-    const checkWishlistStatus = async () => {
-      if (!product || !isAuthenticated || !user) {
-        setIsWishlisted(false)
-        return
-      }
-
-      try {
-        const response = await userService.getWishlist()
-
-        let wishlistItems: any[] = []
-
-        if (response.data?.data?.items && Array.isArray(response.data.data.items)) {
-          wishlistItems = response.data.data.items.map((item: any) => item.product)
-        } else if (response.data?.items && Array.isArray(response.data.items)) {
-          wishlistItems = response.data.items.map((item: any) => item.product)
-        } else if (Array.isArray(response.data)) {
-          wishlistItems = response.data
-        }
-
-        const isInWishlist = wishlistItems.some((wishlistProduct: any) =>
-          wishlistProduct?._id === product._id || wishlistProduct === product._id
-        )
-
-        setIsWishlisted(isInWishlist)
-
-        // Update localStorage for consistency
-        try {
-          const currentWishlist = JSON.parse(localStorage.getItem('wishlist') || '[]')
-          const isInLocalStorage = currentWishlist.some((item: any) => item._id === product._id)
-
-          if (isInWishlist && !isInLocalStorage) {
-            currentWishlist.push({
-              _id: product._id,
-              name: product.name,
-              price: product.discountPrice || product.price,
-              image: productImages[0] || '/placeholder.png',
-              addedAt: new Date().toISOString()
-            })
-            localStorage.setItem('wishlist', JSON.stringify(currentWishlist))
-          } else if (!isInWishlist && isInLocalStorage) {
-            const updated = currentWishlist.filter((item: any) => item._id !== product._id)
-            localStorage.setItem('wishlist', JSON.stringify(updated))
-          }
-        } catch (localStorageError) {
-          console.warn('LocalStorage sync failed:', localStorageError)
-        }
-
-      } catch (error) {
-        console.error('Error checking wishlist status:', error)
-        // Fallback to localStorage check
-        try {
-          const wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]')
-          setIsWishlisted(wishlist.some((item: any) => item._id === product._id))
-        } catch {
-          setIsWishlisted(false)
-        }
-      }
-    }
-
-    checkWishlistStatus()
-  }, [product, isAuthenticated, user, productImages])
-
   // ✅ FIXED: Fetch related products
   const fetchRelatedProducts = async () => {
     try {
@@ -1173,57 +1105,6 @@ const ProductDetailPage: React.FC = () => {
   }
 
   // ✅ FIXED: Handle wishlist toggle
-  const handleWishlistToggle = async () => {
-    if (!product) return
-
-    // Login requirement disabled - allow guests to use wishlist
-    // if (!isAuthenticated || !user) {
-    //   toast.error('Please login to add to wishlist')
-    //   navigate('/login', { state: { returnUrl: `/products/${identifier}` } })
-    //   return
-    // }
-
-    try {
-      setWishlistLoading(true)
-
-      if (isWishlisted) {
-        await userService.removeFromWishlist(product._id)
-        setIsWishlisted(false)
-        toast.success('Removed from wishlist')
-      } else {
-        await userService.addToWishlist(product._id)
-        setIsWishlisted(true)
-        toast.success('Added to wishlist!')
-      }
-
-      // Update localStorage
-      try {
-        const wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]')
-        if (isWishlisted) {
-          const updated = wishlist.filter((item: any) => item._id !== product._id)
-          localStorage.setItem('wishlist', JSON.stringify(updated))
-        } else {
-          wishlist.push({
-            _id: product._id,
-            name: product.name,
-            price: product.discountPrice || product.price,
-            image: productImages[0] || '/placeholder.png',
-            addedAt: new Date().toISOString()
-          })
-          localStorage.setItem('wishlist', JSON.stringify(wishlist))
-        }
-      } catch (localStorageError) {
-        console.warn('LocalStorage update failed')
-      }
-
-    } catch (err: any) {
-      console.error('Wishlist API error:', err)
-      toast.error(err?.response?.data?.message || 'Failed to update wishlist')
-    } finally {
-      setWishlistLoading(false)
-    }
-  }
-
   // Handle quantity change
   const handleQuantityChange = (type: 'increase' | 'decrease') => {
     if (!product) return
@@ -1280,12 +1161,6 @@ const ProductDetailPage: React.FC = () => {
 
   // ✅ FIXED: Handle review form open
   const handleOpenReviewForm = () => {
-    // Login requirement disabled - allow guests to write a review
-    // if (!isAuthenticated) {
-    //   toast.error('Please login to write a review')
-    //   navigate('/login', { state: { returnUrl: `/products/${identifier}` } })
-    //   return
-    // }
     setShowReviewForm(true)
   }
 
@@ -1310,12 +1185,6 @@ const ProductDetailPage: React.FC = () => {
 
   // ✅ FIXED: Handle helpful click
   const handleHelpfulClick = (reviewId: string) => {
-    // Login requirement disabled - allow guests to mark reviews as helpful
-    // if (!isAuthenticated) {
-    //   toast.error('Please login to mark reviews as helpful')
-    //   navigate('/login', { state: { returnUrl: `/products/${identifier}` } })
-    //   return
-    // }
     markHelpfulMutation.mutate(reviewId);
   }
 
@@ -1646,19 +1515,7 @@ const ProductDetailPage: React.FC = () => {
             </div>
 
             {/* Action Buttons */}
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={handleWishlistToggle}
-                disabled={wishlistLoading}
-                className={`flex items-center justify-center gap-2 py-3 rounded-lg border transition-colors ${isWishlisted
-                    ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100'
-                    : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
-                  } ${wishlistLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                <Heart className={`h-5 w-5 ${isWishlisted ? 'fill-current' : ''} ${wishlistLoading ? 'animate-pulse' : ''}`} />
-                {wishlistLoading ? 'Processing...' : isWishlisted ? 'In Wishlist' : 'Add to Wishlist'}
-              </button>
-
+            <div className="grid grid-cols-1 gap-3">
               <button
                 onClick={handleShare}
                 className="flex items-center justify-center gap-2 py-3 bg-gray-50 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"

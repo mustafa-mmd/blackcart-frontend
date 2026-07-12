@@ -63,19 +63,19 @@ const ContactPage: React.FC = () => {
     {
       icon: <Mail className="h-6 w-6 text-blue-600" />,
       title: 'Email Support',
-      details: ['support@blackcart.pk', 'sales@blackcart.pk'],
+      details: ['blackcart.ak25@gmail.com'],
       description: 'We respond within 24 hours'
     },
     {
       icon: <Phone className="h-6 w-6 text-blue-600" />,
       title: 'Phone Support',
-      details: ['+92 300 1234567', '+92 321 9876543'],
+      details: ['+92 3146965599'],
       description: 'Mon-Fri, 9AM-6PM'
     },
     {
       icon: <MapPin className="h-6 w-6 text-blue-600" />,
       title: 'Office Address',
-      details: ['123 Tech Street, Phase 5', 'DHA, Karachi, Pakistan'],
+      details: ['Islamia Town Street# 3rd', 'Peshawar, Khyber Pakhtunkhwa, Pakistan'],
       description: 'Visit our showroom'
     },
     {
@@ -89,7 +89,7 @@ const ContactPage: React.FC = () => {
   const faqs = [
     {
       question: 'How can I track my order?',
-      answer: 'You can track your order using the tracking number sent to your email or through your account dashboard.'
+      answer: 'Use the tracking number sent to your email on our Track Order page or the courier website.'
     },
     {
       question: 'What payment methods do you accept?',
@@ -241,7 +241,7 @@ const ContactPage: React.FC = () => {
                     type="tel"
                     {...register('phone')}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    placeholder="+92 300 1234567"
+                      placeholder="+92 3146965599"
                   />
                 </div>
 

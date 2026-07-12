@@ -3,14 +3,12 @@ import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { CreditCard, Smartphone, Building, Wallet, CheckCircle, Lock, Shield, ArrowLeft } from 'lucide-react'
 import { useOrders } from '../../hooks/useOrders'
-import { useAuth } from '../../context/AuthContext'
 import { formatPrice } from '../../utils/formatCurrency'
 import toast from 'react-hot-toast'
 
 const PaymentPage: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>()
   const navigate = useNavigate()
-  const { user } = useAuth()
   const { getOrderById, getPaymentMethods, createPaymentRequest } = useOrders()
 
   const [order, setOrder] = useState<any>(null)
@@ -385,16 +383,16 @@ const PaymentPage: React.FC = () => {
                 </p>
                 <div className="space-y-2">
                   <a
-                    href="mailto:support@blackcart.com"
+                    href="mailto:blackcart.ak25@gmail.com"
                     className="block text-sm text-blue-600 hover:text-blue-700"
                   >
-                    support@blackcart.com
+                    blackcart.ak25@gmail.com
                   </a>
                   <a
                     href="tel:+9242111222333"
                     className="block text-sm text-blue-600 hover:text-blue-700"
                   >
-                    042-111-222-333
+                    +92 3146965599
                   </a>
                 </div>
               </div>

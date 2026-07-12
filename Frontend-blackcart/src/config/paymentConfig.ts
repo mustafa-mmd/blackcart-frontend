@@ -3,11 +3,11 @@
 // Bank Details - Using import.meta.env for Vite
 export const BANK_DETAILS = {
   bankName: import.meta.env.VITE_BANK_NAME || 'Habib Bank Limited (HBL)',
-  accountName: import.meta.env.VITE_BANK_ACCOUNT_NAME || 'BlackCart Store',
+  accountName: import.meta.env.VITE_BANK_ACCOUNT_NAME || 'BlackCart.store',
   accountNumber: import.meta.env.VITE_BANK_ACCOUNT_NUMBER || '1234567890123456',
   iban: import.meta.env.VITE_BANK_IBAN || 'PK00HABB1234567890123456',
   branchCode: import.meta.env.VITE_BANK_BRANCH_CODE || '1234',
-  branchName: import.meta.env.VITE_BANK_BRANCH_NAME || 'Gulberg Branch, Lahore',
+  branchName: import.meta.env.VITE_BANK_BRANCH_NAME || 'Islamia Town, Peshawar',
   swiftCode: import.meta.env.VITE_BANK_SWIFT_CODE || 'HABBPKKA'
 }
 
@@ -32,6 +32,6 @@ export const PAYMENT_IDS = {
 
 // Support
 export const SUPPORT = {
-  email: import.meta.env.VITE_SUPPORT_EMAIL || 'support@blackcart.com',
-  phone: import.meta.env.VITE_SUPPORT_PHONE || '042-111-222-333'
+  email: import.meta.env.VITE_SUPPORT_EMAIL || 'blackcart.ak25@gmail.com',
+  phone: import.meta.env.VITE_SUPPORT_PHONE || '+92 3146965599'
 }

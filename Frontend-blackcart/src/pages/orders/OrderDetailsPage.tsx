@@ -12,7 +12,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { orderService } from '../../services/orderService'
 import Loader from '../../components/common/Loader'
 import toast from 'react-hot-toast'
-import PrivateRoute from '../../components/common/PrivateRoute'
 
 // ✅ FIXED: Data URI fallback (no external dependency)
 const FALLBACK_IMAGE = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'80\' height=\'80\' viewBox=\'0 0 80 80\'%3E%3Crect width=\'80\' height=\'80\' fill=\'%23f0f0f0\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' font-family=\'Arial\' font-size=\'14\' fill=\'%23999\'%3ENo Image%3C/text%3E%3C/svg%3E'
@@ -76,11 +75,11 @@ const createFallbackInvoice = (orderId: string, invoiceNumber: string) => {
         <p>Date: ${new Date().toLocaleDateString()}</p>
       </div>
       <div class="company-details">
-        <h3>BlackCart Store</h3>
-        <p>123 Main Street, Gulberg</p>
-        <p>Lahore, Punjab 54000, Pakistan</p>
-        <p>Email: support@blackcart.com</p>
-        <p>Phone: 042-111-222-333</p>
+        <h3>BlackCart.store</h3>
+        <p>Islamia Town Street# 3rd</p>
+        <p>Peshawar, Khyber Pakhtunkhwa, Pakistan</p>
+        <p>Email: blackcart.ak25@gmail.com</p>
+        <p>Phone: +92 3146965599</p>
       </div>
       <div class="invoice-details">
         <p><strong>Order ID:</strong> ${orderId}</p>
@@ -140,11 +139,11 @@ const generateInvoiceHTML = (invoiceData: any) => {
       
       <div class="company-details">
         <h3>Seller:</h3>
-        <p><strong>BlackCart Store</strong></p>
-        <p>123 Main Street, Gulberg</p>
-        <p>Lahore, Punjab 54000, Pakistan</p>
-        <p>Email: support@blackcart.com</p>
-        <p>Phone: 042-111-222-333</p>
+        <p><strong>BlackCart.store</strong></p>
+        <p>Islamia Town Street# 3rd</p>
+        <p>Peshawar, Khyber Pakhtunkhwa, Pakistan</p>
+        <p>Email: blackcart.ak25@gmail.com</p>
+        <p>Phone: +92 3146965599</p>
       </div>
       
       <div class="customer-details">
@@ -209,18 +208,6 @@ const OrderDetailsPage: React.FC = () => {
 
   const order = orderData?.data
 
-  const cancelOrderMutation = useMutation({
-    mutationFn: (reason: string) => orderService.cancelOrder(id!, reason),
-    onSuccess: () => {
-      toast.success('Order cancelled successfully')
-      queryClient.invalidateQueries({ queryKey: ['order', id] })
-      queryClient.invalidateQueries({ queryKey: ['recentOrders'] })
-    },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to cancel order')
-    },
-  })
-
   const refundOrderMutation = useMutation({
     mutationFn: (reason: string) => orderService.requestRefund(id!, { reason }),
     onSuccess: () => {
@@ -233,13 +220,6 @@ const OrderDetailsPage: React.FC = () => {
       toast.error(error.message || 'Failed to request refund')
     },
   })
-
-  const handleCancelOrder = () => {
-    const reason = window.prompt('Please provide a reason for cancellation:')
-    if (reason) {
-      cancelOrderMutation.mutate(reason)
-    }
-  }
 
   const handleRequestRefund = () => {
     if (!refundReason.trim()) {
@@ -276,10 +256,10 @@ const OrderDetailsPage: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Order Not Found</h1>
           <p className="text-gray-600 mb-6">The order you're looking for doesn't exist or you don't have permission to view it.</p>
           <button
-            onClick={() => navigate('/orders')}
+            onClick={() => navigate('/')}
             className="btn-primary"
           >
-            View All Orders
+            Return Home
           </button>
         </div>
       </div>
@@ -287,13 +267,12 @@ const OrderDetailsPage: React.FC = () => {
   }
 
   return (
-    <PrivateRoute>
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="container-lg section-padding">
           {/* Header */}
           <div className="mb-8">
             <button
-              onClick={() => navigate('/orders')}
+              onClick={() => navigate('/')}
               className="flex items-center text-gray-600 hover:text-primary-600 mb-4"
             >
               <ArrowLeft className="h-5 w-5 mr-2" />
@@ -563,15 +542,6 @@ const OrderDetailsPage: React.FC = () => {
               >
                 <h2 className="text-xl font-bold text-gray-900 mb-6">Actions</h2>
                 <div className="space-y-3">
-                  {order.isCancellable && (
-                    <button
-                      onClick={handleCancelOrder}
-                      className="w-full flex items-center justify-center py-3 border border-red-600 text-red-600 rounded-lg hover:bg-red-50"
-                    >
-                      <XCircle className="h-5 w-5 mr-2" />
-                      Cancel Order
-                    </button>
-                  )}
                   {order.isRefundable && (
                     <button
                       onClick={() => setShowRefundModal(true)}
@@ -649,7 +619,6 @@ const OrderDetailsPage: React.FC = () => {
           </div>
         )}
       </div>
-    </PrivateRoute>
   )
 }
 

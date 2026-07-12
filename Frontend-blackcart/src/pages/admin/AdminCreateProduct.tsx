@@ -296,7 +296,7 @@ const AdminCreateProduct: React.FC = () => {
         toast.error('Invalid category selected. Please choose a valid category.');
       } else if (errorMessage.includes('Session expired')) {
         toast.error('Session expired. Please login again.');
-        setTimeout(() => navigate('/login'), 2000);
+        setTimeout(() => navigate('/admin/login'), 2000);
       } else {
         toast.error(errorMessage);
       }

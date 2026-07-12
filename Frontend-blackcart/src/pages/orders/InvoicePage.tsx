@@ -5,14 +5,12 @@ import { Printer, Download, Share2, Mail, ArrowLeft, FileText, CheckCircle, Aler
 import { useReactToPrint } from 'react-to-print'
 import InvoiceView from '../../components/order/InvoiceView'
 import { orderService } from '../../services/orderService'
-import { useAuth } from '../../context/AuthContext'
 import toast from 'react-hot-toast'
 import Loader from '../../components/common/Loader'
 
 const InvoicePage: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>()
   const navigate = useNavigate()
-  const { user } = useAuth()
   const componentRef = useRef<HTMLDivElement>(null)
 
   const [order, setOrder] = useState<any>(null)
@@ -35,13 +33,6 @@ const InvoicePage: React.FC = () => {
       const orderData = response.data
       
       console.log('✅ Order loaded:', orderData)
-      
-      // Check if user has permission to view this invoice
-      if (orderData.user._id !== user?._id && user?.role !== 'admin') {
-        toast.error('You do not have permission to view this invoice')
-        navigate('/orders')
-        return
-      }
       
       setOrder(orderData)
     } catch (error: any) {
@@ -288,7 +279,7 @@ const InvoicePage: React.FC = () => {
                 href="tel:+9242111222333"
                 className="text-blue-600 hover:text-blue-700 font-medium"
               >
-                042-111-222-333
+                +92 3146965599
               </a>
             </div>
           </div>

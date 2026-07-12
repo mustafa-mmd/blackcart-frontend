@@ -211,10 +211,10 @@ const PrivacyPolicy: React.FC = () => {
                 <strong>Email:</strong> privacy@blackcart.pk
               </p>
               <p className="text-gray-800">
-                <strong>Phone:</strong> +92 300 1234567
+                <strong>Phone:</strong> +92 3146965599
               </p>
               <p className="text-gray-800">
-                <strong>Address:</strong> 123 Tech Street, Phase 5, DHA, Karachi, Pakistan
+                <strong>Address:</strong> Islamia Town Street# 3rd, Peshawar, Khyber Pakhtunkhwa, Pakistan
               </p>
             </div>
           </div>

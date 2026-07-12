@@ -1,7 +1,7 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import { motion } from "framer-motion";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   ArrowRight,
   Shield,
@@ -12,20 +12,14 @@ import {
   Keyboard,
   Mouse,
   Monitor,
-  Laptop,
   Webcam,
   Music,
-  TrendingUp,
   Sparkles,
   Clock,
-  Award,
   ShoppingBag,
-  Users,
   AlertCircle,
   RefreshCw,
   Package,
-  ChevronDown,
-  Zap,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -34,65 +28,16 @@ import { productService } from "../services/productService";
 import bannerService from "../services/bannerService";
 import ProductCard from "../components/product/ProductCard";
 import Loader from "../components/common/Loader";
+import type { Product } from "../types";
 
 /* ─── Google Fonts now loaded in index.html <head> — no JS injection needed ─ */
 
 /* ─── Animated canvas starfield ─────────────────────────────────────────── */
-const StarCanvas: React.FC = () => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d")!;
-    let animFrame: number;
-    const resize = () => {
-      canvas.width = canvas.offsetWidth;
-      canvas.height = canvas.offsetHeight;
-    };
-    resize();
-    window.addEventListener("resize", resize);
-    const stars = Array.from({ length: 120 }, () => ({
-      x: Math.random() * canvas.width,
-      y: Math.random() * canvas.height,
-      r: Math.random() * 1.2 + 0.3,
-      alpha: Math.random(),
-      speed: Math.random() * 0.004 + 0.001,
-    }));
-    const draw = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      stars.forEach((s) => {
-        s.alpha += s.speed;
-        if (s.alpha > 1) {
-          s.alpha = 0;
-          s.x = Math.random() * canvas.width;
-          s.y = Math.random() * canvas.height;
-        }
-        ctx.beginPath();
-        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(180,220,255,${s.alpha * 0.6})`;
-        ctx.fill();
-      });
-      animFrame = requestAnimationFrame(draw);
-    };
-    draw();
-    return () => {
-      cancelAnimationFrame(animFrame);
-      window.removeEventListener("resize", resize);
-    };
-  }, []);
-  return (
-    <canvas
-      ref={canvasRef}
-      className="absolute inset-0 w-full h-full pointer-events-none"
-      style={{ zIndex: 0 }}
-    />
-  );
-};
-
 const defaultBanners = [
   {
     _id: "default-1",
     url: "https://design.canva.ai/BRgtYcrIkGFURnC",
+    mobileUrl: undefined,
     title: "Premium Computer Accessories",
     link: "/products",
     isActive: true,
@@ -101,6 +46,7 @@ const defaultBanners = [
   {
     _id: "default-2",
     url: "https://images.unsplash.com/photo-1600861195091-690c92f1d2cc?q=80&w=1920&auto=format&fit=crop",
+    mobileUrl: undefined,
     title: "Upgrade Your Gaming Setup",
     link: "/products",
     isActive: true,
@@ -109,6 +55,7 @@ const defaultBanners = [
   {
     _id: "default-3",
     url: "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1920&auto=format&fit=crop",
+    mobileUrl: undefined,
     title: "Exclusive Mechanical Keyboards",
     link: "/products",
     isActive: true,
@@ -117,7 +64,6 @@ const defaultBanners = [
 ];
 
 const HomePage: React.FC = () => {
-  const navigate = useNavigate();
   const [currentSlide, setCurrentSlide] = React.useState(0);
 
   const { data: banners = [] } = useQuery({
@@ -173,51 +119,6 @@ const HomePage: React.FC = () => {
     },
   ];
 
-  const accessories = [
-    {
-      icon: <Mouse className="h-8 w-8 text-red-500" />,
-      name: "Gaming Mouse",
-      category: "mouse",
-      bgClass: "bg-gradient-to-br from-red-500/20 to-pink-600/20",
-      glow: "rgba(239,68,68,0.4)",
-    },
-    {
-      icon: <Keyboard className="h-8 w-8 text-green-500" />,
-      name: "Keyboard",
-      category: "keyboard",
-      bgClass: "bg-gradient-to-br from-green-500/20 to-teal-600/20",
-      glow: "rgba(34,197,94,0.4)",
-    },
-    {
-      icon: <Headphones className="h-8 w-8 text-purple-500" />,
-      name: "Headset",
-      category: "headphones",
-      bgClass: "bg-gradient-to-br from-purple-500/20 to-indigo-600/20",
-      glow: "rgba(168,85,247,0.4)",
-    },
-    {
-      icon: <Monitor className="h-8 w-8 text-blue-500" />,
-      name: "Monitor",
-      category: "monitor",
-      bgClass: "bg-gradient-to-br from-blue-500/20 to-cyan-600/20",
-      glow: "rgba(59,130,246,0.4)",
-    },
-    {
-      icon: <Webcam className="h-8 w-8 text-yellow-500" />,
-      name: "Webcam",
-      category: "webcam",
-      bgClass: "bg-gradient-to-br from-yellow-500/20 to-orange-600/20",
-      glow: "rgba(234,179,8,0.4)",
-    },
-    {
-      icon: <Music className="h-8 w-8 text-pink-500" />,
-      name: "Speakers",
-      category: "speakers",
-      bgClass: "bg-gradient-to-br from-pink-500/20 to-rose-600/20",
-      glow: "rgba(236,72,153,0.4)",
-    },
-  ];
-
   const accessoriesFull = [
     {
       icon: <Mouse className="h-12 w-12 text-red-500" />,
@@ -257,7 +158,6 @@ const HomePage: React.FC = () => {
 
   const isLoading = homeProductsLoading;
   const hasErrors = !!homeProductsError;
-  const isDatabaseEmpty = !isLoading && !hasErrors && allProducts.length === 0;
 
   const handleRetry = async () => {
     try {
@@ -344,7 +244,7 @@ const HomePage: React.FC = () => {
       </Helmet>
       {/* ─── HERO SLIDER SECTION ──────────────────────────────────────────────────── */}
       <section
-        className="relative overflow-hidden text-white w-full h-[40vh] min-h-[260px] sm:h-[50vh] sm:min-h-[360px] md:h-[calc(100vh-80px)] md:min-h-[480px]"
+        className="relative overflow-hidden text-white w-full h-[calc(100dvh-4rem)] min-h-[400px] md:h-[calc(100vh-4rem)] md:min-h-[480px]"
         style={{
           fontFamily: "'DM Sans', sans-serif",
           background: "#020817",
@@ -355,6 +255,10 @@ const HomePage: React.FC = () => {
             const bannerImgUrl = banner.url.startsWith("http")
               ? banner.url
               : `${import.meta.env.VITE_API_URL || "https://blackcart-backend.onrender.com"}${banner.url}`;
+            const rawMobileUrl = banner.mobileUrl || banner.url;
+            const mobileBannerImgUrl = rawMobileUrl.startsWith("http")
+              ? rawMobileUrl
+              : `${import.meta.env.VITE_API_URL || "https://blackcart-backend.onrender.com"}${rawMobileUrl}`;
 
             return (
               <motion.div
@@ -367,16 +271,23 @@ const HomePage: React.FC = () => {
                 }}
                 transition={{ duration: 0.8, ease: "easeInOut" }}
               >
-                {/* Background Banner Image */}
                 <img
-                  src={bannerImgUrl}
-                  alt={banner.title || "Promotional Banner"}
-                  className="w-full h-full object-cover select-none"
-                  onError={(e) => {
-                    e.currentTarget.src =
-                      "https://placehold.co/1920x600?text=Computer+Accessories+Offer";
-                  }}
+                  src={mobileBannerImgUrl}
+                  alt=""
+                  aria-hidden="true"
+                  className="absolute inset-0 h-full w-full scale-110 object-cover blur-2xl opacity-70 md:hidden"
                 />
+                <picture className="relative block h-full w-full">
+                  <source
+                    media="(max-width: 767px)"
+                    srcSet={mobileBannerImgUrl}
+                  />
+                  <img
+                    src={bannerImgUrl}
+                    alt={banner.title || "Promotional Banner"}
+                    className="h-full w-full select-none object-contain md:object-cover"
+                  />
+                </picture>
 
                 {/* Banner Click Link Overlay */}
                 {banner.link &&
@@ -396,7 +307,7 @@ const HomePage: React.FC = () => {
 
                 {/* Premium Dark Gradient Overlay */}
                 <div
-                  className="absolute inset-0 pointer-events-none z-10"
+                  className="absolute inset-0 pointer-events-none z-10 hidden md:block"
                   style={{
                     background:
                       "linear-gradient(to top, rgba(2, 8, 23, 0.7) 0%, rgba(2, 8, 23, 0.2) 50%, rgba(2, 8, 23, 0.4) 100%)",
@@ -515,50 +426,6 @@ const HomePage: React.FC = () => {
         </section>
       )}
 
-      {/* Accessories Section — Mobile only */}
-      <section className="py-12 md:py-16 bg-gradient-to-br from-gray-900 to-gray-800 text-white lg:hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-8 md:mb-10">
-            <h2 className="text-2xl md:text-3xl font-bold mb-3 md:mb-4">
-              Premium Accessories
-            </h2>
-            <p className="text-gray-300 text-sm md:text-base max-w-2xl mx-auto">
-              Enhance your setup with our top-quality computer accessories
-            </p>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 md:gap-6">
-            {accessoriesFull.map((item, index) => (
-              <div
-                key={index}
-                className={`${item.bgClass} rounded-xl p-3 md:p-5 text-center border border-white/10 hover:scale-105 transition-transform`}
-              >
-                <div className="mb-2 md:mb-4 flex justify-center">
-                  <div
-                    className={`p-2 md:p-4 rounded-full ${item.bgClass} border border-white/30`}
-                  >
-                    {React.cloneElement(item.icon, {
-                      className: "h-6 w-6 md:h-8 md:w-8",
-                    })}
-                  </div>
-                </div>
-                <span className="text-xs md:text-sm font-medium">
-                  {item.name}
-                </span>
-              </div>
-            ))}
-          </div>
-          <div className="text-center mt-6 md:mt-8">
-            <Link
-              to="/products?category=accessories"
-              className="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 md:py-3 px-6 md:px-8 rounded-lg text-sm md:text-lg transition-colors"
-            >
-              View All Accessories{" "}
-              <ArrowRight className="ml-2 h-4 w-4 md:h-5 md:w-5" />
-            </Link>
-          </div>
-        </div>
-      </section>
-
       {/* Featured Products */}
       {featuredProducts.length > 0 && (
         <section className="py-12 md:py-16">
@@ -583,7 +450,7 @@ const HomePage: React.FC = () => {
               </Link>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-              {featuredProducts.map((product: any, index: number) => (
+              {featuredProducts.map((product: Product, index: number) => (
                 <ProductCard
                   key={product._id}
                   product={product}
@@ -619,7 +486,7 @@ const HomePage: React.FC = () => {
               </Link>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-              {newArrivalProducts.map((product: any, index: number) => (
+              {newArrivalProducts.map((product: Product, index: number) => (
                 <ProductCard
                   key={product._id}
                   product={product}
@@ -705,90 +572,6 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* Trusted by Thousands */}
-      <section className="py-10 md:py-12 bg-gradient-to-r from-gray-900 to-gray-800 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-6 md:mb-8">
-            <h2 className="text-2xl md:text-3xl font-bold mb-3 md:mb-4">
-              Trusted by Thousands
-            </h2>
-            <p className="text-gray-300 text-sm md:text-base max-w-2xl mx-auto">
-              Join our community of satisfied customers across Pakistan
-            </p>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
-            {[
-              {
-                icon: (
-                  <Award className="h-10 w-10 md:h-12 md:w-12 text-yellow-400 mx-auto mb-3 md:mb-4" />
-                ),
-                val: "4.8/5",
-                label: "Customer Rating",
-              },
-              {
-                icon: (
-                  <Truck className="h-10 w-10 md:h-12 md:w-12 text-green-400 mx-auto mb-3 md:mb-4" />
-                ),
-                val: "50K+",
-                label: "Successful Deliveries",
-              },
-              {
-                icon: (
-                  <Shield className="h-10 w-10 md:h-12 md:w-12 text-blue-400 mx-auto mb-3 md:mb-4" />
-                ),
-                val: "100%",
-                label: "Secure Payments",
-              },
-              {
-                icon: (
-                  <Users className="h-10 w-10 md:h-12 md:w-12 text-purple-400 mx-auto mb-3 md:mb-4" />
-                ),
-                val: "24/7",
-                label: "Customer Support",
-              },
-            ].map((s, i) => (
-              <div key={i} className="text-center">
-                {s.icon}
-                <div className="text-2xl md:text-3xl font-bold mb-1 md:mb-2">
-                  {s.val}
-                </div>
-                <div className="text-gray-300 text-sm md:text-base">
-                  {s.label}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-12 md:py-20 bg-gradient-to-r from-blue-600 to-blue-700 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-4 md:mb-6">
-            Ready to Experience the Best Shopping?
-          </h2>
-          <p className="text-base md:text-xl text-white/80 mb-6 md:mb-8 max-w-2xl mx-auto">
-            Join thousands of satisfied customers across Pakistan who trust
-            BlackCart for their shopping needs.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center">
-            {/* ⚠️ AUTH TEMPORARILY DISABLED — Create Free Account button commented out
-            <Link
-              to="/register"
-              className="bg-white text-blue-700 hover:bg-gray-100 font-bold py-2 md:py-3 px-6 md:px-8 rounded-lg text-base md:text-lg transition-all"
-            >
-              Create Free Account
-            </Link>
-            */}
-            <Link
-              to="/products"
-              className="bg-transparent border-2 border-white hover:bg-white/10 font-bold py-2 md:py-3 px-6 md:px-8 rounded-lg text-base md:text-lg transition-colors"
-            >
-              Browse Products
-            </Link>
-          </div>
-        </div>
-      </section>
     </div>
   );
 };

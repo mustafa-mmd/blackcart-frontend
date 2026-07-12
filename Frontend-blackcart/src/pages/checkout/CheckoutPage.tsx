@@ -762,10 +762,8 @@ import {
   ChevronRight, Home, Check, Wallet
 } from 'lucide-react'
 import { useCart } from '../../context/CartContext'
-import { useAuth } from '../../context/AuthContext'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 import { orderService } from '../../services/orderService'
-import { userService } from '../../services/userService'
 import { paymentService } from '../../services/paymentService'
 import toast from 'react-hot-toast'
 // Login requirement disabled - route kept open for guest checkout
@@ -928,7 +926,6 @@ const extractOrderId = (data: any): string | null => {
 const CheckoutPage: React.FC = () => {
   const navigate = useNavigate()
   const { cartItems, clearCart } = useCart()
-  const { user } = useAuth()
 
   const [step, setStep] = useState(1)
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null)
@@ -942,19 +939,8 @@ const CheckoutPage: React.FC = () => {
   const [isSavingAddress, setIsSavingAddress] = useState(false)
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({})
 
-  const { data: addressesData, refetch: refetchAddresses, isLoading: addressesLoading } = useQuery({
-    queryKey: ['userAddresses'],
-    queryFn: () => userService.getAddresses(),
-    enabled: !!user,
-  })
-
-  const addresses: Address[] = React.useMemo(() => {
-    if (!addressesData) return []
-    if (Array.isArray(addressesData)) return addressesData
-    if (Array.isArray(addressesData.data)) return addressesData.data
-    if (Array.isArray(addressesData.addresses)) return addressesData.addresses
-    return []
-  }, [addressesData])
+  const addresses: Address[] = []
+  const addressesLoading = false
 
   // ✅ FIXED: Enhanced cart items processing with better error handling
   const processedCartItems = React.useMemo(() => {
@@ -1024,7 +1010,7 @@ const CheckoutPage: React.FC = () => {
       if (!orderId) {
         console.error('Order response (no ID found):', JSON.stringify(data, null, 2))
         toast.error('Order was placed but we could not get the order ID. Check your orders page.')
-        navigate('/orders')
+        navigate('/')
         return
       }
 
@@ -1142,45 +1128,12 @@ const CheckoutPage: React.FC = () => {
         isDefault: data.isDefault || false,
       }
 
-      // ✅ FIXED: Guest checkout — skip the authenticated "save address" API call
-      // entirely. Calling it without a login token returns a 401 from the backend,
-      // and an axios interceptor elsewhere in the app turns that into a redirect to
-      // a /login route that doesn't exist, producing the 404 page. Guests simply use
-      // the address locally for this order instead of hitting that endpoint.
-      if (!user) {
-        const localAddress: Address = { _id: `guest-${Date.now()}`, ...addressData }
-        toast.success('Address saved')
-        setSelectedAddress(localAddress)
-        setShowNewAddressForm(false)
-        setTimeout(() => setStep(2), 100)
-        return
-      }
-
-      try {
-        const response = await userService.addAddress(addressData)
-        const newAddress: Address | null =
-          response.data?.data || response.data || response.address || (response._id ? response : null)
-
-        if (newAddress?._id) {
-          toast.success('Address saved successfully')
-          await refetchAddresses()
-          setSelectedAddress(newAddress)
-        } else {
-          const localAddress: Address = { _id: `temp-${Date.now()}`, ...addressData }
-          toast.success('Address saved')
-          refetchAddresses().catch(() => { })
-          setSelectedAddress(localAddress)
-        }
-      } catch {
-        const localAddress: Address = { _id: `local-${Date.now()}`, ...addressData }
-        toast.success('Address saved')
-        setSelectedAddress(localAddress)
-        refetchAddresses().catch(() => { })
-      }
-
+      const localAddress: Address = { _id: `guest-${Date.now()}`, ...addressData }
+      toast.success('Address saved for this order')
+      setSelectedAddress(localAddress)
       setShowNewAddressForm(false)
       setTimeout(() => setStep(2), 100)
-    } catch (error: any) {
+    } catch {
       toast.error('Failed to save address. Please try again.')
     } finally {
       setIsSavingAddress(false)
@@ -1387,7 +1340,7 @@ const CheckoutPage: React.FC = () => {
                         onMethodSelect={handlePaymentSelect}
                         orderTotal={orderSummary.total}
                         orderId={createdOrderId || undefined}
-                        customerDetails={{ name: user?.name || '', email: user?.email || '', phone: selectedAddress?.phone || '' }}
+                        customerDetails={{ name: selectedAddress?.fullName || '', email: '', phone: selectedAddress?.phone || '' }}
                         city={selectedAddress?.city}
                         onPaymentComplete={handlePaymentComplete}
                         onPlaceOrder={handlePlaceOrder}

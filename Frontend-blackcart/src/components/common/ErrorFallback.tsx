@@ -117,8 +117,8 @@ const ErrorFallback: React.FC<ErrorFallbackProps> = ({ error, resetErrorBoundary
           <div className="pt-6 border-t border-gray-200">
             <p className="text-sm text-gray-500">
               If the problem persists, please contact our support team at{' '}
-              <a href="mailto:support@blackcart.com" className="text-blue-600 hover:underline">
-                support@blackcart.com
+              <a href="mailto:blackcart.ak25@gmail.com" className="text-blue-600 hover:underline">
+                blackcart.ak25@gmail.com
               </a>
             </p>
           </div>

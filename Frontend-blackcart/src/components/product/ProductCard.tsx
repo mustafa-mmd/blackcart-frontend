@@ -4,11 +4,9 @@
 import React, { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Star, ShoppingCart, Heart, Eye, TrendingUp, Loader } from 'lucide-react'
+import { Star, ShoppingCart, Eye, TrendingUp, Loader } from 'lucide-react'
 import { Product } from '../../types'
 import { useCart } from '../../context/CartContext'
-import { useAuth } from '../../context/AuthContext'
-import { userService } from '../../services/userService'
 import toast from 'react-hot-toast'
 // Import the image utility
 import { getImageUrl } from '../../utils/imageUtils'
@@ -22,11 +20,8 @@ interface ProductCardProps {
 const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode = 'grid' }) => {
   const navigate = useNavigate()
   const { addToCart, isInCart } = useCart()
-  const { user } = useAuth()
-  const [isWishlisted, setIsWishlisted] = React.useState(false)
   const [isHovered, setIsHovered] = React.useState(false)
   const [imageError, setImageError] = React.useState(false)
-  const [wishlistLoading, setWishlistLoading] = React.useState(false)
   const [imageUrl, setImageUrl] = React.useState<string>('/placeholder.png')
 
   // Extract category name properly
@@ -43,37 +38,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
     
     return String(product.category) || 'Uncategorized'
   }
-
-  // Check wishlist status
-  useEffect(() => {
-    const checkWishlistStatus = async () => {
-      if (!user || !product?._id) return
-      
-      try {
-        const response = await userService.getWishlist()
-        
-        let wishlistItems: any[] = []
-        
-        if (response.data?.data?.items && Array.isArray(response.data.data.items)) {
-          wishlistItems = response.data.data.items.map((item: any) => item.product)
-        } else if (response.data?.items && Array.isArray(response.data.items)) {
-          wishlistItems = response.data.items.map((item: any) => item.product)
-        } else if (Array.isArray(response.data)) {
-          wishlistItems = response.data
-        }
-        
-        const isInWishlist = wishlistItems.some((wishlistProduct: any) => 
-          wishlistProduct?._id === product._id || wishlistProduct === product._id
-        )
-        
-        setIsWishlisted(isInWishlist)
-      } catch (error) {
-        console.error('Error checking wishlist status:', error)
-      }
-    }
-    
-    checkWishlistStatus()
-  }, [user, product?._id])
 
   // Get product image URL - FIXED to handle object format
   useEffect(() => {
@@ -132,38 +96,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
     
     addToCart(product)
     toast.success(`${getProductName()} added to cart!`)
-  }
-
-  const handleToggleWishlist = async (e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    
-    if (!product) return
-    
-    if (!user) {
-      toast.error('Please login to add items to wishlist')
-      navigate('/login', { state: { returnUrl: window.location.pathname } })
-      return
-    }
-    
-    setWishlistLoading(true)
-    
-    try {
-      if (isWishlisted) {
-        await userService.removeFromWishlist(product._id)
-        setIsWishlisted(false)
-        toast.success(`${getProductName()} removed from wishlist`)
-      } else {
-        await userService.addToWishlist(product._id)
-        setIsWishlisted(true)
-        toast.success(`${getProductName()} added to wishlist!`)
-      }
-    } catch (error: any) {
-      console.error('Wishlist error:', error)
-      toast.error(error?.response?.data?.message || 'Failed to update wishlist')
-    } finally {
-      setWishlistLoading(false)
-    }
   }
 
   const handleQuickView = (e: React.MouseEvent) => {
@@ -348,23 +280,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
               </button>
               
               <button
-                onClick={handleToggleWishlist}
-                disabled={wishlistLoading || !user}
-                className={`p-2 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-                  isWishlisted 
-                    ? 'bg-red-500 text-white' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-                aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
-              >
-                {wishlistLoading ? (
-                  <Loader className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Heart className={`h-4 w-4 ${isWishlisted ? 'fill-current' : ''}`} />
-                )}
-              </button>
-              
-              <button
                 onClick={handleQuickView}
                 className="p-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all"
                 aria-label="Quick view"
@@ -433,23 +348,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
         <div className={`absolute top-3 right-3 flex flex-col gap-2 transition-all duration-300 ${
           isHovered ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4'
         }`}>
-          <button
-            onClick={handleToggleWishlist}
-            disabled={wishlistLoading || !user}
-            className={`p-2 rounded-full shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-              isWishlisted 
-                ? 'bg-red-500 text-white hover:bg-red-600' 
-                : 'bg-white text-gray-700 hover:bg-gray-50 hover:text-red-500'
-            }`}
-            aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
-            title={!user ? "Login to add to wishlist" : isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
-          >
-            {wishlistLoading ? (
-              <Loader className="h-4 w-4 animate-spin" />
-            ) : (
-              <Heart className={`h-4 w-4 ${isWishlisted ? 'fill-current' : ''}`} />
-            )}
-          </button>
           <button
             onClick={handleQuickView}
             className="p-2 bg-white text-gray-700 rounded-full shadow-md hover:bg-gray-50 hover:text-blue-600 transition-all"

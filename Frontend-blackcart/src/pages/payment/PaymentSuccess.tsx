@@ -277,10 +277,10 @@ const PaymentSuccess: React.FC = () => {
             <div>
               <p className="text-gray-600 mb-1">Email Support</p>
               <a
-                href="mailto:support@blackcart.com"
+                href="mailto:blackcart.ak25@gmail.com"
                 className="text-blue-600 hover:text-blue-700 font-medium"
               >
-                support@blackcart.com
+                blackcart.ak25@gmail.com
               </a>
             </div>
             <div>
@@ -289,7 +289,7 @@ const PaymentSuccess: React.FC = () => {
                 href="tel:+9242111222333"
                 className="text-blue-600 hover:text-blue-700 font-medium"
               >
-                042-111-222-333
+                +92 3146965599
               </a>
             </div>
             <div>

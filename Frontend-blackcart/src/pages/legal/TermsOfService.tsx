@@ -248,7 +248,7 @@ const TermsOfService: React.FC = () => {
             </p>
             <p className="text-gray-700">
               Any disputes arising under or in connection with these Terms shall be subject to the 
-              exclusive jurisdiction of the courts located in Karachi, Pakistan.
+              exclusive jurisdiction of the courts located in Peshawar, Pakistan.
             </p>
           </div>
         </motion.div>

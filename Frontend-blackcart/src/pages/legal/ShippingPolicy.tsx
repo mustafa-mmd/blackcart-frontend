@@ -235,7 +235,7 @@ const ShippingPolicy: React.FC = () => {
                   </li>
                   <li className="flex items-center gap-2">
                     <div className="h-1.5 w-1.5 bg-blue-600 rounded-full" />
-                    <span>Visit "My Orders" in your account</span>
+                    <span>Open the Track Order page on BlackCart.store</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <div className="h-1.5 w-1.5 bg-blue-600 rounded-full" />
@@ -314,7 +314,7 @@ const ShippingPolicy: React.FC = () => {
               <strong>Shipping Support:</strong> shipping@blackcart.pk
             </p>
             <p className="text-gray-700">
-              <strong>Phone:</strong> +92 300 1234567 (Ext: 2)
+              <strong>Phone:</strong> +92 3146965599
             </p>
             <p className="text-gray-700">
               <strong>Hours:</strong> Mon-Fri, 9AM-6PM PKT

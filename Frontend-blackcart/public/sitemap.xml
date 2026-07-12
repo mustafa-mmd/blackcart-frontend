@@ -21,13 +21,6 @@
     <priority>0.8</priority>
   </url>
 
-  <!-- About -->
-  <url>
-    <loc>https://www.blackcart.store/about</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-
   <!-- Contact -->
   <url>
     <loc>https://www.blackcart.store/contact</loc>

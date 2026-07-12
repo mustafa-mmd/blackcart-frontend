@@ -31,7 +31,6 @@ const FaqPage: React.FC = () => {
     { id: 'shipping', name: 'Shipping & Delivery', icon: <Truck className="h-5 w-5" /> },
     { id: 'returns', name: 'Returns & Refunds', icon: <RotateCcw className="h-5 w-5" /> },
     { id: 'products', name: 'Products & Warranty', icon: <Package className="h-5 w-5" /> },
-    { id: 'account', name: 'Account & Security', icon: <Shield className="h-5 w-5" /> },
     { id: 'payment', name: 'Payment Methods', icon: <CreditCard className="h-5 w-5" /> },
   ]
 
@@ -41,7 +40,7 @@ const FaqPage: React.FC = () => {
       id: 1,
       category: 'ordering',
       question: 'How do I place an order?',
-      answer: 'You can place an order by browsing products, adding them to cart, and proceeding to checkout. You need to create an account or checkout as guest.'
+      answer: 'Browse products, add them to your cart, and proceed to checkout. No customer account or login is required.'
     },
     {
       id: 2,
@@ -67,7 +66,7 @@ const FaqPage: React.FC = () => {
       id: 5,
       category: 'shipping',
       question: 'How can I track my order?',
-      answer: 'You can track your order using the tracking number sent to your email, or through your account dashboard under "My Orders".'
+      answer: 'Use the tracking number sent to your email on our Track Order page or on the courier website.'
     },
     {
       id: 6,
@@ -119,19 +118,19 @@ const FaqPage: React.FC = () => {
     // Account & Security
     {
       id: 13,
-      category: 'account',
-      question: 'How do I reset my password?',
-      answer: 'Click "Forgot Password" on the login page. Enter your email and follow the instructions sent to your inbox.'
+      category: 'ordering',
+      question: 'Do I need an account to shop?',
+      answer: 'No. BlackCart.store supports guest shopping and checkout without a customer login.'
     },
     {
       id: 14,
-      category: 'account',
-      question: 'How do I update my account information?',
-      answer: 'Go to "My Account" → "Profile Settings" to update your personal information, address, and contact details.'
+      category: 'ordering',
+      question: 'How do I correct my order contact information?',
+      answer: 'Contact us at blackcart.ak25@gmail.com or +92 3146965599 as soon as possible.'
     },
     {
       id: 15,
-      category: 'account',
+      category: 'ordering',
       question: 'Is my personal information secure?',
       answer: 'Yes, we use industry-standard encryption and security measures to protect your personal information.'
     },
@@ -171,7 +170,7 @@ const FaqPage: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       <Helmet>
         <title>Frequently Asked Questions | BlackCart Pakistan</title>
-        <meta name="description" content="Find answers to common questions about shopping at BlackCart: orders, payments, delivery, returns, and account management. Quick help for Pakistani customers." />
+        <meta name="description" content="Find answers to common questions about shopping at BlackCart.store: orders, payments, delivery, and returns. Quick help for Pakistani customers." />
         <meta property="og:title" content="FAQ | BlackCart Pakistan" />
         <meta property="og:description" content="Answers to your questions about BlackCart orders, payments, delivery across Pakistan, and easy returns." />
         <meta property="og:url" content="https://blackcart.store/faq" />

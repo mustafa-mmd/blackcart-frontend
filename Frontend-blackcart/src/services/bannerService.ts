@@ -4,6 +4,8 @@ export interface HeroBanner {
   _id: string;
   url: string;
   public_id: string;
+  mobileUrl?: string;
+  mobilePublicId?: string;
   title: string;
   link: string;
   isActive: boolean;
@@ -31,14 +33,14 @@ class BannerService {
     return response.data.data;
   }
 
-  // Update banner metadata (admin only)
-  async updateBanner(id: string, data: Partial<Omit<HeroBanner, '_id' | 'url' | 'public_id'>>): Promise<HeroBanner> {
+  // Update metadata and/or either responsive image (admin only)
+  async updateBanner(id: string, data: FormData | Partial<Omit<HeroBanner, '_id' | 'url' | 'public_id'>>): Promise<HeroBanner> {
     const response = await api.put(`/banners/admin/${id}`, data);
     return response.data.data;
   }
 
   // Delete a banner (admin only)
-  async deleteBanner(id: string): Promise<any> {
+  async deleteBanner(id: string): Promise<{ success: boolean; message: string }> {
     const response = await api.delete(`/banners/admin/${id}`);
     return response.data;
   }

@@ -134,7 +134,7 @@ const PaymentProofPage: React.FC = () => {
                   </div>
                   <div>
                     <p className="text-sm text-gray-500 mb-1">Account Name</p>
-                    <p className="font-medium">BlackCart Store</p>
+                    <p className="font-medium">BlackCart.store</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500 mb-1">Account Number</p>
@@ -150,7 +150,7 @@ const PaymentProofPage: React.FC = () => {
                   </div>
                   <div>
                     <p className="text-sm text-gray-500 mb-1">Branch Name</p>
-                    <p className="font-medium">Gulberg Branch, Lahore</p>
+                    <p className="font-medium">Islamia Town Street# 3rd, Peshawar</p>
                   </div>
                 </div>
                 
@@ -361,7 +361,7 @@ const PaymentProofPage: React.FC = () => {
                     href="tel:+9242111222333"
                     className="block text-sm text-blue-600 hover:text-blue-700"
                   >
-                    042-111-222-333 (Accounts)
+                    +92 3146965599 (Accounts)
                   </a>
                 </div>
                 <p className="text-xs text-gray-500 mt-3">

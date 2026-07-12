@@ -304,13 +304,13 @@ const ReturnsPolicy: React.FC = () => {
             </p>
             <div className="space-y-3">
               <p className="text-gray-700">
-                <strong>Returns Department:</strong> returns@blackcart.pk
+                <strong>Returns Department:</strong> blackcart.ak25@gmail.com
               </p>
               <p className="text-gray-700">
-                <strong>Phone:</strong> +92 300 1234567 (Ext: 3)
+                <strong>Phone:</strong> +92 3146965599
               </p>
               <p className="text-gray-700">
-                <strong>RMA Requests:</strong> Visit "My Orders" in your account
+                <strong>RMA Requests:</strong> Contact us using the email or phone above
               </p>
             </div>
           </div>

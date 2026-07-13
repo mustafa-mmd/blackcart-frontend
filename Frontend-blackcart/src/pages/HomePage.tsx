@@ -16,10 +16,8 @@ import {
   Music,
   Sparkles,
   Clock,
-  ShoppingBag,
   AlertCircle,
   RefreshCw,
-  Package,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -87,6 +85,15 @@ const HomePage: React.FC = () => {
   });
 
   const activeBanners = banners.length > 0 ? banners : defaultBanners;
+  const activeBanner = activeBanners[currentSlide] || activeBanners[0];
+  const apiBase = import.meta.env.VITE_API_URL || "https://blackcart-backend.onrender.com";
+  const desktopBannerUrl = activeBanner.url.startsWith("http")
+    ? activeBanner.url
+    : `${apiBase}${activeBanner.url}`;
+  const rawMobileBannerUrl = activeBanner.mobileUrl || activeBanner.url;
+  const mobileBannerUrl = rawMobileBannerUrl.startsWith("http")
+    ? rawMobileBannerUrl
+    : `${apiBase}${rawMobileBannerUrl}`;
 
   useEffect(() => {
     if (activeBanners.length <= 1) return;
@@ -156,66 +163,9 @@ const HomePage: React.FC = () => {
   const featuredProducts = allProducts.slice(0, 4);
   const newArrivalProducts = allProducts.slice(4, 8);
 
-  const isLoading = homeProductsLoading;
-  const hasErrors = !!homeProductsError;
-
   const handleRetry = async () => {
-    try {
-      await refetchHomeProducts();
-      setTimeout(() => window.location.reload(), 500);
-    } catch (error) {
-      console.error("Error during retry:", error);
-    }
+    await refetchHomeProducts();
   };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center">
-        <div className="text-center">
-          <Loader size="lg" />
-          <p className="mt-4 text-gray-600 text-lg">
-            Loading amazing products...
-          </p>
-          <p className="text-sm text-gray-500 mt-2">This might take a moment</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (hasErrors) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-        <div className="max-w-md text-center">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-red-100 rounded-full mb-6">
-            <AlertCircle className="h-10 w-10 text-red-600" />
-          </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
-            Oops! Something went wrong
-          </h2>
-          <p className="text-gray-600 mb-6">
-            We're having trouble loading products. This might be due to server
-            issues.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button
-              onClick={handleRetry}
-              className="btn-primary inline-flex items-center justify-center"
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Try Again
-            </button>
-            <Link
-              to="/products"
-              className="btn-secondary inline-flex items-center justify-center"
-            >
-              <Package className="h-4 w-4 mr-2" />
-              Browse All Products
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   /* ══════════════════════════════════════════════════════════════════════════
      ✨ PREMIUM HERO — main render
@@ -251,40 +201,32 @@ const HomePage: React.FC = () => {
         }}
       >
         <div className="relative w-full h-full">
-          {activeBanners.map((banner, index) => {
-            const bannerImgUrl = banner.url.startsWith("http")
-              ? banner.url
-              : `${import.meta.env.VITE_API_URL || "https://blackcart-backend.onrender.com"}${banner.url}`;
-            const rawMobileUrl = banner.mobileUrl || banner.url;
-            const mobileBannerImgUrl = rawMobileUrl.startsWith("http")
-              ? rawMobileUrl
-              : `${import.meta.env.VITE_API_URL || "https://blackcart-backend.onrender.com"}${rawMobileUrl}`;
-
+          {[activeBanner].map((banner) => {
             return (
               <motion.div
-                key={banner._id}
+                key={`${banner._id}-${currentSlide}`}
                 className="absolute inset-0 w-full h-full"
                 initial={{ opacity: 0 }}
-                animate={{
-                  opacity: index === currentSlide ? 1 : 0,
-                  zIndex: index === currentSlide ? 10 : 0,
-                }}
+                animate={{ opacity: 1, zIndex: 10 }}
                 transition={{ duration: 0.8, ease: "easeInOut" }}
               >
                 <img
-                  src={mobileBannerImgUrl}
+                  src={mobileBannerUrl}
                   alt=""
                   aria-hidden="true"
+                  decoding="async"
                   className="absolute inset-0 h-full w-full scale-110 object-cover blur-2xl opacity-70 md:hidden"
                 />
                 <picture className="relative block h-full w-full">
                   <source
                     media="(max-width: 767px)"
-                    srcSet={mobileBannerImgUrl}
+                    srcSet={mobileBannerUrl}
                   />
                   <img
-                    src={bannerImgUrl}
+                    src={desktopBannerUrl}
                     alt={banner.title || "Promotional Banner"}
+                    decoding="async"
+                    fetchPriority="high"
                     className="h-full w-full select-none object-contain md:object-cover"
                   />
                 </picture>
@@ -371,58 +313,19 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* Admin Notice if database has no products */}
-      {allProducts.length === 0 && (
-        <section className="py-12 bg-gray-50 flex items-center justify-center">
-          <div className="max-w-4xl mx-auto px-4 w-full">
-            <div
-              className="rounded-2xl p-6 md:p-10 text-white shadow-xl relative overflow-hidden"
-              style={{
-                background: "linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%)",
-                border: "1px solid rgba(59,130,246,0.3)",
-              }}
-            >
-              {/* background ambient shape */}
-              <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-blue-500 rounded-full opacity-30 blur-2xl pointer-events-none" />
+      {homeProductsLoading && (
+        <section className="py-12 bg-white" aria-label="Loading products">
+          <Loader size="lg" />
+        </section>
+      )}
 
-              <div className="text-center max-w-2xl mx-auto space-y-6">
-                <div
-                  className="inline-flex items-center justify-center p-3 rounded-xl mb-2 backdrop-blur-sm"
-                  style={{
-                    background: "rgba(255, 255, 255, 0.1)",
-                    border: "1px solid rgba(255, 255, 255, 0.15)",
-                  }}
-                >
-                  <AlertCircle className="h-8 w-8 text-yellow-400" />
-                </div>
-                <h3
-                  className="text-2xl md:text-3xl font-bold tracking-wide"
-                  style={{ fontFamily: "'Syne', sans-serif" }}
-                >
-                  Admin Notice
-                </h3>
-                <p className="text-gray-300 text-sm md:text-base leading-relaxed">
-                  No products found in the database. Please add products to
-                  start displaying your store products.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center pt-2">
-                  <Link
-                    to="/admin/dashboard"
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-xl transition-all shadow-md hover:shadow-lg inline-flex items-center justify-center text-sm border border-blue-500/20"
-                  >
-                    <ShoppingBag className="h-5 w-5 mr-2" />
-                    Add Products (Admin)
-                  </Link>
-                  <Link
-                    to="/dashboard"
-                    className="bg-transparent border-2 border-white/20 hover:border-white/40 hover:bg-white/5 text-white font-bold py-3 px-8 rounded-xl transition-all inline-flex items-center justify-center text-sm"
-                  >
-                    Go to Dashboard
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
+      {homeProductsError && (
+        <section className="py-10 bg-white text-center px-4">
+          <AlertCircle className="h-8 w-8 text-red-600 mx-auto mb-3" />
+          <p className="text-gray-600 mb-4">Products are temporarily unavailable.</p>
+          <button onClick={() => void handleRetry()} className="btn-primary inline-flex items-center">
+            <RefreshCw className="h-4 w-4 mr-2" /> Try Again
+          </button>
         </section>
       )}
 

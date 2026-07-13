@@ -3,14 +3,21 @@ import React from 'react'
 import { FileText, Grid, Star, Package, Shield, Truck, RefreshCw } from 'lucide-react'
 import ReviewList from '../reviews/ReviewList'
 import ProductSpecifications from './ProductSpecifications'
+import type { Product, Review } from '../../types'
+
+interface RatingStats {
+  average: number
+  total: number
+  distribution: Record<number, number>
+}
 
 interface ProductTabsProps {
   activeTab: 'description' | 'specifications' | 'reviews' | 'shipping'
   onTabChange: (tab: 'description' | 'specifications' | 'reviews' | 'shipping') => void
-  product: any
-  reviews: any[]
-  ratingStats?: any
-  onReviewSubmit: () => void
+  product: Product
+  reviews: Review[]
+  ratingStats?: RatingStats
+  onReviewSubmit?: () => void
   onHelpfulClick?: (reviewId: string) => void // ✅ ADDED: New prop for helpful clicks
 }
 
@@ -132,14 +139,8 @@ const ProductTabs: React.FC<ProductTabsProps> = ({
         
         {activeTab === 'reviews' && (
           <div>
-            <div className="flex items-center justify-between mb-6">
+            <div className="mb-6">
               <h3 className="text-2xl font-bold text-gray-900">Customer Reviews</h3>
-              <button
-                onClick={onReviewSubmit}
-                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-              >
-                Write a Review
-              </button>
             </div>
             <ReviewList
               reviews={reviews}

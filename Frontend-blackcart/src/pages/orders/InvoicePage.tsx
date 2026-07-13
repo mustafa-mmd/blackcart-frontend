@@ -139,8 +139,8 @@ const InvoicePage: React.FC = () => {
       setSendingEmail(true)
       
       // Create mailto link
-      const subject = `Invoice ${order?.invoiceNumber} from BlackCart`
-      const body = `Dear ${order?.shippingAddress?.fullName},\n\nPlease find your invoice attached.\n\nOrder ID: ${order?._id}\nInvoice Number: ${order?.invoiceNumber}\nTotal Amount: PKR ${order?.totalPrice?.toLocaleString()}\n\nThank you for shopping with BlackCart!`
+      const subject = `Invoice ${order?.invoiceNumber} from BlackCart.store`
+      const body = `Dear ${order?.shippingAddress?.fullName},\n\nPlease find your invoice attached.\n\nOrder ID: ${order?._id}\nInvoice Number: ${order?.invoiceNumber}\nTotal Amount: PKR ${order?.totalPrice?.toLocaleString()}\n\nThank you for shopping with BlackCart.store!`
       
       window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
       

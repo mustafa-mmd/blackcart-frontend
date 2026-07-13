@@ -126,7 +126,7 @@ self.addEventListener('push', (event) => {
 
   const data = event.data.json();
   const options = {
-    body: data.body || 'New notification from BlackCart',
+    body: data.body || 'New notification from BlackCart.store',
     icon: '/icons/icon-192x192.png',
     badge: '/icons/badge-72x72.png',
     vibrate: [200, 100, 200],
@@ -146,7 +146,7 @@ self.addEventListener('push', (event) => {
   };
 
   event.waitUntil(
-    self.registration.showNotification(data.title || 'BlackCart', options)
+    self.registration.showNotification(data.title || 'BlackCart.store', options)
   );
 });
 

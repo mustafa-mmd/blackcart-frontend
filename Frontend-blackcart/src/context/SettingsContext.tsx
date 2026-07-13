@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import settingService, { SiteSettings, Logo } from '../services/settingService';
 import toast from 'react-hot-toast';
@@ -6,7 +7,7 @@ interface SettingsContextType {
   settings: SiteSettings;
   loading: boolean;
   refreshSettings: () => Promise<void>;
-  updateSettings: (section: string, data: any) => Promise<void>;
+  updateSettings: (section: string, data: unknown) => Promise<void>;
   uploadLogo: (file: File, alt?: string) => Promise<Logo>;
   resetSection: (section: string) => Promise<void>;
 }
@@ -32,9 +33,8 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) 
   const refreshSettings = async () => {
     try {
       setLoading(true);
-      const data = await settingService.getSettings(true);
+      const data = await settingService.getSettings();
       setSettings(data);
-      console.log('✅ Settings refreshed:', data.logo?.url);
     } catch (error) {
       console.error('Error loading settings:', error);
     } finally {
@@ -42,9 +42,9 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) 
     }
   };
 
-  const updateSettings = async (section: string, data: any) => {
+  const updateSettings = async (section: string, data: unknown) => {
     try {
-      const updated = await settingService.updateSettings(section, data);
+      await settingService.updateSettings(section, data);
       await refreshSettings();
       toast.success('Settings updated successfully');
     } catch (error) {

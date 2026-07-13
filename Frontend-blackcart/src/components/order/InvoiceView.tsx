@@ -4,7 +4,7 @@ import { Printer, Download, Share2, Mail, FileText, Calendar, Hash, User, MapPin
 import { useReactToPrint } from 'react-to-print'
 import { Order } from '../../types'
 import { formatDate, formatOrderDate } from '../../utils/dateFormatter'
-import { formatCurrency, formatPrice } from '../../utils/formatCurrency'
+import { formatPrice } from '../../utils/formatCurrency'
 import toast from 'react-hot-toast'
 
 interface InvoiceViewProps {
@@ -105,7 +105,7 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({
 
   const handleEmail = () => {
     // Create mailto link
-    const subject = `Invoice ${invoiceNumber} from BlackCart`
+    const subject = `Invoice ${invoiceNumber} from BlackCart.store`
     const body = `Please find your invoice attached.\n\nOrder ID: ${order._id}\nInvoice Number: ${invoiceNumber}\nTotal Amount: ${formatPrice(order.totalPrice)}`
     window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
     

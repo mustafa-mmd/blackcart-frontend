@@ -1,7 +1,5 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter as Router, Navigate, Route, Routes } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { SettingsProvider } from './context/SettingsContext';
@@ -36,17 +34,6 @@ const AdminLoginPage = lazy(() => import('./pages/admin/AdminLoginPage'));
 const AdminRoutes = lazy(() => import('./routes/AdminRoutes'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60 * 1000,
-      gcTime: 10 * 60 * 1000,
-      retry: 1,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
-
 const applySavedTheme = () => {
   try {
     const theme = JSON.parse(localStorage.getItem('theme') || '{}');
@@ -64,19 +51,15 @@ function App() {
 
   return (
     <ErrorBoundary fallback={<ErrorFallback />} onReset={() => window.location.reload()}>
-      <QueryClientProvider client={queryClient}>
-        <Router>
-          <AuthProvider>
-            <SettingsProvider>
-              <CartProvider>
-                <Toaster position="top-right" />
+      <Router>
+        <SettingsProvider>
                 <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50"><Loader size="lg" /></div>}>
                   <Routes>
                     {/* Admin authentication remains private and separate from the storefront. */}
-                    <Route path="/admin/login" element={<AdminLoginPage />} />
-                    <Route path="/admin/*" element={<AdminRoutes />} />
+                    <Route path="/admin/login" element={<AuthProvider><AdminLoginPage /></AuthProvider>} />
+                    <Route path="/admin/*" element={<AuthProvider><AdminRoutes /></AuthProvider>} />
 
-                    <Route element={<Layout />}>
+                    <Route element={<CartProvider><Layout /></CartProvider>}>
                       <Route index element={<HomePage />} />
                       <Route path="products" element={<ProductsPage />} />
                       <Route path="products/:identifier" element={<ProductDetailPage />} />
@@ -109,11 +92,8 @@ function App() {
                     </Route>
                   </Routes>
                 </Suspense>
-              </CartProvider>
-            </SettingsProvider>
-          </AuthProvider>
-        </Router>
-      </QueryClientProvider>
+        </SettingsProvider>
+      </Router>
     </ErrorBoundary>
   );
 }

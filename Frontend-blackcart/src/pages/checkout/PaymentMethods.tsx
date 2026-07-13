@@ -119,7 +119,7 @@ const PaymentMethods: React.FC<PaymentMethodsProps> = ({
   orderTotal,
   orderId,
   customerDetails,
-  city = 'Karachi',
+  city = 'Peshawar',
   onPaymentComplete,
   onPlaceOrder,
   onPaymentInitiate,

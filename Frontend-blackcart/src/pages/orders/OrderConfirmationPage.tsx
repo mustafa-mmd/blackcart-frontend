@@ -152,7 +152,7 @@ const OrderConfirmationPage: React.FC = () => {
     if (navigator.share) {
       navigator.share({
         title: `Order ${order?.invoiceNumber}`,
-        text: `Check out my order from BlackCart`,
+        text: `Check out my order from BlackCart.store`,
         url: window.location.href,
       }).catch(() => {
         navigator.clipboard.writeText(window.location.href)

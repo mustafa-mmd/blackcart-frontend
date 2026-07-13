@@ -4,7 +4,6 @@ import {
   User, 
   Product, 
   Order, 
-  Category, 
   ApiResponse, 
   Pagination,
   AdminDashboardStats,
@@ -14,9 +13,6 @@ import {
 } from '../types'
 // Import categoryService
 import { categoryService } from './categoryService'
-
-// Add toast import at the top
-import { toast } from 'react-toastify'
 
 export interface DashboardStats extends AdminDashboardStats {
   overview: {

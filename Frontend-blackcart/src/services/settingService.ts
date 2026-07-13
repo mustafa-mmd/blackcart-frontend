@@ -185,7 +185,7 @@ class SettingService {
   }
 
   // ── Admin: Update settings section ──────────────────────────────────────────
-  async updateSettings(section: string, data: any): Promise<any> {
+  async updateSettings(section: string, data: unknown): Promise<unknown> {
     const response = await api.put('/admin/settings', { section, data });
     this.cache = null; // Invalidate cache
     return response.data.data;

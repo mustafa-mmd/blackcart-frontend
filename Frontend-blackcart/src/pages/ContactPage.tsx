@@ -7,7 +7,6 @@ import {
   MapPin, 
   Clock, 
   Send, 
-  MessageSquare,
   HeadphonesIcon as Headset
 } from 'lucide-react'
 import { useForm } from 'react-hook-form'
@@ -195,19 +194,6 @@ const ContactPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Live Chat */}
-              <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl p-6 text-white">
-                <div className="flex items-center gap-3 mb-4">
-                  <MessageSquare className="h-6 w-6" />
-                  <h3 className="text-xl font-bold">Live Chat Support</h3>
-                </div>
-                <p className="mb-4 text-white/90">
-                  Chat with our support team in real-time for instant help.
-                </p>
-                <button className="w-full bg-white text-green-700 hover:bg-gray-100 font-semibold py-3 px-4 rounded-lg transition-colors">
-                  Start Live Chat
-                </button>
-              </div>
             </motion.div>
           </div>
 

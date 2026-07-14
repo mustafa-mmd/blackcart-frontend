@@ -1,5 +1,5 @@
 // Frontend-blackcart/src/pages/admin/AdminCreateProduct.tsx
-import React, { useState, useEffect } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { toast } from 'react-hot-toast'
@@ -10,14 +10,14 @@ import {
   Trash2,
   Package,
   DollarSign,
-  Hash,
   Tag,
   BookOpen,
   BarChart,
   Award,
-  Check,
-  X,
-  Save
+  Save,
+  GripVertical,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react'
 import { adminService } from '../../services/adminServiceMethods'
 import Loader from '../../components/common/Loader'
@@ -53,11 +53,22 @@ interface Category {
   productCount?: number
 }
 
+interface PendingImage {
+  id: string
+  file: File
+  previewUrl: string
+}
+
+const getErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback
+
 const AdminCreateProduct: React.FC = () => {
   const navigate = useNavigate()
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [images, setImages] = useState<File[]>([])
-  const [imagePreviews, setImagePreviews] = useState<string[]>([])
+  const [images, setImages] = useState<PendingImage[]>([])
+  const [draggedImageId, setDraggedImageId] = useState<string | null>(null)
+  const previewUrlsRef = useRef(new Set<string>())
+  const pointerDragIdRef = useRef<string | null>(null)
   const [specifications, setSpecifications] = useState<Specification[]>([{ key: '', value: '' }])
   const [features, setFeatures] = useState<string[]>([''])
   const [categories, setCategories] = useState<Category[]>([])
@@ -77,15 +88,20 @@ const AdminCreateProduct: React.FC = () => {
         } else {
           toast.error('Failed to load categories')
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('Error fetching categories:', error)
-        toast.error('Failed to load categories')
+        toast.error(getErrorMessage(error, 'Failed to load categories'))
       } finally {
         setLoadingCategories(false)
       }
     }
     
     fetchCategories()
+  }, [])
+
+  useEffect(() => () => {
+    previewUrlsRef.current.forEach(url => URL.revokeObjectURL(url))
+    previewUrlsRef.current.clear()
   }, [])
 
   const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm<ProductFormData>({
@@ -103,9 +119,15 @@ const AdminCreateProduct: React.FC = () => {
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return
-    
-    const files = Array.from(e.target.files)
+
+    const availableSlots = Math.max(10 - images.length, 0)
+    const selectedFiles = Array.from(e.target.files)
+    const files = selectedFiles.slice(0, availableSlots)
     console.log(`📁 Selected ${files.length} files`);
+
+    if (selectedFiles.length > availableSlots) {
+      toast.error(`You can upload a maximum of 10 images. ${availableSlots} slot(s) remaining.`)
+    }
     
     // Validate file types and sizes
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
@@ -127,28 +149,87 @@ const AdminCreateProduct: React.FC = () => {
       validFiles.push(file)
     })
     
-    if (validFiles.length === 0) return
-    
+    if (validFiles.length === 0) {
+      e.target.value = ''
+      return
+    }
+
     console.log(`✅ Added ${validFiles.length} valid images`)
-    setImages(prev => [...prev, ...validFiles])
-    
-    // Create previews
-    validFiles.forEach(file => {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setImagePreviews(prev => [...prev, reader.result as string])
-        console.log(`🖼️ Created preview for ${file.name}`)
+    const pendingImages = validFiles.map((file, index) => {
+      const previewUrl = URL.createObjectURL(file)
+      previewUrlsRef.current.add(previewUrl)
+      return {
+        id: `${file.name}-${file.size}-${file.lastModified}-${Date.now()}-${index}`,
+        file,
+        previewUrl,
       }
-      reader.readAsDataURL(file)
     })
+    setImages(previous => [...previous, ...pendingImages])
+    e.target.value = ''
   }
 
   const handleRemoveImage = (index: number) => {
-    const newImages = images.filter((_, i) => i !== index)
-    const newPreviews = imagePreviews.filter((_, i) => i !== index)
-    setImages(newImages)
-    setImagePreviews(newPreviews)
+    const image = images[index]
+    if (image) {
+      URL.revokeObjectURL(image.previewUrl)
+      previewUrlsRef.current.delete(image.previewUrl)
+    }
+    setImages(previous => previous.filter((_, imageIndex) => imageIndex !== index))
     console.log(`🗑️ Removed image at index ${index}`)
+  }
+
+  const reorderImage = (sourceId: string, targetId: string) => {
+    if (sourceId === targetId) return
+    setImages(previous => {
+      const sourceIndex = previous.findIndex(image => image.id === sourceId)
+      const targetIndex = previous.findIndex(image => image.id === targetId)
+      if (sourceIndex < 0 || targetIndex < 0) return previous
+      const reordered = [...previous]
+      const [movedImage] = reordered.splice(sourceIndex, 1)
+      reordered.splice(targetIndex, 0, movedImage)
+      return reordered
+    })
+  }
+
+  const moveImage = (sourceIndex: number, targetIndex: number) => {
+    if (targetIndex < 0 || targetIndex >= images.length) return
+    reorderImage(images[sourceIndex].id, images[targetIndex].id)
+  }
+
+  const handleDragStart = (event: React.DragEvent<HTMLDivElement>, imageId: string) => {
+    setDraggedImageId(imageId)
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', imageId)
+  }
+
+  const handleDrop = (event: React.DragEvent<HTMLDivElement>, targetId: string) => {
+    event.preventDefault()
+    const sourceId = event.dataTransfer.getData('text/plain') || draggedImageId
+    if (sourceId) reorderImage(sourceId, targetId)
+    setDraggedImageId(null)
+  }
+
+  const handlePointerDown = (event: React.PointerEvent<HTMLButtonElement>, imageId: string) => {
+    event.preventDefault()
+    pointerDragIdRef.current = imageId
+    setDraggedImageId(imageId)
+    event.currentTarget.setPointerCapture(event.pointerId)
+  }
+
+  const handlePointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const sourceId = pointerDragIdRef.current
+    if (!sourceId) return
+    const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>('[data-image-id]')
+    const targetId = target?.dataset.imageId
+    if (targetId) reorderImage(sourceId, targetId)
+  }
+
+  const endPointerDrag = (event: React.PointerEvent<HTMLButtonElement>) => {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
+    pointerDragIdRef.current = null
+    setDraggedImageId(null)
   }
 
   const addSpecification = () => {
@@ -193,7 +274,7 @@ const AdminCreateProduct: React.FC = () => {
     setValue('features', newFeatures, { shouldValidate: true })
   }
 
-  const safeSplit = (value: any): string[] => {
+  const safeSplit = (value: unknown): string[] => {
     if (!value) return [];
     
     if (Array.isArray(value)) {
@@ -248,6 +329,11 @@ const AdminCreateProduct: React.FC = () => {
             // Ensure categoryId is sent
             formData.append('categoryId', value);
             console.log(`✅ Added categoryId:`, value);
+          } else if (key === 'discountPrice') {
+            const discountPrice = Number(value)
+            if (Number.isFinite(discountPrice) && discountPrice > 0) {
+              formData.append(key, String(discountPrice))
+            }
           } else {
             formData.append(key, String(value));
           }
@@ -257,13 +343,13 @@ const AdminCreateProduct: React.FC = () => {
       // Add images
       if (images.length > 0) {
         images.forEach((image) => {
-          formData.append('images', image);
+          formData.append('images', image.file, image.file.name);
         });
       }
       
       // Debug form data
       console.log('📦 FormData contents:');
-      for (let pair of formData.entries()) {
+      for (const pair of formData.entries()) {
         const [key, value] = pair;
         if (value instanceof File) {
           console.log(`  ${key}: File - ${value.name}`);
@@ -287,10 +373,10 @@ const AdminCreateProduct: React.FC = () => {
         toast.error(response.message || 'Failed to create product');
       }
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('❌ API Error:', error);
       
-      const errorMessage = error.message || 'Failed to create product';
+      const errorMessage = getErrorMessage(error, 'Failed to create product');
       
       if (errorMessage.includes('Category')) {
         toast.error('Invalid category selected. Please choose a valid category.');
@@ -313,7 +399,6 @@ const AdminCreateProduct: React.FC = () => {
   }
 
   const price = watch('price')
-  const discountPrice = watch('discountPrice')
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
@@ -494,7 +579,7 @@ const AdminCreateProduct: React.FC = () => {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Discount Price (PKR)
+                        Discount Price (PKR) <span className="font-normal text-gray-500">(Optional)</span>
                       </label>
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -506,7 +591,7 @@ const AdminCreateProduct: React.FC = () => {
                           min="0"
                           {...register('discountPrice', { 
                             min: { value: 0, message: 'Discount price must be positive' },
-                            valueAsNumber: true,
+                            setValueAs: value => value === '' ? undefined : Number(value),
                             validate: (value) => {
                               if (value && value >= price) {
                                 return 'Discount price must be less than regular price'
@@ -514,6 +599,7 @@ const AdminCreateProduct: React.FC = () => {
                               return true
                             }
                           })}
+                          placeholder="Leave blank for no discount"
                           className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
                         />
                       </div>
@@ -667,44 +753,101 @@ const AdminCreateProduct: React.FC = () => {
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Product Images</h2>
                 
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    {imagePreviews.map((preview, index) => (
-                      <div key={index} className="relative group">
-                        <img
-                          src={preview}
-                          alt={`Preview ${index + 1}`}
-                          className="w-full h-32 object-cover rounded-lg"
-                        />
-                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-200 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
+                  <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                    {images.map((image, index) => (
+                      <div
+                        key={image.id}
+                        data-image-id={image.id}
+                        draggable
+                        onDragStart={event => handleDragStart(event, image.id)}
+                        onDragOver={event => event.preventDefault()}
+                        onDrop={event => handleDrop(event, image.id)}
+                        onDragEnd={() => setDraggedImageId(null)}
+                        className={`rounded-xl border bg-white p-2 shadow-sm transition ${
+                          draggedImageId === image.id
+                            ? 'scale-95 border-blue-500 opacity-60'
+                            : index === 0
+                              ? 'border-blue-400 ring-2 ring-blue-100'
+                              : 'border-gray-200'
+                        }`}
+                      >
+                        <div className="relative">
+                          <img
+                            src={image.previewUrl}
+                            alt={`${image.file.name}, position ${index + 1}`}
+                            draggable="false"
+                            className="h-28 w-full rounded-lg object-cover sm:h-32"
+                          />
+                          <button
+                            type="button"
+                            onPointerDown={event => handlePointerDown(event, image.id)}
+                            onPointerMove={handlePointerMove}
+                            onPointerUp={endPointerDrag}
+                            onPointerCancel={endPointerDrag}
+                            className="touch-none absolute left-1.5 top-1.5 flex h-9 w-9 cursor-grab items-center justify-center rounded-lg bg-gray-950/80 text-white shadow active:cursor-grabbing"
+                            aria-label={`Drag image ${index + 1} to reorder`}
+                            title="Drag to reorder"
+                          >
+                            <GripVertical className="h-5 w-5" />
+                          </button>
                           <button
                             type="button"
                             onClick={() => handleRemoveImage(index)}
-                            className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition transform scale-0 group-hover:scale-100"
+                            className="absolute right-1.5 top-1.5 flex h-9 w-9 items-center justify-center rounded-lg bg-red-600 text-white shadow transition hover:bg-red-700"
+                            aria-label={`Remove image ${index + 1}`}
                             title="Remove image"
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
+                          <span className={`absolute bottom-1.5 left-1.5 rounded-md px-2 py-1 text-xs font-bold text-white ${index === 0 ? 'bg-blue-700' : 'bg-gray-950/75'}`}>
+                            {index === 0 ? 'Primary' : `Position ${index + 1}`}
+                          </span>
+                        </div>
+                        <div className="mt-2 flex items-center justify-between gap-2">
+                          <button
+                            type="button"
+                            onClick={() => moveImage(index, index - 1)}
+                            disabled={index === 0}
+                            className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-700 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-35"
+                            aria-label={`Move image ${index + 1} left`}
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                          </button>
+                          <span className="min-w-0 truncate text-xs text-gray-500" title={image.file.name}>
+                            {index + 1} of {images.length}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => moveImage(index, index + 1)}
+                            disabled={index === images.length - 1}
+                            className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-700 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-35"
+                            aria-label={`Move image ${index + 1} right`}
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </button>
                         </div>
                       </div>
                     ))}
-                    
-                    <label className="h-32 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition">
-                      <Upload className="h-8 w-8 text-gray-400 mb-2" />
-                      <span className="text-sm text-gray-600">Upload Image</span>
-                      <span className="text-xs text-gray-500 mt-1">(Max 5MB)</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        onChange={handleImageUpload}
-                        className="hidden"
-                      />
-                    </label>
+
+                    {images.length < 10 && (
+                      <label className="flex h-40 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 transition hover:border-blue-400 hover:bg-blue-50 sm:h-[11.25rem]">
+                        <Upload className="mb-2 h-8 w-8 text-gray-400" />
+                        <span className="text-sm text-gray-600">Upload Images</span>
+                        <span className="mt-1 text-xs text-gray-500">Max 5MB each · {10 - images.length} left</span>
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,image/gif"
+                          multiple
+                          onChange={handleImageUpload}
+                          className="hidden"
+                        />
+                      </label>
+                    )}
                   </div>
                   
                   <div className="text-sm">
                     <p className="text-gray-500">
-                      First image will be the main display image.
+                      Drag images to reorder them. On mobile, drag the grip or use the arrow buttons. The first image is the main storefront image.
                     </p>
                     {images.length > 0 && (
                       <p className="text-green-600 mt-1">
@@ -729,7 +872,7 @@ const AdminCreateProduct: React.FC = () => {
                   <input
                     type="text"
                     {...register('tags', {
-                      setValueAs: (value: any) => {
+                      setValueAs: (value: unknown) => {
                         return safeSplit(value);
                       }
                     })}

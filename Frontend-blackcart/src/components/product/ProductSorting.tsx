@@ -33,6 +33,8 @@ const ProductSorting: React.FC<ProductSortingProps> = ({
     { value: 'name', label: 'Name', defaultOrder: 'asc' as const },
     { value: 'rating', label: 'Rating', defaultOrder: 'desc' as const },
     { value: 'popularity', label: 'Popularity', defaultOrder: 'desc' as const },
+    { value: 'soldCount', label: 'Best Selling', defaultOrder: 'desc' as const },
+    { value: 'discountPercentage', label: 'Biggest Discount', defaultOrder: 'desc' as const },
   ], [])
 
   // Handle click outside

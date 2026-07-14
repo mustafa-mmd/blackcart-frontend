@@ -61,13 +61,16 @@ export interface Product {
   name: string
   slug: string
   categoryId?: string
+  category?: string
   brand: string
   price: number
   discountPrice?: number
+  discountPercentage?: number
   description: string
   shortDescription: string
   // ✅ FIXED: images can be either string[] or ProductImage[] to handle both formats
   images: (string | ProductImage)[]
+  image?: string
   thumbnail?: string
   specifications: Specification[]
   features: string[]
@@ -78,6 +81,8 @@ export interface Product {
   tags: string[]
   rating?: number
   numReviews?: number
+  viewCount?: number
+  soldCount?: number
   weight?: number
   dimensions?: Dimensions
   warranty?: string
@@ -86,6 +91,12 @@ export interface Product {
   metaDescription?: string
   createdAt: string
   updatedAt: string
+}
+
+export type StorefrontProduct = Omit<Product, 'categoryId' | 'category'> & {
+  categoryId?: string | Pick<Category, '_id' | 'name' | 'slug'>
+  category?: string | Pick<Category, '_id' | 'name' | 'slug'> | null
+  categorySlug?: string
 }
 
 // // ============================================
@@ -258,6 +269,7 @@ export interface PaymentRequest {
   status: 'pending' | 'success' | 'failed' | 'cancelled'
   requestedAt: string
   expiresAt?: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   providerData?: any
 }
 
@@ -434,6 +446,7 @@ export interface Activity {
   action: string
   timestamp: string
   details?: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data?: any
 }
 
@@ -693,6 +706,7 @@ export interface Notification {
   message: string
   type: NotificationType
   read: boolean
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data?: any
   actionUrl?: string
   createdAt: string
@@ -788,6 +802,7 @@ export interface SearchParams {
 // API RESPONSE TYPES
 // ============================================
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export interface ApiResponse<T = any> {
   success: boolean
   data?: T

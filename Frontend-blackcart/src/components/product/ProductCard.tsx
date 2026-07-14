@@ -4,20 +4,21 @@
 import React, { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Star, ShoppingCart, Eye, TrendingUp, Loader } from 'lucide-react'
-import { Product } from '../../types'
+import { Star, ShoppingCart, Eye, TrendingUp } from 'lucide-react'
+import type { Product, StorefrontProduct } from '../../types'
 import { useCart } from '../../context/CartContext'
 import toast from 'react-hot-toast'
 // Import the image utility
 import { getImageUrl } from '../../utils/imageUtils'
 
 interface ProductCardProps {
-  product: Product
+  product: StorefrontProduct
+  compact?: boolean
   index?: number
   viewMode?: 'grid' | 'list'  // ✅ ADDED: viewMode prop
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode = 'grid' }) => {
+const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode = 'grid', compact = false }) => {
   const navigate = useNavigate()
   const { addToCart, isInCart } = useCart()
   const [isHovered, setIsHovered] = React.useState(false)
@@ -79,7 +80,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
 
   const getProductName = () => product?.name || 'Product'
 
-  const discountPercentage = product?.discountPrice && product?.price
+  const hasValidDiscount = Boolean(
+    product?.discountPrice && product?.price && product.discountPrice < product.price,
+  )
+  const discountPercentage = hasValidDiscount && product?.discountPrice && product?.price
     ? Math.round(((product.price - product.discountPrice) / product.price) * 100)
     : 0
 
@@ -94,7 +98,16 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
       return
     }
     
-    addToCart(product)
+    const cartProduct: Product = {
+      ...product,
+      categoryId: typeof product.categoryId === 'object'
+        ? product.categoryId._id
+        : product.categoryId,
+      category: product.category && typeof product.category === 'object'
+        ? product.category.name
+        : product.category || undefined,
+    }
+    addToCart(cartProduct)
     toast.success(`${getProductName()} added to cart!`)
   }
 
@@ -127,14 +140,15 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
     }
   }
 
-  const safeRender = (value: any, fallback: string = ''): string => {
+  const safeRender = (value: unknown, fallback: string = ''): string => {
     if (value == null) return fallback
     
     if (typeof value === 'object') {
-      if (value.name && typeof value.name === 'string') {
-        return value.name
+      const objectValue = value as Record<string, unknown>
+      if (typeof objectValue.name === 'string') {
+        return objectValue.name
       }
-      const stringValues = Object.values(value).filter(v => typeof v === 'string')
+      const stringValues = Object.values(objectValue).filter(v => typeof v === 'string')
       if (stringValues.length > 0) {
         return String(stringValues[0])
       }
@@ -194,6 +208,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
                   setImageError(true);
                 }}
                 loading="lazy"
+                decoding="async"
               />
             </div>
             
@@ -298,8 +313,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay: index * 0.05 }}
-      className="card overflow-hidden group cursor-pointer bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300"
+      transition={{ duration: 0.3, delay: compact ? Math.min(index, 3) * 0.03 : index * 0.05 }}
+      className={`card overflow-hidden group cursor-pointer bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300 ${compact ? 'flex h-full flex-col' : ''}`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={handleCardClick}
@@ -313,7 +328,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
       }}
       aria-label={`View ${product.name} details`}
     >
-      <div className="relative aspect-square overflow-hidden bg-gray-100">
+      <div className={`relative overflow-hidden bg-gray-100 ${compact ? 'aspect-[4/3]' : 'aspect-square'}`}>
         <img
           src={imageError ? '/placeholder.png' : imageUrl}
           alt={safeRender(product.name, 'Product image')}
@@ -323,6 +338,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
             setImageError(true);
           }}
           loading="lazy"
+          decoding="async"
         />
         
         {/* Badges */}
@@ -384,7 +400,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
       </div>
 
       {/* Product info */}
-      <div className="p-4">
+      <div className={`p-4 ${compact ? 'flex flex-1 flex-col' : ''}`}>
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs text-gray-500 uppercase tracking-wider">
             {getCategoryName()}
@@ -393,24 +409,24 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
             <div className="flex items-center">
               <Star className="h-3 w-3 text-yellow-400 fill-current" />
               <span className="text-xs text-gray-600 ml-1">
-                {safeRender(product.rating?.toFixed(1), '0.0')}
+                {safeRender(product.rating?.toFixed(1), '0.0')} ({product.numReviews || 0})
               </span>
             </div>
           )}
         </div>
 
-        <h3 className="font-medium text-gray-900 mb-2 line-clamp-1 hover:text-blue-600 transition-colors cursor-pointer"
+        <h3 className={`font-medium text-gray-900 mb-2 hover:text-blue-600 transition-colors cursor-pointer ${compact ? 'min-h-12 line-clamp-2' : 'line-clamp-1'}`}
             onClick={handleCardClick}>
           {safeRender(product.name, 'Unnamed Product')}
         </h3>
 
-        <p className="text-sm text-gray-500 mb-3 line-clamp-1">
-          {safeRender(product.brand, 'Unknown Brand')}
+        <p className={`text-sm text-gray-500 mb-3 ${compact ? 'min-h-10 line-clamp-2' : 'line-clamp-1'}`}>
+          {safeRender(compact ? product.shortDescription || product.brand : product.brand, 'Quality product')}
         </p>
 
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            {product.discountPrice ? (
+            {hasValidDiscount ? (
               <>
                 <span className="text-lg font-bold text-gray-900">
                   PKR {safeRender(product.discountPrice?.toLocaleString(), '0')}
@@ -433,6 +449,34 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
             </div>
           )}
         </div>
+
+        {compact && (
+          <div className="mt-auto pt-4">
+            <div className="mb-2 flex min-h-5 items-center justify-between gap-2 text-xs">
+              <span className={product.stock > 0 ? 'font-medium text-green-700' : 'font-medium text-red-700'}>
+                {product.stock > 0 ? (product.stock < 10 ? `Only ${product.stock} left` : 'In stock') : 'Out of stock'}
+              </span>
+              {product.variants && product.variants.length > 0 && (
+                <span className="text-gray-500">{product.variants.length} variants</span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={handleAddToCart}
+              disabled={product.stock === 0}
+              className={`flex w-full items-center justify-center rounded-lg px-3 py-2.5 text-sm font-semibold text-white outline-none transition focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 ${
+                product.stock === 0
+                  ? 'cursor-not-allowed bg-gray-300'
+                  : isInCart(product._id)
+                    ? 'bg-green-700 hover:bg-green-800'
+                    : 'bg-blue-700 hover:bg-blue-800'
+              }`}
+            >
+              <ShoppingCart className="mr-2 h-4 w-4" aria-hidden="true" />
+              {product.stock === 0 ? 'Out of Stock' : isInCart(product._id) ? 'In Cart' : 'Add to Cart'}
+            </button>
+          </div>
+        )}
       </div>
     </motion.div>
   )

@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   Star, Truck, Shield, RefreshCw, ShoppingCart,
   Minus, Plus, Share2, Package, AlertCircle, CheckCircle,
-  ChevronRight, Facebook, Twitter, Linkedin
+  Facebook, Twitter, Linkedin
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { productService } from '../../services/productService'
@@ -12,11 +12,13 @@ import { useCart } from '../../context/CartContext'
 import toast from 'react-hot-toast'
 import Breadcrumb from '../../components/common/Breadcrumb'
 import Loader from '../../components/common/Loader'
-import ProductCard from '../../components/product/ProductCard'
+import ProductRail from '../../components/product/ProductRail'
 import ProductTabs from '../../components/product/ProductTabs'
 import ImageGallery from '../../components/product/ImageGallery'
-import { Product } from '../../types'
+import type { Product, ProductImage } from '../../types'
 import { getImageUrl } from '../../utils/imageUtils'
+import { recordProductView } from '../../utils/browsingHistory'
+import { BrandIcon } from '../../components/common/BrandIcon'
 
 const ProductDetailPage: React.FC = () => {
   const { identifier } = useParams<{ identifier: string }>()
@@ -26,8 +28,6 @@ const ProductDetailPage: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState(0)
   const [quantity, setQuantity] = useState(1)
   const [activeTab, setActiveTab] = useState<'description' | 'specifications' | 'reviews' | 'shipping'>('description')
-  const [relatedProducts, setRelatedProducts] = useState<Product[]>([])
-  const [productImages, setProductImages] = useState<string[]>([])
 
   // Fetch product data
   const { data: productData, isLoading, error } = useQuery({
@@ -44,79 +44,61 @@ const ProductDetailPage: React.FC = () => {
   const product = productData?.data?.product || productData?.data
   const reviews = product?.reviews || []
   const ratingStats = product?.ratingStats
+  const categorySlug = product?.categorySlug
+    || (typeof product?.category === 'object' ? product.category.slug : '')
+    || (typeof product?.categoryId === 'object' ? product.categoryId.slug : '')
 
-  // ✅ FIXED: Process images when product loads - handles object format
+  const {
+    data: relatedProductsResponse,
+    isLoading: relatedProductsLoading,
+  } = useQuery({
+    queryKey: ['related-products', categorySlug, product?._id],
+    queryFn: () => productService.getProductsByCategory(categorySlug, {
+      limit: 12,
+      sort: 'createdAt',
+      order: 'desc',
+    }),
+    enabled: Boolean(categorySlug && product?._id),
+    retry: 1,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  })
+
+  const relatedProducts = useMemo(
+    () => (relatedProductsResponse?.data?.products || [])
+      .filter((relatedProduct: Product) => relatedProduct._id !== product?._id)
+      .slice(0, 12),
+    [product?._id, relatedProductsResponse],
+  )
+
   useEffect(() => {
-    if (product?.images && Array.isArray(product.images)) {
-      // Map each image object to a URL string using getImageUrl
-      const images = product.images
-        .map((img: any) => {
-          try {
-            return getImageUrl(img);
-          } catch (err) {
-            console.error('Error processing image:', err);
-            return null;
-          }
-        })
-        .filter((url: string | null): url is string =>
-          url !== null && url !== '' && url !== '/placeholder.png'
-        );
+    if (product?._id) recordProductView(String(product._id), categorySlug)
+  }, [categorySlug, product?._id])
 
-      // If we have images, use them; otherwise, add placeholder
-      if (images.length > 0) {
-        setProductImages(images);
-      } else {
-        setProductImages(['/placeholder.png']);
-      }
-    } else {
-      setProductImages(['/placeholder.png']);
-    }
-  }, [product]);
+  const productImages = (() => {
+    if (!Array.isArray(product?.images)) return ['/placeholder.png']
+
+    const images = product.images
+      .map((image: string | ProductImage) => {
+        try {
+          return getImageUrl(image)
+        } catch {
+          return null
+        }
+      })
+      .filter((url: string | null): url is string =>
+        Boolean(url && url !== '/placeholder.png'),
+      )
+
+    return images.length > 0 ? images : ['/placeholder.png']
+  })()
 
   // ✅ FIXED: Check wishlist status
   // ✅ FIXED: Fetch related products
-  const fetchRelatedProducts = async () => {
-    try {
-      if (!product?.category) return
-
-      console.log(`🔍 Fetching related products for category: ${product.category}`)
-
-      const response = await productService.getProductsByCategory(product.category, { limit: 4 })
-
-      if (response.success && response.data?.products) {
-        const filtered = response.data.products.filter((p: Product) =>
-          p._id !== product._id
-        )
-        setRelatedProducts(filtered.slice(0, 4))
-        console.log(`✅ Found ${filtered.length} related products`)
-      } else {
-        console.log('⚠️ No related products found:', response.message)
-      }
-    } catch (error) {
-      console.error('❌ Error fetching related products:', error)
-    }
-  }
-
-  // Fetch related products
-  useEffect(() => {
-    if (product?.category) {
-      fetchRelatedProducts()
-    }
-  }, [product?.category])
-
   // Calculate discount
   const discountPercentage = product?.discountPrice && product?.price
     ? Math.round(((product.price - product.discountPrice) / product.price) * 100)
     : 0
-
-  // Stock status
-  const getStockStatus = (stock: number) => {
-    if (stock === 0) return { text: 'Out of Stock', color: 'text-red-600', bgColor: 'bg-red-50', icon: '❌' }
-    if (stock < 10) return { text: 'Low Stock', color: 'text-yellow-600', bgColor: 'bg-yellow-50', icon: '⚠️' }
-    return { text: 'In Stock', color: 'text-green-600', bgColor: 'bg-green-50', icon: '✅' }
-  }
-
-  const stockStatus = getStockStatus(product?.stock || 0)
 
   // Format price
   const formatPrice = (price: number) => {
@@ -140,12 +122,12 @@ const ProductDetailPage: React.FC = () => {
       return
     }
 
-    const cartProduct = {
+    const cartProduct: Product = {
+      ...product,
       _id: String(product._id),
       name: String(product.name || 'Product'),
-      price: Number(product.discountPrice || product.price || 0),
       image: String(productImages[0] || '/placeholder.png'),
-      stock: product.stock
+      stock: Number(product.stock || 0),
     }
 
     addToCart(cartProduct, quantity)
@@ -559,7 +541,7 @@ const ProductDetailPage: React.FC = () => {
                     {platform === 'facebook' && <Facebook className="h-5 w-5 text-blue-600" />}
                     {platform === 'twitter' && <Twitter className="h-5 w-5 text-blue-400" />}
                     {platform === 'linkedin' && <Linkedin className="h-5 w-5 text-blue-700" />}
-                    {platform === 'whatsapp' && <div className="h-5 w-5 bg-green-500 rounded"></div>}
+                    {platform === 'whatsapp' && <BrandIcon brand="whatsapp" className="h-5 w-5 text-green-500" />}
                   </button>
                 ))}
               </div>
@@ -636,31 +618,17 @@ const ProductDetailPage: React.FC = () => {
           ratingStats={ratingStats}
         />
 
-        {/* Related Products */}
-        {relatedProducts.length > 0 && (
-          <div className="mt-16">
-            <div className="flex items-center justify-between mb-8">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">Related Products</h2>
-                <p className="text-gray-600 mt-1">Customers also viewed these products</p>
-              </div>
-              <button
-                onClick={() => navigate(`/products?category=${product.category}`)}
-                className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium"
-              >
-                View All
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {relatedProducts.map((relatedProduct, index) => (
-                <ProductCard
-                  key={relatedProduct._id}
-                  product={relatedProduct}
-                  index={index}
-                />
-              ))}
-            </div>
+        {categorySlug && (
+          <div className="mt-12 overflow-hidden rounded-2xl">
+            <ProductRail
+              id="related-products"
+              title="Related Products"
+              subtitle="More products from the same category"
+              products={relatedProducts}
+              viewAllUrl={`/categories/${categorySlug}`}
+              isLoading={relatedProductsLoading}
+              backgroundClassName="bg-white"
+            />
           </div>
         )}
       </div>

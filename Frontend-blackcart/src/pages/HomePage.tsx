@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
@@ -14,8 +14,6 @@ import {
   Monitor,
   Webcam,
   Music,
-  Sparkles,
-  Clock,
   AlertCircle,
   RefreshCw,
   ChevronLeft,
@@ -24,9 +22,9 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { productService } from "../services/productService";
 import bannerService from "../services/bannerService";
-import ProductCard from "../components/product/ProductCard";
-import Loader from "../components/common/Loader";
-import type { Product } from "../types";
+import ProductRail from "../components/product/ProductRail";
+import InlinePromoBanner from "../components/product/InlinePromoBanner";
+import { getBrowsingHistory } from "../utils/browsingHistory";
 
 /* ─── Google Fonts now loaded in index.html <head> — no JS injection needed ─ */
 
@@ -61,8 +59,16 @@ const defaultBanners = [
   },
 ];
 
+const resolveBannerUrl = (url: string) => {
+  if (url.startsWith("http")) return url;
+  const apiBase = import.meta.env.VITE_API_URL || "https://blackcart-backend.onrender.com";
+  return `${apiBase}${url}`;
+};
+
 const HomePage: React.FC = () => {
-  const [currentSlide, setCurrentSlide] = React.useState(0);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [selectedLaunchCategory, setSelectedLaunchCategory] = useState("all");
+  const browsingHistory = useMemo(() => getBrowsingHistory(), []);
 
   const { data: banners = [] } = useQuery({
     queryKey: ["banners"],
@@ -72,13 +78,16 @@ const HomePage: React.FC = () => {
   });
 
   const {
-    data: homeProductsData,
+    data: homeSectionsResponse,
     isLoading: homeProductsLoading,
     error: homeProductsError,
     refetch: refetchHomeProducts,
   } = useQuery({
-    queryKey: ["homeProducts"],
-    queryFn: () => productService.getProducts({ limit: 16 }),
+    queryKey: ["homeSections", browsingHistory.categorySlugs.join(",")],
+    queryFn: () => productService.getHomeSections({
+      recentCategories: browsingHistory.categorySlugs,
+      limit: 12,
+    }),
     retry: 1,
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -86,14 +95,9 @@ const HomePage: React.FC = () => {
 
   const activeBanners = banners.length > 0 ? banners : defaultBanners;
   const activeBanner = activeBanners[currentSlide] || activeBanners[0];
-  const apiBase = import.meta.env.VITE_API_URL || "https://blackcart-backend.onrender.com";
-  const desktopBannerUrl = activeBanner.url.startsWith("http")
-    ? activeBanner.url
-    : `${apiBase}${activeBanner.url}`;
+  const desktopBannerUrl = resolveBannerUrl(activeBanner.url);
   const rawMobileBannerUrl = activeBanner.mobileUrl || activeBanner.url;
-  const mobileBannerUrl = rawMobileBannerUrl.startsWith("http")
-    ? rawMobileBannerUrl
-    : `${apiBase}${rawMobileBannerUrl}`;
+  const mobileBannerUrl = resolveBannerUrl(rawMobileBannerUrl);
 
   useEffect(() => {
     if (activeBanners.length <= 1) return;
@@ -159,9 +163,24 @@ const HomePage: React.FC = () => {
     },
   ];
 
-  const allProducts = homeProductsData?.data?.products || [];
-  const featuredProducts = allProducts.slice(0, 4);
-  const newArrivalProducts = allProducts.slice(4, 8);
+  const homeSections = homeSectionsResponse?.data;
+  const justLaunchedProducts = homeSections?.justLaunched.products || [];
+  const launchedCategorySlugs = new Set(justLaunchedProducts.map((product) => product.categorySlug).filter(Boolean));
+  const launchedCategories = (homeSections?.categories || []).filter((category) =>
+    launchedCategorySlugs.has(category.slug),
+  );
+  const visibleJustLaunched = selectedLaunchCategory === "all"
+    ? justLaunchedProducts
+    : justLaunchedProducts.filter((product) => product.categorySlug === selectedLaunchCategory);
+  const justLaunchedViewAllUrl = selectedLaunchCategory === "all"
+    ? "/products?newArrivals=true"
+    : `/categories/${selectedLaunchCategory}`;
+  const recentlyViewedIds = new Set(browsingHistory.productIds);
+  const categorySections = (homeSections?.categorySections || []).map((section) => ({
+    ...section,
+    products: section.products.filter((product) => !recentlyViewedIds.has(product._id)),
+  }));
+  const inlineBanners = banners.slice(1, 3);
 
   const handleRetry = async () => {
     await refetchHomeProducts();
@@ -313,12 +332,6 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {homeProductsLoading && (
-        <section className="py-12 bg-white" aria-label="Loading products">
-          <Loader size="lg" />
-        </section>
-      )}
-
       {homeProductsError && (
         <section className="py-10 bg-white text-center px-4">
           <AlertCircle className="h-8 w-8 text-red-600 mx-auto mb-3" />
@@ -329,76 +342,68 @@ const HomePage: React.FC = () => {
         </section>
       )}
 
-      {/* Featured Products */}
-      {featuredProducts.length > 0 && (
-        <section className="py-12 md:py-16">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between mb-6 md:mb-8">
-              <div>
-                <div className="flex items-center mb-1 md:mb-2">
-                  <Sparkles className="h-5 w-5 md:h-6 md:w-6 text-yellow-500 mr-2" />
-                  <h2 className="text-xl md:text-2xl font-bold text-gray-900">
-                    Featured Products
-                  </h2>
-                </div>
-                <p className="text-sm md:text-base text-gray-600">
-                  Handpicked quality products for you
-                </p>
-              </div>
-              <Link
-                to="/products?featured=true"
-                className="flex items-center text-blue-600 hover:text-blue-700 font-medium text-sm md:text-base"
-              >
-                View All <ArrowRight className="h-4 w-4 md:h-5 md:w-5 ml-2" />
-              </Link>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-              {featuredProducts.map((product: Product, index: number) => (
-                <ProductCard
-                  key={product._id}
-                  product={product}
-                  index={index}
-                />
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
+      {!homeProductsError && (
+        <>
+          <ProductRail
+            id="just-launched"
+            title="Just Launched"
+            subtitle="The newest products to arrive at BlackCart"
+            products={visibleJustLaunched}
+            viewAllUrl={justLaunchedViewAllUrl}
+            viewAllLabel={selectedLaunchCategory === "all" ? "View All New Arrivals" : undefined}
+            isLoading={homeProductsLoading}
+            categories={launchedCategories}
+            selectedCategory={selectedLaunchCategory}
+            onCategoryChange={setSelectedLaunchCategory}
+            backgroundClassName="bg-white"
+          />
 
-      {/* New Arrivals */}
-      {newArrivalProducts.length > 0 && (
-        <section className="py-12 md:py-16 bg-gray-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between mb-6 md:mb-8">
-              <div>
-                <div className="flex items-center mb-1 md:mb-2">
-                  <Clock className="h-5 w-5 md:h-6 md:w-6 text-blue-500 mr-2" />
-                  <h2 className="text-xl md:text-2xl font-bold text-gray-900">
-                    New Arrivals
-                  </h2>
-                </div>
-                <p className="text-sm md:text-base text-gray-600">
-                  Discover our latest products
-                </p>
-              </div>
-              <Link
-                to="/products?newArrivals=true"
-                className="flex items-center text-blue-600 hover:text-blue-700 font-medium text-sm md:text-base"
-              >
-                View All <ArrowRight className="h-4 w-4 md:h-5 md:w-5 ml-2" />
-              </Link>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-              {newArrivalProducts.map((product: Product, index: number) => (
-                <ProductCard
-                  key={product._id}
-                  product={product}
-                  index={index}
-                />
-              ))}
-            </div>
-          </div>
-        </section>
+          <InlinePromoBanner banner={inlineBanners[0]} />
+
+          <ProductRail
+            id="best-sellers"
+            title="Best Sellers"
+            subtitle="Popular products ranked from paid or delivered orders"
+            products={homeSections?.bestSellers.products || []}
+            viewAllUrl="/products?sort=soldCount&order=desc"
+            isLoading={homeProductsLoading}
+            backgroundClassName="bg-gray-50"
+          />
+
+          <ProductRail
+            id="best-offers"
+            title="Best Offers"
+            subtitle="The biggest valid discounts available right now"
+            products={homeSections?.bestOffers.products || []}
+            viewAllUrl="/products?onSale=true&sort=discountPercentage&order=desc"
+            isLoading={homeProductsLoading}
+            backgroundClassName="bg-white"
+          />
+
+          <InlinePromoBanner banner={inlineBanners[1]} />
+
+          <ProductRail
+            id="recommended-for-you"
+            title="Recommended For You"
+            subtitle="Private recommendations based only on browsing stored on this device"
+            products={homeSections?.recommended.products || []}
+            viewAllUrl="/products"
+            isLoading={homeProductsLoading}
+            backgroundClassName="bg-gray-50"
+          />
+
+          {!homeProductsLoading && categorySections.map((section, index) => (
+            <ProductRail
+              key={section.category._id}
+              id={`more-${section.category.slug}`}
+              title={`More ${section.category.name}`}
+              subtitle={`Explore more products in ${section.category.name}`}
+              products={section.products}
+              viewAllUrl={`/categories/${section.category.slug}`}
+              backgroundClassName={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
+            />
+          ))}
+        </>
       )}
 
       {/* Popular Computer Accessories — Desktop only */}

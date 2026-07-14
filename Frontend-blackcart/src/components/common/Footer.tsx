@@ -1,6 +1,30 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import { Facebook, Twitter, Instagram, Youtube, Mail, Phone, MapPin, Shield, FileText, Truck, RotateCcw } from 'lucide-react'
+import { Mail, Phone, MapPin, Shield, FileText, Truck, RotateCcw } from 'lucide-react'
+import { BrandIcon } from './BrandIcon'
+
+const socialLinks = [
+  {
+    brand: 'facebook',
+    label: 'BlackCart.store on Facebook',
+    href: 'https://www.facebook.com/share/18ryxiWJsx/',
+  },
+  {
+    brand: 'tiktok',
+    label: 'blackcart.store on TikTok',
+    href: 'https://www.tiktok.com/@blackcart.store?_r=1&_t=ZS-980Tn3zBR3A',
+  },
+  {
+    brand: 'instagram',
+    label: 'blackcart.store on Instagram',
+    href: 'https://www.instagram.com/blackcart.store?igsh=ZHgyYXFhendvcTE0',
+  },
+  {
+    brand: 'whatsapp',
+    label: 'BlackCart.store on WhatsApp',
+    href: 'https://wa.me/923146965599',
+  },
+] as const
 
 const Footer: React.FC = () => {
   return (
@@ -19,19 +43,20 @@ const Footer: React.FC = () => {
               Pakistan's premier e-commerce destination for laptops & computer accessories. 
               Shop from thousands of products with secure payments and fast delivery.
             </p>
-            <div className="flex space-x-4">
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                <Facebook className="h-5 w-5" />
-              </a>
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                <Twitter className="h-5 w-5" />
-              </a>
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                <Instagram className="h-5 w-5" />
-              </a>
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                <Youtube className="h-5 w-5" />
-              </a>
+            <div className="flex flex-wrap gap-3" aria-label="BlackCart.store social media">
+              {socialLinks.map((social) => (
+                <a
+                  key={social.brand}
+                  href={social.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={social.label}
+                  title={social.label}
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-800 text-gray-300 outline-none transition hover:-translate-y-0.5 hover:bg-primary-600 hover:text-white focus-visible:ring-2 focus-visible:ring-primary-400"
+                >
+                  <BrandIcon brand={social.brand} />
+                </a>
+              ))}
             </div>
           </div>
 
@@ -116,7 +141,18 @@ const Footer: React.FC = () => {
               </li>
               <li className="flex items-center space-x-3">
                 <Phone className="h-5 w-5 text-gray-400" />
-                <a href="tel:+923146965599" className="text-gray-400 hover:text-white">+92 3146965599</a>
+                <a href="tel:+923146965599" className="text-gray-400 hover:text-white">+92 314 696 5599</a>
+              </li>
+              <li className="flex items-center space-x-3">
+                <BrandIcon brand="whatsapp" className="h-5 w-5 text-[#25D366]" />
+                <a
+                  href="https://wa.me/923146965599"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-400 hover:text-white"
+                >
+                  WhatsApp: +92 314 696 5599
+                </a>
               </li>
               <li className="flex items-center space-x-3">
                 <Mail className="h-5 w-5 text-gray-400" />

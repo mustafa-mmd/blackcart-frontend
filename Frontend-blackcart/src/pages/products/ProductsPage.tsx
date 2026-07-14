@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Helmet } from 'react-helmet-async'
-import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
 import ProductCard from '../../components/product/ProductCard'
@@ -11,17 +11,28 @@ import ProductSorting from '../../components/product/ProductSorting'
 import Pagination from '../../components/common/Pagination'
 import { productService } from '../../services/productService'
 import { AlertCircle, RefreshCw, Package, X, Filter, ChevronLeft } from 'lucide-react'
+import type { Product } from '../../types'
+
+interface ProductFiltersState {
+  category: string[]
+  brand: string[]
+  minPrice?: number
+  maxPrice?: number
+  featured: boolean
+  newArrivals: boolean
+  onSale: boolean
+  search: string
+}
 
 const ProductsPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams()
-  const navigate = useNavigate()
   const isInitialMount = useRef(true)
   
   // Filter sidebar state
   const [showFilters, setShowFilters] = useState(true)
   
   // Parse filters from URL — category/brand are now arrays
-  const getInitialFilters = useCallback(() => {
+  const getInitialFilters = useCallback((): ProductFiltersState => {
     const params = Object.fromEntries(searchParams.entries())
     
     return {
@@ -32,6 +43,7 @@ const ProductsPage: React.FC = () => {
       maxPrice: params.maxPrice ? Number(params.maxPrice) : undefined,
       featured: params.featured === 'true',
       newArrivals: params.newArrivals === 'true',
+      onSale: params.onSale === 'true',
       search: params.search || '',
     }
   }, [searchParams])
@@ -75,6 +87,7 @@ const ProductsPage: React.FC = () => {
     if (filters.maxPrice !== undefined) params.set('maxPrice', filters.maxPrice.toString())
     if (filters.featured) params.set('featured', 'true')
     if (filters.newArrivals) params.set('newArrivals', 'true')
+    if (filters.onSale) params.set('onSale', 'true')
     if (filters.search && filters.search.trim() !== '') params.set('search', filters.search)
     if (sortBy !== 'createdAt' || sortOrder !== 'desc') {
       params.set('sort', sortBy)
@@ -87,7 +100,7 @@ const ProductsPage: React.FC = () => {
 
   // Build API query params
   const queryParams = useMemo(() => {
-    const params: any = {
+    const params: Record<string, string | number | boolean> = {
       page: currentPage,
       limit,
       sort: sortBy,
@@ -105,6 +118,7 @@ const ProductsPage: React.FC = () => {
     if (filters.maxPrice !== undefined) params.maxPrice = filters.maxPrice
     if (filters.featured) params.featured = true
     if (filters.newArrivals) params.newArrivals = true
+    if (filters.onSale) params.onSale = true
     if (filters.search && filters.search.trim() !== '') params.search = filters.search.trim()
     
     return params
@@ -119,7 +133,7 @@ const ProductsPage: React.FC = () => {
   } = useQuery({
     queryKey: ['products', queryParams],
     queryFn: () => productService.getProducts(queryParams),
-    keepPreviousData: true,
+    placeholderData: (previousData) => previousData,
     retry: 1,
     staleTime: 1000 * 60 * 5,
   })
@@ -132,7 +146,7 @@ const ProductsPage: React.FC = () => {
     return data?.success ? data.data?.pagination : null
   }, [data])
 
-  const handleFilterChange = useCallback((newFilters: any) => {
+  const handleFilterChange = useCallback((newFilters: Partial<ProductFiltersState>) => {
     setFilters(prev => ({ ...prev, ...newFilters }))
     setCurrentPage(1)
   }, [])
@@ -156,6 +170,7 @@ const ProductsPage: React.FC = () => {
       maxPrice: undefined,
       featured: false,
       newArrivals: false,
+      onSale: false,
       search: '',
     })
     setSortBy('createdAt')
@@ -174,6 +189,7 @@ const ProductsPage: React.FC = () => {
     if (filters.maxPrice !== undefined) count++
     if (filters.featured) count++
     if (filters.newArrivals) count++
+    if (filters.onSale) count++
     if (filters.search && filters.search !== '') count++
     return count
   }, [filters])
@@ -230,6 +246,8 @@ const ProductsPage: React.FC = () => {
             ? 'Featured Products | BlackCart Pakistan'
             : filters.newArrivals
             ? 'New Arrivals | BlackCart Pakistan'
+            : filters.onSale
+            ? 'Best Offers | BlackCart Pakistan'
             : 'Buy Computer Accessories Online in Pakistan | BlackCart'}
         </title>
         <meta
@@ -259,6 +277,8 @@ const ProductsPage: React.FC = () => {
                   ? 'Featured Products'
                   : filters.newArrivals
                   ? 'New Arrivals'
+                  : filters.onSale
+                  ? 'Best Offers'
                   : 'All Products'}
               </h1>
               <p className="text-gray-600">
@@ -332,7 +352,7 @@ const ProductsPage: React.FC = () => {
                     : 'space-y-4'
                 }
               >
-                {products.map((product: any, index: number) => (
+                {products.map((product: Product, index: number) => (
                   <motion.div
                     key={product._id}
                     initial={{ opacity: 0, y: 20 }}
@@ -368,8 +388,6 @@ const ProductsPage: React.FC = () => {
                   currentPage={currentPage}
                   totalPages={pagination.pages}
                   onPageChange={handlePageChange}
-                  totalItems={pagination.total}
-                  itemsPerPage={limit}
                 />
               </div>
             )}

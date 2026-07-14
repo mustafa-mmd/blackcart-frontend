@@ -63,12 +63,55 @@ interface ProductFormData {
   features: string[]
 }
 
+interface AdminProductData {
+  _id?: string
+  name?: string
+  description?: string
+  shortDescription?: string
+  price?: number
+  discountPrice?: number
+  categoryId?: string
+  category?: string | { _id?: string }
+  brand?: string
+  sku?: string
+  stock?: number
+  tags?: string[] | string
+  isFeatured?: boolean
+  isActive?: boolean
+  specifications?: Specification[]
+  features?: string[]
+  images?: unknown[]
+}
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (error instanceof Error) return error.message
+
+  if (typeof error === 'object' && error !== null) {
+    const errorRecord = error as Record<string, unknown>
+    const response = errorRecord.response
+    if (typeof response === 'object' && response !== null) {
+      const data = (response as Record<string, unknown>).data
+      if (typeof data === 'object' && data !== null) {
+        const message = (data as Record<string, unknown>).message
+        if (typeof message === 'string') return message
+      }
+    }
+
+    if (typeof errorRecord.message === 'string') return errorRecord.message
+  }
+
+  return fallback
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null
+
 const AdminEditProduct: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [product, setProduct] = useState<any>(null)
+  const [product, setProduct] = useState<AdminProductData | null>(null)
   const [newImages, setNewImages] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [existingImages, setExistingImages] = useState<ProductImage[]>([])
@@ -81,7 +124,6 @@ const AdminEditProduct: React.FC = () => {
   const [isInitialLoad, setIsInitialLoad] = useState(true)
   const [draggedImageIndex, setDraggedImageIndex] = useState<number | null>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState<string | null>(null)
-  const [isDragging, setIsDragging] = useState(false)
   
   const touchStartRef = useRef<{ index: number; y: number } | null>(null)
 
@@ -109,20 +151,29 @@ const AdminEditProduct: React.FC = () => {
           const productResponse = await adminService.getAdminProductById(id);
           
           if (productResponse.success && productResponse.data) {
-            const productData = productResponse.data.product || productResponse.data;
+            const responseData = productResponse.data as unknown
+            const productData = isRecord(responseData) && isRecord(responseData.product)
+              ? responseData.product as AdminProductData
+              : responseData as AdminProductData
             setProduct(productData);
             
             const images = productData.images || [];
-            const processedImages: ProductImage[] = images.map((img: any, index: number) => {
+            const processedImages: ProductImage[] = images.map((img, index: number) => {
               if (typeof img === 'string') {
                 return { url: img, alt: 'Product image', isPrimary: index === 0 };
               }
+
+              const image = typeof img === 'object' && img !== null
+                ? img as Record<string, unknown>
+                : {}
               return {
-                url: img.url || img.path || '',
-                public_id: img.public_id || img.publicId,
-                alt: img.alt || 'Product image',
-                _id: img._id,
-                isPrimary: img.isPrimary || index === 0
+                url: String(image.url || image.path || ''),
+                public_id: image.public_id || image.publicId
+                  ? String(image.public_id || image.publicId)
+                  : undefined,
+                alt: typeof image.alt === 'string' ? image.alt : 'Product image',
+                _id: image._id ? String(image._id) : undefined,
+                isPrimary: image.isPrimary === true || index === 0
               };
             });
             setExistingImages(processedImages);
@@ -176,9 +227,9 @@ const AdminEditProduct: React.FC = () => {
             navigate('/admin/products');
           }
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('❌ Error fetching data:', error);
-        toast.error(error.message || 'Failed to load product data');
+        toast.error(getErrorMessage(error, 'Failed to load product data'));
         navigate('/admin/products');
       } finally {
         setIsLoading(false);
@@ -234,7 +285,6 @@ const AdminEditProduct: React.FC = () => {
   // ==================== DRAG & DROP ====================
   const handleDragStart = (e: React.DragEvent, index: number) => {
     setDraggedImageIndex(index)
-    setIsDragging(true)
     e.dataTransfer.effectAllowed = 'move'
     e.dataTransfer.setData('text/plain', String(index))
   }
@@ -247,7 +297,6 @@ const AdminEditProduct: React.FC = () => {
   const handleDrop = (e: React.DragEvent, dropIndex: number) => {
     e.preventDefault()
     if (draggedImageIndex === null || draggedImageIndex === dropIndex) {
-      setIsDragging(false)
       return
     }
     
@@ -258,13 +307,11 @@ const AdminEditProduct: React.FC = () => {
     const updated = reordered.map((img, idx) => ({ ...img, isPrimary: idx === 0 }))
     setExistingImages(updated)
     setDraggedImageIndex(null)
-    setIsDragging(false)
     toast.success('Image order updated — save the form to make it permanent')
   }
 
   const handleDragEnd = () => {
     setDraggedImageIndex(null)
-    setIsDragging(false)
   }
 
   // ==================== MOBILE TOUCH DRAG ====================
@@ -276,7 +323,7 @@ const AdminEditProduct: React.FC = () => {
     target.style.transform = 'scale(0.98)'
   }
 
-  const handleTouchMove = (e: React.TouchEvent, currentIndex: number) => {
+  const handleTouchMove = (e: React.TouchEvent) => {
     if (!touchStartRef.current) return
     e.preventDefault()
     
@@ -453,15 +500,11 @@ const AdminEditProduct: React.FC = () => {
         setImagePreviews([]);
         navigate('/admin/products');
       } else {
-        toast.error((response as any).message || 'Failed to update product');
+        toast.error(response.message || 'Failed to update product');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('❌ Update error:', error);
-      if (error.response?.data?.message) {
-        toast.error(error.response.data.message);
-      } else {
-        toast.error(error.message || 'Failed to update product');
-      }
+      toast.error(getErrorMessage(error, 'Failed to update product'));
     } finally {
       setIsSubmitting(false);
     }
@@ -506,7 +549,6 @@ const AdminEditProduct: React.FC = () => {
   }
 
   const price = watch('price')
-  const discountPrice = watch('discountPrice')
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
@@ -658,7 +700,9 @@ const AdminEditProduct: React.FC = () => {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Discount Price (PKR)</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Discount Price (PKR) <span className="font-normal text-gray-500">(Optional)</span>
+                      </label>
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                           <DollarSign className="h-5 w-5 text-gray-400" />
@@ -667,12 +711,13 @@ const AdminEditProduct: React.FC = () => {
                           type="number" step="0.01" min="0"
                           {...register('discountPrice', { 
                             min: { value: 0, message: 'Discount price must be positive' },
-                            valueAsNumber: true,
+                            setValueAs: value => value === '' ? undefined : Number(value),
                             validate: (value) => {
                               if (value && value >= price) return 'Discount price must be less than regular price'
                               return true
                             }
                           })}
+                          placeholder="Leave blank for no discount"
                           className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
                         />
                       </div>
@@ -878,7 +923,7 @@ const AdminEditProduct: React.FC = () => {
                           <div
                             className="absolute top-1.5 left-1.5 cursor-move touch-manipulation"
                             onTouchStart={(e) => handleTouchStart(e, index)}
-                            onTouchMove={(e) => handleTouchMove(e, index)}
+                            onTouchMove={handleTouchMove}
                             onTouchEnd={handleTouchEnd}
                           >
                             <div className="bg-black/60 rounded-full p-1.5">

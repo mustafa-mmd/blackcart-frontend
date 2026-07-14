@@ -547,10 +547,62 @@
 
 //update for advance search
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// The legacy product API supports several historical payload shapes. New methods are fully typed.
 // src/services/productService.ts
+import { isAxiosError } from 'axios'
 import api from './api'
+import type { Category, StorefrontProduct } from '../types'
+
+export interface HomeProductSection {
+  title: string
+  products: StorefrontProduct[]
+}
+
+export interface HomeCategorySection {
+  category: Pick<Category, '_id' | 'name' | 'slug'>
+  products: StorefrontProduct[]
+}
+
+export interface HomeSectionsData {
+  justLaunched: HomeProductSection
+  bestSellers: HomeProductSection
+  bestOffers: HomeProductSection
+  recommended: HomeProductSection
+  categorySections: HomeCategorySection[]
+  categories: Pick<Category, '_id' | 'name' | 'slug'>[]
+}
+
+export interface HomeSectionsResponse {
+  success: boolean
+  data: HomeSectionsData
+  message?: string
+}
+
+export interface HomeSectionsParams {
+  recentCategories?: string[]
+  limit?: number
+}
 
 export const productService = {
+  getHomeSections: async ({ recentCategories = [], limit = 12 }: HomeSectionsParams = {}): Promise<HomeSectionsResponse> => {
+    try {
+      const response = await api.get<HomeSectionsResponse>('/products/home-sections', {
+        params: {
+          recentCategories: recentCategories.slice(0, 3).join(','),
+          limit: Math.min(Math.max(limit, 1), 16),
+        },
+        timeout: 20000,
+      })
+      return response.data
+    } catch (error: unknown) {
+      const apiMessage = isAxiosError<{ message?: string; error?: string }>(error)
+        ? error.response?.data?.message || error.response?.data?.error
+        : undefined
+      throw new Error(apiMessage || (error instanceof Error ? error.message : 'Failed to load homepage products'))
+    }
+  },
+
   getProducts: async (params?: any) => {
     try {
       console.log('🚀 [PRODUCT SERVICE] Fetching products with params:', params)
@@ -721,7 +773,7 @@ export const productService = {
               return { success: true, data: { product }, message: 'Product fetched successfully' }
             }
           }
-        } catch (endpointError) {
+        } catch {
           console.log(`⚠️ Endpoint ${endpoint} failed`)
           continue
         }

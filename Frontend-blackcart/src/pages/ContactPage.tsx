@@ -14,6 +14,8 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'react-hot-toast'
+import { BrandIcon } from '../components/common/BrandIcon'
+import { STORE_SOCIAL_LINKS } from '../config/storeContact'
 
 const contactSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -53,9 +55,9 @@ const ContactPage: React.FC = () => {
     } else {
       throw new Error(result.message || 'Failed to send message');
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Contact form error:', error);
-    toast.error(error.message || 'Failed to send message. Please try again.');
+    toast.error(error instanceof Error ? error.message : 'Failed to send message. Please try again.');
   }
 };
 
@@ -162,6 +164,33 @@ const ContactPage: React.FC = () => {
                         <p className="text-sm text-gray-500 mt-1">{info.description}</p>
                       </div>
                     </motion.div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-xl bg-white p-6 shadow-lg">
+                <h2 className="text-xl font-bold text-gray-900">Connect with us</h2>
+                <p className="mt-2 text-sm text-gray-600">
+                  Follow BlackCart.store or message us directly on WhatsApp.
+                </p>
+                <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1">
+                  {STORE_SOCIAL_LINKS.map((social) => (
+                    <a
+                      key={social.brand}
+                      href={social.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={social.label}
+                      className="group flex min-h-14 items-center gap-3 rounded-xl border border-gray-200 px-4 py-3 outline-none transition hover:-translate-y-0.5 hover:border-blue-300 hover:bg-blue-50 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-blue-500"
+                    >
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-900 text-white transition group-hover:bg-blue-600">
+                        <BrandIcon brand={social.brand} className="h-5 w-5" />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block font-semibold text-gray-900">{social.name}</span>
+                        <span className="block truncate text-sm text-gray-500">{social.username}</span>
+                      </span>
+                    </a>
                   ))}
                 </div>
               </div>

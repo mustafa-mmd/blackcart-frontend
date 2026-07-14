@@ -2,29 +2,7 @@ import React from 'react'
 import { Link } from 'react-router-dom'
 import { Mail, Phone, MapPin, Shield, FileText, Truck, RotateCcw } from 'lucide-react'
 import { BrandIcon } from './BrandIcon'
-
-const socialLinks = [
-  {
-    brand: 'facebook',
-    label: 'BlackCart.store on Facebook',
-    href: 'https://www.facebook.com/share/18ryxiWJsx/',
-  },
-  {
-    brand: 'tiktok',
-    label: 'blackcart.store on TikTok',
-    href: 'https://www.tiktok.com/@blackcart.store?_r=1&_t=ZS-980Tn3zBR3A',
-  },
-  {
-    brand: 'instagram',
-    label: 'blackcart.store on Instagram',
-    href: 'https://www.instagram.com/blackcart.store?igsh=ZHgyYXFhendvcTE0',
-  },
-  {
-    brand: 'whatsapp',
-    label: 'BlackCart.store on WhatsApp',
-    href: 'https://wa.me/923146965599',
-  },
-] as const
+import { STORE_SOCIAL_LINKS } from '../../config/storeContact'
 
 const Footer: React.FC = () => {
   return (
@@ -44,7 +22,7 @@ const Footer: React.FC = () => {
               Shop from thousands of products with secure payments and fast delivery.
             </p>
             <div className="flex flex-wrap gap-3" aria-label="BlackCart.store social media">
-              {socialLinks.map((social) => (
+              {STORE_SOCIAL_LINKS.map((social) => (
                 <a
                   key={social.brand}
                   href={social.href}

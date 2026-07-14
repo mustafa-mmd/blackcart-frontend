@@ -7,6 +7,7 @@ import Layout from './components/layout/Layout';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import ErrorFallback from './components/common/ErrorFallback';
 import Loader from './components/common/Loader';
+import { ScrollToTop } from './components/common/ScrollToTop';
 
 const HomePage = lazy(() => import('./pages/HomePage'));
 const ProductsPage = lazy(() => import('./pages/products/ProductsPage'));
@@ -52,6 +53,7 @@ function App() {
   return (
     <ErrorBoundary fallback={<ErrorFallback />} onReset={() => window.location.reload()}>
       <Router>
+        <ScrollToTop />
         <SettingsProvider>
                 <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50"><Loader size="lg" /></div>}>
                   <Routes>

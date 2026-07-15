@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import { Menu, Search, ShoppingCart, X } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import { useSettings } from '../../context/SettingsContext';
@@ -51,7 +51,22 @@ const Header: React.FC = () => {
             </Link>
 
             <nav className="hidden shrink-0 items-center gap-6 md:flex xl:gap-8" aria-label="Main navigation">
-              {navLinks.map(link => <Link key={link.to} to={link.to} className="font-medium text-gray-700 transition-colors hover:text-primary-600">{link.label}</Link>)}
+              {navLinks.map((link) => (
+                <NavLink
+                  key={link.to}
+                  to={link.to}
+                  end={link.to === '/'}
+                  className={({ isActive }) =>
+                    `border-b-2 px-0.5 py-2 font-medium transition-colors duration-200 ${
+                      isActive
+                        ? 'border-primary-500 text-primary-700'
+                        : 'border-transparent text-gray-700 hover:border-primary-200 hover:text-primary-600'
+                    }`
+                  }
+                >
+                  {link.label}
+                </NavLink>
+              ))}
             </nav>
 
             <SearchDropdown />
@@ -60,10 +75,18 @@ const Header: React.FC = () => {
               <button onClick={() => setIsMobileSearchOpen(true)} className="p-2 text-gray-600 hover:text-primary-600 lg:hidden" aria-label="Open search">
                 <Search className="h-6 w-6" />
               </button>
-              <Link to="/cart" className="relative p-2 text-gray-600 hover:text-primary-600" aria-label={`Cart with ${itemCount} items`}>
+              <NavLink
+                to="/cart"
+                className={({ isActive }) =>
+                  `relative rounded-lg p-2 transition-colors ${
+                    isActive ? 'bg-primary-50 text-primary-700' : 'text-gray-600 hover:text-primary-600'
+                  }`
+                }
+                aria-label={`Cart with ${itemCount} items`}
+              >
                 <ShoppingCart className="h-6 w-6" />
                 {itemCount > 0 && <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary-600 text-xs text-white">{itemCount}</span>}
-              </Link>
+              </NavLink>
               <button onClick={() => setIsMenuOpen(open => !open)} className="p-2 text-gray-600 hover:text-primary-600 md:hidden" aria-label="Toggle menu">
                 {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
               </button>
@@ -72,7 +95,23 @@ const Header: React.FC = () => {
 
           {isMenuOpen && (
             <nav className="space-y-2 border-t border-gray-200 py-4 md:hidden" aria-label="Mobile navigation">
-              {navLinks.map(link => <Link key={link.to} to={link.to} onClick={closeMenu} className="block py-2 text-gray-700 hover:text-primary-600">{link.label}</Link>)}
+              {navLinks.map((link) => (
+                <NavLink
+                  key={link.to}
+                  to={link.to}
+                  end={link.to === '/'}
+                  onClick={closeMenu}
+                  className={({ isActive }) =>
+                    `block rounded-lg border-l-4 px-3 py-2.5 font-medium transition-colors ${
+                      isActive
+                        ? 'border-primary-500 bg-primary-50 text-primary-700'
+                        : 'border-transparent text-gray-700 hover:bg-gray-50 hover:text-primary-600'
+                    }`
+                  }
+                >
+                  {link.label}
+                </NavLink>
+              ))}
             </nav>
           )}
         </div>

@@ -316,7 +316,7 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({ isMobilePage = false, o
     <div
       ref={containerRef}
       className={`relative ${
-        isMobilePage ? 'w-full' : 'hidden lg:flex flex-1 max-w-xl mx-6 items-center'
+        isMobilePage ? 'w-full' : 'hidden lg:flex flex-1 max-w-md mx-4 xl:mx-6 items-center'
       }`}
     >
       {/* ── Input ── */}

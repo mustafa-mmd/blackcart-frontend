@@ -50,7 +50,7 @@ const Header: React.FC = () => {
               )}
             </Link>
 
-            <nav className="hidden shrink-0 items-center gap-6 md:flex xl:gap-8" aria-label="Main navigation">
+            <nav className="hidden shrink-0 items-center gap-6 md:ml-6 md:flex xl:ml-10 xl:gap-8" aria-label="Main navigation">
               {navLinks.map((link) => (
                 <NavLink
                   key={link.to}

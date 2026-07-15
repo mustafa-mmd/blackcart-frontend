@@ -19,6 +19,7 @@ const PUBLIC_PAGINATION = {
 // Request queue to prevent rate limiting
 let requestQueue: Promise<any> | null = null;
 const REQUEST_DELAY = 300; // ms delay between requests
+const CATEGORY_UPLOAD_TIMEOUT = 120_000;
 
 // Helper function to handle string error responses
 const getErrorMessage = (error: any): string => {
@@ -228,7 +229,9 @@ export const categoryService = {
           Object.fromEntries(data.entries())
         );
         
-        const response = await api.post('/admin/categories', data);
+        const response = await api.post('/admin/categories', data, {
+          timeout: CATEGORY_UPLOAD_TIMEOUT,
+        });
         
         console.log('✅ Frontend: Category created:', response.data.data?.name);
         
@@ -267,9 +270,9 @@ updateCategory: async (id: string, data: FormData): Promise<ApiResponse<Category
       console.log('📦 Sending FormData:', formDataEntries);
       
       const response = await api.put(`/admin/categories/${id}`, data, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+        // Cloudinary uploads can exceed the normal API timeout on a cold
+        // backend. Axios sets the multipart boundary automatically.
+        timeout: CATEGORY_UPLOAD_TIMEOUT,
       });
       
       console.log('✅ Frontend: Category updated:', {

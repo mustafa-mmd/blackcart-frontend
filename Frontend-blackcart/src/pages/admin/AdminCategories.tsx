@@ -19,6 +19,7 @@ const AdminCategories: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
   
   // Form states
   const [newCategory, setNewCategory] = useState({
@@ -133,6 +134,14 @@ const AdminCategories: React.FC = () => {
   const handleUpdateCategory = async () => {
     if (!selectedCategory) return;
 
+    if (!selectedCategory.name.trim()) {
+      toast.error('Category name is required');
+      return;
+    }
+
+    const toastId = toast.loading('Updating category...');
+    setIsUpdating(true);
+
     try {
       const formData = new FormData();
       formData.append('name', selectedCategory.name.trim());
@@ -151,19 +160,31 @@ const AdminCategories: React.FC = () => {
       console.log('📦 Update category response:', response);
       
       if (response.success) {
-        toast.success('Category updated successfully!');
+        if (response.data) {
+          setCategories((currentCategories) =>
+            currentCategories.map((category) =>
+              category._id === response.data?._id
+                ? {
+                    ...category,
+                    ...response.data,
+                    productCount: category.productCount,
+                  }
+                : category
+            )
+          );
+        }
+
         setShowEditModal(false);
         resetForm();
-        
-        // ✅ ADD DELAY BEFORE REFRESHING
-        await delay(500);
-        fetchCategories();
+        toast.success('Category updated successfully!', { id: toastId });
       } else {
-        toast.error(response.message || 'Failed to update category');
+        toast.error(response.message || 'Failed to update category', { id: toastId });
       }
     } catch (error: any) {
       console.error('Update category error:', error);
-      toast.error(error.message || 'Failed to update category');
+      toast.error(error.message || 'Failed to update category', { id: toastId });
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -723,20 +744,26 @@ const AdminCategories: React.FC = () => {
 
               <div className="flex justify-end space-x-3 mt-6">
                 <button
+                  type="button"
                   onClick={() => {
                     setShowEditModal(false);
                     setSelectedCategory(null);
                     resetForm();
                   }}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  disabled={isUpdating}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
+                  type="button"
                   onClick={handleUpdateCategory}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  disabled={isUpdating}
+                  aria-busy={isUpdating}
+                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
                 >
-                  Update Category
+                  {isUpdating && <RefreshCw className="h-4 w-4 mr-2 animate-spin" />}
+                  {isUpdating ? 'Updating...' : 'Update Category'}
                 </button>
               </div>
             </div>

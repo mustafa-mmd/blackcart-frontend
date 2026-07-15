@@ -4,7 +4,7 @@
 import React, { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Star, ShoppingCart, Eye, TrendingUp } from 'lucide-react'
+import { Star, ShoppingCart, Eye } from 'lucide-react'
 import type { Product, StorefrontProduct } from '../../types'
 import { useCart } from '../../context/CartContext'
 import toast from 'react-hot-toast'
@@ -270,12 +270,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
                 )}
               </div>
               
-              {product.stock > 0 && product.stock < 10 && (
-                <div className="flex items-center text-xs text-orange-600">
-                  <TrendingUp className="h-3 w-3 mr-1" />
-                  Only {safeRender(product.stock, '0')} left
-                </div>
-              )}
             </div>
 
             {/* Action buttons for list view */}
@@ -328,7 +322,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
       }}
       aria-label={`View ${product.name} details`}
     >
-      <div className={`relative overflow-hidden bg-gray-100 ${compact ? 'aspect-[4/3]' : 'aspect-square'}`}>
+      <div className={`relative overflow-hidden bg-gray-100 ${compact ? 'aspect-[3/2]' : 'aspect-square'}`}>
         <img
           src={imageError ? '/placeholder.png' : imageUrl}
           alt={safeRender(product.name, 'Product image')}
@@ -400,8 +394,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
       </div>
 
       {/* Product info */}
-      <div className={`p-4 ${compact ? 'flex flex-1 flex-col' : ''}`}>
-        <div className="flex items-center justify-between mb-2">
+      <div className={`${compact ? 'flex flex-1 flex-col p-3' : 'p-4'}`}>
+        <div className={`flex items-center justify-between ${compact ? 'mb-1' : 'mb-2'}`}>
           <span className="text-xs text-gray-500 uppercase tracking-wider">
             {getCategoryName()}
           </span>
@@ -415,12 +409,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
           )}
         </div>
 
-        <h3 className={`font-medium text-gray-900 mb-2 hover:text-blue-600 transition-colors cursor-pointer ${compact ? 'min-h-12 line-clamp-2' : 'line-clamp-1'}`}
+        <h3 className={`font-medium text-gray-900 hover:text-blue-600 transition-colors cursor-pointer ${compact ? 'mb-1 min-h-10 text-sm leading-5 line-clamp-2' : 'mb-2 line-clamp-1'}`}
             onClick={handleCardClick}>
           {safeRender(product.name, 'Unnamed Product')}
         </h3>
 
-        <p className={`text-sm text-gray-500 mb-3 ${compact ? 'min-h-10 line-clamp-2' : 'line-clamp-1'}`}>
+        <p className={`text-gray-500 ${compact ? 'mb-2 min-h-5 text-xs leading-5 line-clamp-1' : 'mb-3 text-sm line-clamp-1'}`}>
           {safeRender(compact ? product.shortDescription || product.brand : product.brand, 'Quality product')}
         </p>
 
@@ -442,29 +436,15 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
             )}
           </div>
           
-          {product.stock > 0 && product.stock < 10 && (
-            <div className="flex items-center text-xs text-orange-600">
-              <TrendingUp className="h-3 w-3 mr-1" />
-              Only {safeRender(product.stock, '0')} left
-            </div>
-          )}
         </div>
 
         {compact && (
-          <div className="mt-auto pt-4">
-            <div className="mb-2 flex min-h-5 items-center justify-between gap-2 text-xs">
-              <span className={product.stock > 0 ? 'font-medium text-green-700' : 'font-medium text-red-700'}>
-                {product.stock > 0 ? (product.stock < 10 ? `Only ${product.stock} left` : 'In stock') : 'Out of stock'}
-              </span>
-              {product.variants && product.variants.length > 0 && (
-                <span className="text-gray-500">{product.variants.length} variants</span>
-              )}
-            </div>
+          <div className="mt-auto pt-3">
             <button
               type="button"
               onClick={handleAddToCart}
               disabled={product.stock === 0}
-              className={`flex w-full items-center justify-center rounded-lg px-3 py-2.5 text-sm font-semibold text-white outline-none transition focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 ${
+              className={`flex w-full items-center justify-center rounded-lg px-3 py-2 text-sm font-semibold text-white outline-none transition focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 ${
                 product.stock === 0
                   ? 'cursor-not-allowed bg-gray-300'
                   : isInCart(product._id)

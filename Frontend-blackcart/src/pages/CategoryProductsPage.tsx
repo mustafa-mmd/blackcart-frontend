@@ -13,38 +13,59 @@ import { productService } from '../services/productService';
 import { useCart } from '../context/CartContext';
 import Loader from '../components/common/Loader';
 import toast from 'react-hot-toast';
+import type { Category, Product, StorefrontProduct } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://blackcart-backend.onrender.com';
+
+interface CategoryFilters {
+  sort: string;
+  order: string;
+  minPrice: string;
+  maxPrice: string;
+  inStock: boolean;
+  onSale: boolean;
+  search: string;
+}
+
+type CategoryFilterKey = keyof CategoryFilters;
+type StoreCategory = Omit<Category, 'image'> & {
+  image?: string | { url?: string; secure_url?: string };
+};
+
+const DEFAULT_FILTERS: CategoryFilters = {
+  sort: 'createdAt',
+  order: 'desc',
+  minPrice: '',
+  maxPrice: '',
+  inStock: false,
+  onSale: false,
+  search: '',
+};
+
+const getErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;
 
 const CategoryProductsPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { addToCart } = useCart();
   
-  const [category, setCategory] = useState<any>(null);
-  const [products, setProducts] = useState<any[]>([]);
+  const [category, setCategory] = useState<StoreCategory | null>(null);
+  const [products, setProducts] = useState<StorefrontProduct[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   
-  const [filters, setFilters] = useState({
-    sort: 'createdAt',
-    order: 'desc',
-    minPrice: '',
-    maxPrice: '',
-    inStock: false,
-    onSale: false,
-    search: ''
-  });
+  const [filters, setFilters] = useState<CategoryFilters>(DEFAULT_FILTERS);
   
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [activeFilters, setActiveFilters] = useState<string[]>([]);
+  const [activeFilters, setActiveFilters] = useState<CategoryFilterKey[]>([]);
   const [showMobileFilters, setShowMobileFilters] = useState<boolean>(false);
   const [totalProducts, setTotalProducts] = useState<number>(0);
   
   const prevFiltersRef = useRef(filters);
   const isInitialMount = useRef(true);
 
-  const getProductImage = (product: any): string => {
+  const getProductImage = (product: StorefrontProduct): string => {
     try {
       if (productService.getFirstImageUrl) return productService.getFirstImageUrl(product);
       const imageData = product?.images?.[0] || product?.image;
@@ -66,7 +87,7 @@ const CategoryProductsPage: React.FC = () => {
     }
   };
 
-  const getCategoryImage = (category: any): string => {
+  const getCategoryImage = (category: StoreCategory): string => {
     if (!category?.image) return '';
     if (typeof category.image === 'object' && category.image !== null) {
       const url = category.image.url || category.image.secure_url;
@@ -83,7 +104,7 @@ const CategoryProductsPage: React.FC = () => {
     return '';
   };
 
-  const fetchCategoryAndProducts = async (filterParams = filters) => {
+  const fetchCategoryAndProducts = useCallback(async (filterParams: CategoryFilters) => {
     if (!slug) {
       setError('Category slug is missing');
       setLoading(false);
@@ -100,7 +121,7 @@ const CategoryProductsPage: React.FC = () => {
         throw new Error(categoryResponse.message || `Category "${slug}" not found`);
       }
       
-      const categoryData = categoryResponse.data;
+      const categoryData = categoryResponse.data as StoreCategory;
       setCategory(categoryData);
       
       const productParams = {
@@ -116,9 +137,9 @@ const CategoryProductsPage: React.FC = () => {
       const productsResponse = await categoryService.getProductsByCategory(slug, productParams);
       
       if (productsResponse.success && productsResponse.data) {
-        let filteredProducts = productsResponse.data.products || [];
-        if (filterParams.inStock) filteredProducts = filteredProducts.filter((p: any) => p.stock > 0);
-        if (filterParams.onSale) filteredProducts = filteredProducts.filter((p: any) => p.discountPrice && p.discountPrice < p.price);
+        let filteredProducts = (productsResponse.data.products || []) as StorefrontProduct[];
+        if (filterParams.inStock) filteredProducts = filteredProducts.filter((product) => product.stock > 0);
+        if (filterParams.onSale) filteredProducts = filteredProducts.filter((product) => Boolean(product.discountPrice && product.discountPrice < product.price));
         setProducts(filteredProducts);
         setTotalProducts(filteredProducts.length);
       } else {
@@ -126,19 +147,19 @@ const CategoryProductsPage: React.FC = () => {
         setTotalProducts(0);
       }
       
-    } catch (err: any) {
-      setError(err.message || 'Failed to load category products');
+    } catch (error: unknown) {
+      setError(getErrorMessage(error, 'Failed to load category products'));
       setCategory(null);
       setProducts([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [slug]);
 
   useEffect(() => {
-    if (slug) fetchCategoryAndProducts();
+    if (slug) void fetchCategoryAndProducts(prevFiltersRef.current);
     else { setError('No category specified'); setLoading(false); }
-  }, [slug]);
+  }, [fetchCategoryAndProducts, slug]);
 
   useEffect(() => {
     if (isInitialMount.current) { isInitialMount.current = false; return; }
@@ -156,11 +177,11 @@ const CategoryProductsPage: React.FC = () => {
     if (!changed) return;
     prevFiltersRef.current = { ...filters };
     
-    const timer = setTimeout(() => fetchCategoryAndProducts(filters), 500);
+    const timer = setTimeout(() => void fetchCategoryAndProducts(filters), 500);
     return () => clearTimeout(timer);
-  }, [filters, category]);
+  }, [filters, category, fetchCategoryAndProducts]);
 
-  const handleFilterChange = (key: string, value: any) => {
+  const handleFilterChange = <Key extends CategoryFilterKey>(key: Key, value: CategoryFilters[Key]) => {
     setFilters(prev => {
       const newFilters = { ...prev, [key]: value };
       if (key !== 'sort' && key !== 'order') {
@@ -175,12 +196,12 @@ const CategoryProductsPage: React.FC = () => {
   };
 
   const clearFilters = () => {
-    setFilters({ sort: 'createdAt', order: 'desc', minPrice: '', maxPrice: '', inStock: false, onSale: false, search: '' });
+    setFilters({ ...DEFAULT_FILTERS });
     setActiveFilters([]);
     toast.success('Filters cleared');
   };
 
-  const removeFilter = (filterName: string) => {
+  const removeFilter = (filterName: CategoryFilterKey) => {
     switch (filterName) {
       case 'minPrice': case 'maxPrice': setFilters(prev => ({ ...prev, [filterName]: '' })); break;
       case 'inStock': case 'onSale': setFilters(prev => ({ ...prev, [filterName]: false })); break;
@@ -189,12 +210,19 @@ const CategoryProductsPage: React.FC = () => {
     setActiveFilters(prev => prev.filter(f => f !== filterName));
   };
 
-  const handleAddToCart = async (product: any) => {
+  const handleAddToCart = async (product: StorefrontProduct) => {
     try {
-      await addToCart(product, 1);
+      const cartProduct: Product = {
+        ...product,
+        categoryId: typeof product.categoryId === 'object' ? product.categoryId._id : product.categoryId,
+        category: typeof product.category === 'object'
+          ? product.category.name
+          : product.category || undefined,
+      };
+      await addToCart(cartProduct, 1);
       toast.success(`Added ${product.name} to cart`);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to add to cart');
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'Failed to add to cart'));
     }
   };
 
@@ -335,7 +363,7 @@ const CategoryProductsPage: React.FC = () => {
                   <span className="text-xs text-gray-500">Active:</span>
                   {activeFilters.map(filter => (
                     <span key={filter} className="flex items-center px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
-                      {filter === 'inStock' && 'In Stock'}
+                      {filter === 'inStock' && 'Available'}
                       {filter === 'onSale' && 'On Sale'}
                       {filter === 'minPrice' && `Min: PKR ${filters.minPrice}`}
                       {filter === 'maxPrice' && `Max: PKR ${filters.maxPrice}`}
@@ -394,7 +422,7 @@ const CategoryProductsPage: React.FC = () => {
                 </div>
                 <div className="flex items-center">
                   <input type="checkbox" id="mobileInStock" checked={filters.inStock} onChange={(e) => handleFilterChange('inStock', e.target.checked)} className="h-4 w-4 text-blue-600 border-gray-300 rounded" />
-                  <label htmlFor="mobileInStock" className="ml-2 text-sm text-gray-700">In Stock Only</label>
+                  <label htmlFor="mobileInStock" className="ml-2 text-sm text-gray-700">Available Products Only</label>
                 </div>
                 <div className="flex items-center">
                   <input type="checkbox" id="mobileOnSale" checked={filters.onSale} onChange={(e) => handleFilterChange('onSale', e.target.checked)} className="h-4 w-4 text-red-600 border-gray-300 rounded" />
@@ -419,7 +447,7 @@ const CategoryProductsPage: React.FC = () => {
             </div>
             <div className="flex items-center">
               <input type="checkbox" id="desktopInStock" checked={filters.inStock} onChange={(e) => handleFilterChange('inStock', e.target.checked)} className="h-4 w-4 text-blue-600 border-gray-300 rounded" />
-              <label htmlFor="desktopInStock" className="ml-2 text-sm text-gray-700">In Stock Only</label>
+              <label htmlFor="desktopInStock" className="ml-2 text-sm text-gray-700">Available Products Only</label>
             </div>
             <div className="flex items-center">
               <input type="checkbox" id="desktopOnSale" checked={filters.onSale} onChange={(e) => handleFilterChange('onSale', e.target.checked)} className="h-4 w-4 text-red-600 border-gray-300 rounded" />
@@ -532,9 +560,11 @@ const CategoryProductsPage: React.FC = () => {
                                 )}
                               </div>
                               <div className="flex items-center space-x-3">
-                                <span className={`px-2 py-0.5 rounded text-xs font-medium ${product.stock > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                                  {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
-                                </span>
+                                {product.stock <= 0 && (
+                                  <span className="rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">
+                                    Out of Stock
+                                  </span>
+                                )}
                                 <div className="flex items-center">
                                   <Star className="h-3.5 w-3.5 text-yellow-400 fill-current" />
                                   <span className="ml-1 text-xs text-gray-600">{product.rating?.toFixed(1) || 'N/A'}</span>

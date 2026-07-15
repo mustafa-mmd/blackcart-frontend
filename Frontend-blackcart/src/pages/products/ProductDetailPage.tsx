@@ -118,7 +118,7 @@ const ProductDetailPage: React.FC = () => {
     }
 
     if (quantity > product.stock) {
-      toast.error(`Only ${product.stock} items available`)
+      toast.error('The requested quantity is not available')
       return
     }
 
@@ -151,7 +151,7 @@ const ProductDetailPage: React.FC = () => {
 
     if (type === 'increase') {
       if (quantity >= (product.stock || 0)) {
-        toast.error(`Only ${product.stock} items available`)
+        toast.error('The requested quantity is not available')
         return
       }
       setQuantity(prev => prev + 1)
@@ -410,41 +410,6 @@ const ProductDetailPage: React.FC = () => {
               </p>
             </div>
 
-            {/* Stock Status */}
-            {/*
-            <div className={`p-4 rounded-xl ${stockStatus.bgColor} border ${stockStatus.color.replace('text', 'border')}`}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <span className="text-lg mr-2">{stockStatus.icon}</span>
-                  <div>
-                    <span className={`font-bold ${stockStatus.color}`}>
-                      {stockStatus.text}
-                    </span>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {product.stock === 0 
-                        ? 'Currently unavailable. Check back soon!'
-                        : product.stock < 10
-                        ? `Only ${product.stock} left in stock - order soon!`
-                        : `${product.stock} units available for immediate dispatch`
-                      }
-                    </p>
-                  </div>
-                </div>
-              </div>
-              
-              {product.stock > 0 && product.stock < 10 && (
-                <div className="mt-3">
-                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-red-500 transition-all duration-500"
-                      style={{ width: `${(product.stock / 10) * 100}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-            */}
-
             {/* Short Description */}
             {product.shortDescription && (
               <div className="p-4 bg-gray-50 rounded-lg">
@@ -459,7 +424,7 @@ const ProductDetailPage: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Quantity
                 </label>
-                <div className="flex items-center space-x-4">
+                <div className="flex items-center">
                   <div className="flex items-center border border-gray-300 rounded-xl overflow-hidden">
                     <button
                       onClick={() => handleQuantityChange('decrease')}
@@ -477,9 +442,6 @@ const ProductDetailPage: React.FC = () => {
                       <Plus className="h-5 w-5" />
                     </button>
                   </div>
-                  <span className="text-sm text-gray-500">
-                    Max: {product.stock} units
-                  </span>
                 </div>
               </div>
 

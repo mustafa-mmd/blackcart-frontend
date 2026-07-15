@@ -584,25 +584,12 @@ const CartPage: React.FC = () => {
                             </div>
                           </div>
 
-                          {/* Stock Status */}
-                          <div className="mt-3">
-                            {product.stock === 0 ? (
-                              <div className="flex items-center text-sm text-red-600">
-                                <AlertCircle className="h-4 w-4 mr-1" />
-                                Out of Stock
-                              </div>
-                            ) : product.stock < 10 ? (
-                              <div className="flex items-center text-sm text-orange-600">
-                                <AlertCircle className="h-4 w-4 mr-1" />
-                                Only {product.stock} left in stock
-                              </div>
-                            ) : (
-                              <div className="flex items-center text-sm text-green-600">
-                                <span className="h-2 w-2 bg-green-500 rounded-full mr-2"></span>
-                                In Stock
-                              </div>
-                            )}
-                          </div>
+                          {product.stock === 0 && (
+                            <div className="mt-3 flex items-center text-sm text-red-600">
+                              <AlertCircle className="h-4 w-4 mr-1" />
+                              Out of Stock
+                            </div>
+                          )}
 
                           {/* Item Total */}
                           <div className="mt-3 pt-3 border-t border-gray-100 flex justify-between items-center">

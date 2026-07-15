@@ -196,7 +196,7 @@ const ProductRail = ({
               {isLoading
                 ? Array.from({ length: 5 }, (_, index) => (
                     <div key={index} className={railItemClass} aria-hidden="true">
-                      <div className="min-h-[25rem] animate-pulse overflow-hidden rounded-xl border border-gray-200 bg-white">
+                      <div className="min-h-[22rem] animate-pulse overflow-hidden rounded-xl border border-gray-200 bg-white">
                         <div className="aspect-square bg-gray-200" />
                         <div className="space-y-3 p-4">
                           <div className="h-3 w-1/3 rounded bg-gray-200" />
@@ -217,7 +217,7 @@ const ProductRail = ({
                 <div className={railItemClass}>
                   <Link
                     to={viewAllUrl}
-                    className="flex min-h-[25rem] h-full flex-col items-center justify-center rounded-xl border-2 border-dashed border-blue-200 bg-gradient-to-br from-blue-50 to-white p-6 text-center text-blue-800 outline-none transition hover:border-blue-400 hover:shadow-lg focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+                    className="flex min-h-[22rem] h-full flex-col items-center justify-center rounded-xl border-2 border-dashed border-blue-200 bg-gradient-to-br from-blue-50 to-white p-6 text-center text-blue-800 outline-none transition hover:border-blue-400 hover:shadow-lg focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
                     aria-label={resolvedViewAllLabel}
                   >
                     <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-blue-700 text-white shadow-md">

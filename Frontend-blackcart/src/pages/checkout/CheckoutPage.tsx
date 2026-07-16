@@ -753,7 +753,7 @@
 // export default CheckoutPage
 
 // src/pages/checkout/CheckoutPage.tsx
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -926,6 +926,7 @@ const extractOrderId = (data: any): string | null => {
 const CheckoutPage: React.FC = () => {
   const navigate = useNavigate()
   const { cartItems, clearCart } = useCart()
+  const addressFormRef = useRef<any>(null)
 
   const [step, setStep] = useState(1)
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null)
@@ -1143,8 +1144,13 @@ const CheckoutPage: React.FC = () => {
   const handleAddressSelect = (address: Address) => { setSelectedAddress(address); setStep(2) }
   const handlePaymentSelect = (methodId: string) => { setSelectedPaymentMethod(methodId) }
   const handleContinueToPayment = () => {
-    if (selectedAddress) setStep(2)
-    else toast.error('Please select or add an address')
+    if (selectedAddress) {
+      setStep(2)
+    } else if (addressFormRef.current) {
+      addressFormRef.current.submitForm()
+    } else {
+      toast.error('Please select or add an address')
+    }
   }
 
   const steps = [
@@ -1271,6 +1277,7 @@ const CheckoutPage: React.FC = () => {
                     <div className="card p-6">
                       <h2 className="text-xl font-bold text-gray-900 mb-4">Add Shipping Address</h2>
                       <AddressForm
+                        ref={addressFormRef}
                         onSubmit={handleAddressSubmit}
                         initialData={selectedAddress || undefined}
                         isSubmitting={isSavingAddress}
@@ -1293,8 +1300,7 @@ const CheckoutPage: React.FC = () => {
                     </button>
                     <button
                       onClick={handleContinueToPayment}
-                      className={`btn-primary px-6 py-3 flex items-center transition-opacity ${!selectedAddress ? 'opacity-60' : ''
-                        }`}
+                      className="btn-primary px-6 py-3 flex items-center"
                     >
                       Continue to Payment <ChevronRight className="h-5 w-5 ml-2" />
                     </button>

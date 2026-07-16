@@ -1,20 +1,25 @@
 // src/components/admin/DataTable.tsx
 import React from 'react';
-import { ChevronLeft, ChevronRight, Search, Filter, MoreVertical, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, Loader2 } from 'lucide-react';
 
-interface Column {
+interface TableRow {
+  _id?: React.Key;
+  id?: React.Key;
+}
+
+interface Column<T> {
   key: string;
-  header: string;
-  render?: (value: any, row: any) => React.ReactNode;
+  header: React.ReactNode;
+  render?: (value: never, row: T) => React.ReactNode;
   sortable?: boolean;
   width?: string;
 }
 
-interface DataTableProps {
-  columns: Column[];
-  data: any[];
+interface DataTableProps<T extends TableRow> {
+  columns: Column<T>[];
+  data: T[];
   loading?: boolean;
-  onRowClick?: (row: any) => void;
+  onRowClick?: (row: T) => void;
   searchable?: boolean;
   onSearch?: (value: string) => void;
   pagination?: {
@@ -26,18 +31,20 @@ interface DataTableProps {
     hasPrev: boolean;
     onPageChange: (page: number) => void;
   };
-  actions?: (row: any) => React.ReactNode;
+  actions?: (row: T) => React.ReactNode;
   emptyMessage?: React.ReactNode; // Changed from string to ReactNode
   selection?: {
     enable: boolean;
-    render: (row: any) => React.ReactNode;
+    render: (row: T) => React.ReactNode;
     onSelectAll: () => void;
     selectedCount: number;
     totalCount: number;
+    allSelected: boolean;
+    someSelected: boolean;
   };
 }
 
-const DataTable: React.FC<DataTableProps> = ({
+const DataTable = <T extends TableRow>({
   columns,
   data,
   loading = false,
@@ -48,10 +55,17 @@ const DataTable: React.FC<DataTableProps> = ({
   actions,
   emptyMessage = 'No data available',
   selection,
-}) => {
+}: DataTableProps<T>) => {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [sortColumn, setSortColumn] = React.useState<string>('');
   const [sortDirection, setSortDirection] = React.useState<'asc' | 'desc'>('asc');
+  const selectAllRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (selectAllRef.current) {
+      selectAllRef.current.indeterminate = Boolean(selection?.someSelected && !selection.allSelected);
+    }
+  }, [selection?.allSelected, selection?.someSelected]);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -72,6 +86,23 @@ const DataTable: React.FC<DataTableProps> = ({
       setSortDirection('asc');
     }
   };
+
+  const sortedData = React.useMemo(() => {
+    if (!sortColumn) return data;
+
+    return [...data].sort((leftRow, rightRow) => {
+      const left = (leftRow as unknown as Record<string, unknown>)[sortColumn];
+      const right = (rightRow as unknown as Record<string, unknown>)[sortColumn];
+      if (left === right) return 0;
+      if (left === null || left === undefined) return 1;
+      if (right === null || right === undefined) return -1;
+
+      const comparison = typeof left === 'number' && typeof right === 'number'
+        ? left - right
+        : String(left).localeCompare(String(right), undefined, { numeric: true, sensitivity: 'base' });
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+  }, [data, sortColumn, sortDirection]);
 
   const renderEmptyState = () => {
     if (typeof emptyMessage === 'string') {
@@ -162,7 +193,7 @@ const DataTable: React.FC<DataTableProps> = ({
               onClick={selection.onSelectAll}
               className="text-sm text-blue-600 hover:text-blue-800"
             >
-              {selection.selectedCount === selection.totalCount ? 'Deselect All' : 'Select All'}
+              {selection.allSelected ? 'Deselect All' : 'Select All'}
             </button>
           </div>
         </div>
@@ -177,9 +208,11 @@ const DataTable: React.FC<DataTableProps> = ({
               {selection?.enable && (
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
                   <input
+                    ref={selectAllRef}
                     type="checkbox"
-                    checked={selection.selectedCount === selection.totalCount && selection.totalCount > 0}
+                    checked={selection.allSelected}
                     onChange={selection.onSelectAll}
+                    aria-label={selection.allSelected ? 'Deselect all visible products' : 'Select all visible products'}
                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                   />
                 </th>
@@ -241,9 +274,9 @@ const DataTable: React.FC<DataTableProps> = ({
                 </td>
               </tr>
             ) : (
-              data.map((row, rowIndex) => (
+              sortedData.map((row, rowIndex) => (
                 <tr
-                  key={rowIndex}
+                  key={row._id || row.id || rowIndex}
                   className={`hover:bg-gray-50 ${
                     onRowClick ? 'cursor-pointer' : ''
                   }`}
@@ -263,8 +296,8 @@ const DataTable: React.FC<DataTableProps> = ({
                     >
                       <div className="text-sm text-gray-900">
                         {column.render
-                          ? column.render(row[column.key], row)
-                          : row[column.key]}
+                          ? column.render((row as unknown as Record<string, unknown>)[column.key] as never, row)
+                          : String((row as unknown as Record<string, unknown>)[column.key] ?? '')}
                       </div>
                     </td>
                   ))}

@@ -61,6 +61,22 @@ export interface Coupon {
   updatedAt: string
 }
 
+export type BulkProductAction = 'activate' | 'deactivate' | 'feature' | 'delete' | 'updatePrices'
+export type PriceAdjustmentOperation = 'set' | 'increasePercent' | 'decreasePercent' | 'increaseFixed' | 'decreaseFixed'
+
+export interface ProductPriceAdjustment {
+  operation: PriceAdjustmentOperation
+  value: number
+}
+
+export interface BulkProductActionResult {
+  action: BulkProductAction
+  selectedCount: number
+  matchedCount: number
+  modifiedCount: number
+  result: string
+}
+
 export const adminService = {
   // Dashboard Statistics
   getDashboardStats: async (): Promise<DashboardStats> => {
@@ -186,7 +202,7 @@ export const adminService = {
     
     console.log('📁 FormData contents:');
     let hasFiles = false;
-    for (let pair of formData.entries()) {
+    for (const pair of formData.entries()) {
       const [key, value] = pair;
       if (value instanceof File) {
         console.log(`  ${key}: File - "${value.name}" (${value.size} bytes, ${value.type})`);
@@ -200,7 +216,7 @@ export const adminService = {
     }
     console.log('📊 Has files:', hasFiles);
     
-    if (!hasFiles) {
+    if (!hasFiles && !formData.get('preuploadedImages')) {
       throw new Error('Please select at least one product image');
     }
     
@@ -255,6 +271,20 @@ export const adminService = {
     }
   },
 
+  bulkProductAction: async (data: {
+    productIds: string[]
+    action: BulkProductAction
+    priceAdjustment?: ProductPriceAdjustment
+  }): Promise<ApiResponse<BulkProductActionResult>> => {
+    const response = await api.post('/admin/products/bulk/action', data)
+    return response.data
+  },
+
+  importRemoteProductImage: async (url: string): Promise<ApiResponse<{ url: string; public_id: string; alt?: string }>> => {
+    const response = await api.post('/admin/products/remote-image', { url }, { timeout: 30000 })
+    return response.data
+  },
+
   
 
 updateProduct: async (id: string, data: any): Promise<ApiResponse<Product>> => {
@@ -265,7 +295,7 @@ updateProduct: async (id: string, data: any): Promise<ApiResponse<Product>> => {
     // If it's FormData, log its contents for debugging
     if (data instanceof FormData) {
       console.log('📋 FormData contents:');
-      for (let pair of data.entries()) {
+      for (const pair of data.entries()) {
         if (pair[1] instanceof File) {
           console.log(`  ${pair[0]}: File - ${pair[1].name}`);
         } else {

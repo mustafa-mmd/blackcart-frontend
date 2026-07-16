@@ -212,6 +212,11 @@ const CategoryProductsPage: React.FC = () => {
 
   const handleAddToCart = async (product: StorefrontProduct) => {
     try {
+      if (product.colorVariants?.length) {
+        toast('Choose a color on the product page')
+        navigate(`/products/${product.slug || product._id}`)
+        return
+      }
       const cartProduct: Product = {
         ...product,
         categoryId: typeof product.categoryId === 'object' ? product.categoryId._id : product.categoryId,
@@ -220,7 +225,6 @@ const CategoryProductsPage: React.FC = () => {
           : product.category || undefined,
       };
       await addToCart(cartProduct, 1);
-      toast.success(`Added ${product.name} to cart`);
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, 'Failed to add to cart'));
     }
@@ -280,7 +284,7 @@ const CategoryProductsPage: React.FC = () => {
       </Helmet>
       {/* ✅ FIXED: Header — reduced py-8 md:py-12 → py-1 md:py-2 so filters + products are visible */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white">
-        <div className="container mx-auto px-4 py-1 md:py-2">
+        <div className="container mx-auto px-4 py-6 md:py-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
             <div className="flex-1">
               {/* Breadcrumb */}
@@ -292,7 +296,7 @@ const CategoryProductsPage: React.FC = () => {
                 <span className="text-white font-semibold">{category.name}</span>
               </nav>
               
-              <h1 className="text-xl md:text-2xl font-bold mb-1">{category.name}</h1>
+              <h1 className="mb-1 text-2xl font-bold md:text-3xl">{category.name}</h1>
               
               {category.description && (
                 <p className="text-blue-100 text-xs md:text-sm mb-2 line-clamp-2">
@@ -321,7 +325,7 @@ const CategoryProductsPage: React.FC = () => {
                 <img
                   src={getCategoryImage(category)}
                   alt={category.name}
-                  className="h-20 w-20 rounded-xl object-cover shadow-lg"
+                  className="h-24 w-24 rounded-xl object-cover shadow-lg"
                   onError={(e) => { e.currentTarget.style.display = 'none'; }}
                 />
               </div>

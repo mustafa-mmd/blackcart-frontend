@@ -6,13 +6,13 @@ const TermsOfService: React.FC = () => {
   const terms = [
     {
       icon: <FileText className="h-6 w-6 text-blue-600" />,
-      title: 'Account Registration',
+      title: 'Guest Shopping',
       points: [
-        'You must be at least 18 years old to create an account',
-        'Provide accurate and complete information during registration',
-        'Maintain the confidentiality of your account credentials',
-        'Notify us immediately of any unauthorized access',
-        'You are responsible for all activities under your account'
+        'No customer account or login is required to shop',
+        'Provide accurate delivery and contact information at checkout',
+        'Keep your order number private for order support',
+        'Contact us promptly if order details need correction',
+        'Customers must be legally able to place an order'
       ]
     },
     {
@@ -41,7 +41,8 @@ const TermsOfService: React.FC = () => {
       icon: <CheckCircle className="h-6 w-6 text-teal-600" />,
       title: 'Shipping & Delivery',
       points: [
-        'Delivery times vary by location (2-14 business days)',
+        'Normal delivery is PKR 200 and takes 4-6 working days',
+        'Express delivery is PKR 350 and takes 2-3 working days',
         'Shipping costs calculated at checkout',
         'Risk of loss transfers upon delivery confirmation',
         'Signature may be required for delivery',
@@ -52,7 +53,7 @@ const TermsOfService: React.FC = () => {
       icon: <XCircle className="h-6 w-6 text-red-600" />,
       title: 'Returns & Refunds',
       points: [
-        '14-day return policy for most products',
+        '3-day return policy for eligible products',
         'Products must be in original condition',
         'Return shipping may be customer responsibility',
         'Refunds issued to original payment method',

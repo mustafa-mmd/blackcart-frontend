@@ -111,7 +111,7 @@ const HomePage: React.FC = () => {
     {
       icon: <Truck className="h-8 w-8 text-blue-600" />,
       title: "Fast Delivery",
-      description: "Across Pakistan in 3-7 business days",
+      description: "Normal 4-6 or Express 2-3 working days",
     },
     {
       icon: <Shield className="h-8 w-8 text-blue-600" />,
@@ -121,7 +121,7 @@ const HomePage: React.FC = () => {
     {
       icon: <CreditCard className="h-8 w-8 text-blue-600" />,
       title: "Easy Returns",
-      description: "14-day return policy for all products",
+      description: "3-day return policy for eligible products",
     },
     {
       icon: <Star className="h-8 w-8 text-blue-600" />,
@@ -197,7 +197,7 @@ const HomePage: React.FC = () => {
         </title>
         <meta
           name="description"
-          content="Shop gaming mice, mechanical keyboards, headphones and computer accessories at BlackCart. Fast delivery across Pakistan. 14-day easy returns. Order now!"
+          content="Shop gaming mice, mechanical keyboards, headphones and computer accessories at BlackCart. Delivery across Pakistan and 3-day returns on eligible products."
         />
         <meta
           property="og:title"
@@ -213,7 +213,7 @@ const HomePage: React.FC = () => {
       </Helmet>
       {/* ─── HERO SLIDER SECTION ──────────────────────────────────────────────────── */}
       <section
-        className="relative overflow-hidden text-white w-full h-[calc(100dvh-4rem)] min-h-[400px] md:h-[calc(100vh-4rem)] md:min-h-[480px]"
+        className="relative overflow-hidden text-white w-full h-[55vw] min-h-[280px] max-h-[600px] md:aspect-[16/5] md:h-auto md:min-h-0"
         style={{
           fontFamily: "'DM Sans', sans-serif",
           background: "#020817",

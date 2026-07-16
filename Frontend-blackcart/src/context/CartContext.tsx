@@ -9,7 +9,7 @@ import React, {
   type ReactNode,
 } from 'react'
 import toast from 'react-hot-toast'
-import type { CartItem, Product } from '../types'
+import type { CartItem, Product, ProductColorVariant } from '../types'
 
 interface CartContextType {
   cartItems: CartItem[]
@@ -17,9 +17,9 @@ interface CartContextType {
   cartTotal: number
   loading: boolean
   error: string | null
-  addToCart: (product: Product, quantity?: number) => Promise<void>
-  removeFromCart: (productId: string) => Promise<void>
-  updateQuantity: (productId: string, quantity: number, product?: Product) => Promise<void>
+  addToCart: (product: Product, quantity?: number, variant?: ProductColorVariant) => Promise<void>
+  removeFromCart: (productId: string, variantId?: string) => Promise<void>
+  updateQuantity: (productId: string, quantity: number, product?: Product, variantId?: string) => Promise<void>
   clearCart: () => Promise<void>
   getCartItem: (productId: string) => CartItem | undefined
   isInCart: (productId: string) => boolean
@@ -33,6 +33,10 @@ interface StoredCartItem {
   product?: Product | string | null
   quantity?: number
   addedAt?: string
+  v?: ProductColorVariant | string
+  c?: { name: string; value: string }
+  variant?: ProductColorVariant | string
+  selectedColor?: { name: string; value: string }
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
@@ -41,6 +45,11 @@ const CART_STORAGE_KEY = 'cart'
 const getProductId = (product: CartItem['product']): string => {
   if (!product) return ''
   return typeof product === 'string' ? product : product._id
+}
+
+const getVariantId = (variant: CartItem['variant']): string => {
+  if (!variant) return ''
+  return typeof variant === 'string' ? variant : String(variant._id || '')
 }
 
 const readStoredCart = (): CartItem[] => {
@@ -61,6 +70,8 @@ const readStoredCart = (): CartItem[] => {
           product: product as Product | string,
           quantity: Math.max(1, Number(item.quantity ?? item.q ?? 1)),
           addedAt: item.addedAt ?? item.a ?? new Date().toISOString(),
+          variant: item.variant ?? item.v,
+          selectedColor: item.selectedColor ?? item.c,
         }
       })
       .filter((item): item is CartItem => item !== null)
@@ -76,6 +87,8 @@ const writeStoredCart = (items: CartItem[]) => {
     q: item.quantity,
     a: item.addedAt,
     p: typeof item.product === 'object' ? item.product : null,
+    v: item.variant,
+    c: item.selectedColor,
   }))
   localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(compactItems))
 }
@@ -96,12 +109,22 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [cartItems])
 
-  const addToCart = useCallback(async (product: Product, quantity = 1) => {
+  const addToCart = useCallback(async (product: Product, quantity = 1, variant?: ProductColorVariant) => {
     const safeQuantity = Math.max(1, quantity)
+    const variantId = getVariantId(variant)
     setCartItems((current) => {
-      const existingIndex = current.findIndex((item) => getProductId(item.product) === product._id)
+      const existingIndex = current.findIndex((item) => (
+        getProductId(item.product) === product._id && getVariantId(item.variant) === variantId
+      ))
       if (existingIndex < 0) {
-        return [...current, { product, quantity: safeQuantity, addedAt: new Date().toISOString() }]
+        return [...current, {
+          product,
+          quantity: safeQuantity,
+          addedAt: new Date().toISOString(),
+          variant,
+          selectedColor: variant ? { name: variant.name, value: variant.value } : undefined,
+          selectedAttributes: variant ? { color: variant.name } : undefined,
+        }]
       }
 
       return current.map((item, index) =>
@@ -113,18 +136,22 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     toast.success(`${safeQuantity} × ${product.name} added to cart`)
   }, [])
 
-  const removeFromCart = useCallback(async (productId: string) => {
-    setCartItems((current) => current.filter((item) => getProductId(item.product) !== productId))
+  const removeFromCart = useCallback(async (productId: string, variantId = '') => {
+    setCartItems((current) => current.filter((item) => !(
+      getProductId(item.product) === productId && getVariantId(item.variant) === variantId
+    )))
   }, [])
 
-  const updateQuantity = useCallback(async (productId: string, quantity: number, product?: Product) => {
+  const updateQuantity = useCallback(async (productId: string, quantity: number, product?: Product, variantId = '') => {
     if (quantity < 1) {
-      setCartItems((current) => current.filter((item) => getProductId(item.product) !== productId))
+      setCartItems((current) => current.filter((item) => !(
+        getProductId(item.product) === productId && getVariantId(item.variant) === variantId
+      )))
       return
     }
 
     setCartItems((current) => current.map((item) =>
-      getProductId(item.product) === productId
+      getProductId(item.product) === productId && getVariantId(item.variant) === variantId
         ? { ...item, product: product ?? item.product, quantity }
         : item,
     ))

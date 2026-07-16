@@ -107,8 +107,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
         ? product.category.name
         : product.category || undefined,
     }
+
+    if (product.colorVariants?.length) {
+      toast('Choose your color on the product page')
+      navigate(`/products/${product.slug || product._id}`)
+      return
+    }
     addToCart(cartProduct)
-    toast.success(`${getProductName()} added to cart!`)
   }
 
   const handleQuickView = (e: React.MouseEvent) => {
@@ -233,7 +238,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
               <span className="text-xs text-gray-500 uppercase tracking-wider">
                 {getCategoryName()}
               </span>
-              {product.rating && (
+              {Boolean(product.rating) && (
                 <div className="flex items-center">
                   <Star className="h-3 w-3 text-yellow-400 fill-current" />
                   <span className="text-xs text-gray-600 ml-1">
@@ -322,7 +327,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
       }}
       aria-label={`View ${product.name} details`}
     >
-      <div className={`relative overflow-hidden bg-gray-100 ${compact ? 'aspect-[3/2]' : 'aspect-square'}`}>
+      <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
         <img
           src={imageError ? '/placeholder.png' : imageUrl}
           alt={safeRender(product.name, 'Product image')}
@@ -394,12 +399,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
       </div>
 
       {/* Product info */}
-      <div className={`${compact ? 'flex flex-1 flex-col p-3' : 'p-4'}`}>
+      <div className="flex flex-1 flex-col p-3">
         <div className={`flex items-center justify-between ${compact ? 'mb-1' : 'mb-2'}`}>
           <span className="text-xs text-gray-500 uppercase tracking-wider">
             {getCategoryName()}
           </span>
-          {product.rating && (
+          {Boolean(product.rating) && (
             <div className="flex items-center">
               <Star className="h-3 w-3 text-yellow-400 fill-current" />
               <span className="text-xs text-gray-600 ml-1">
@@ -409,12 +414,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
           )}
         </div>
 
-        <h3 className={`font-medium text-gray-900 hover:text-blue-600 transition-colors cursor-pointer ${compact ? 'mb-1 min-h-10 text-sm leading-5 line-clamp-2' : 'mb-2 line-clamp-1'}`}
+        <h3 className="mb-1 min-h-10 cursor-pointer line-clamp-2 text-sm font-medium leading-5 text-gray-900 transition-colors hover:text-blue-600"
             onClick={handleCardClick}>
           {safeRender(product.name, 'Unnamed Product')}
         </h3>
 
-        <p className={`text-gray-500 ${compact ? 'mb-2 min-h-5 text-xs leading-5 line-clamp-1' : 'mb-3 text-sm line-clamp-1'}`}>
+        <p className="mb-2 min-h-5 line-clamp-1 text-xs leading-5 text-gray-500">
           {safeRender(compact ? product.shortDescription || product.brand : product.brand, 'Quality product')}
         </p>
 

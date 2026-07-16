@@ -6,59 +6,41 @@ const ShippingPolicy: React.FC = () => {
   const shippingOptions = [
     {
       icon: <Truck className="h-6 w-6 text-blue-600" />,
-      title: 'Standard Shipping',
-      price: 'PKR 200 - 500',
-      time: '3-7 business days',
+      title: 'Normal Delivery',
+      price: 'PKR 200',
+      time: '4-6 working days',
       features: [
         'Tracking available',
         'Signature required',
-        'Insurance up to PKR 5,000',
-        'Free for orders over PKR 10,000'
+        'Nationwide service',
+        'Careful packaging'
       ]
     },
     {
       icon: <Package className="h-6 w-6 text-green-600" />,
-      title: 'Express Shipping',
-      price: 'PKR 500 - 1,000',
-      time: '1-3 business days',
+      title: 'Express Delivery',
+      price: 'PKR 350',
+      time: '2-3 working days',
       features: [
         'Priority processing',
         'Real-time tracking',
         'Signature required',
-        'Insurance up to PKR 10,000',
-        'Free for orders over PKR 20,000'
-      ]
-    },
-    {
-      icon: <Clock className="h-6 w-6 text-purple-600" />,
-      title: 'Same Day Delivery',
-      price: 'PKR 1,000+',
-      time: 'Same day (if ordered before 2 PM)',
-      features: [
-        'Karachi, Lahore, Islamabad only',
-        'Order by 2 PM for same day',
-        'Premium priority handling',
-        'Full insurance coverage',
-        'Direct customer contact'
+        'Nationwide service',
+        'Careful packaging'
       ]
     }
   ]
 
   const deliveryAreas = [
     {
-      area: 'Major Cities',
-      cities: 'Karachi, Lahore, Islamabad, Rawalpindi, Faisalabad',
-      time: '2-3 business days'
+      area: 'Normal Delivery',
+      cities: 'All supported locations in Pakistan',
+      time: '4-6 working days'
     },
     {
-      area: 'Other Cities',
-      cities: 'Peshawar, Quetta, Multan, Hyderabad, Gujranwala',
-      time: '3-5 business days'
-    },
-    {
-      area: 'Remote Areas',
-      cities: 'All other locations in Pakistan',
-      time: '5-14 business days'
+      area: 'Express Delivery',
+      cities: 'All supported locations in Pakistan',
+      time: '2-3 working days'
     }
   ]
 
@@ -102,7 +84,7 @@ const ShippingPolicy: React.FC = () => {
           className="mb-12"
         >
           <h2 className="text-2xl font-bold text-gray-900 mb-8 text-center">Shipping Options</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="mx-auto grid max-w-4xl grid-cols-1 gap-8 md:grid-cols-2">
             {shippingOptions.map((option, index) => (
               <motion.div
                 key={index}
@@ -199,7 +181,7 @@ const ShippingPolicy: React.FC = () => {
                 </div>
                 <div>
                   <h4 className="font-semibold text-gray-800 mb-1">Order Processing</h4>
-                  <p className="text-gray-600">1-2 business days for verification and packaging</p>
+                  <p className="text-gray-600">Included within your selected delivery estimate</p>
                 </div>
               </div>
               <div className="flex items-start gap-4">

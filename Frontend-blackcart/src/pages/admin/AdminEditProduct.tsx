@@ -19,7 +19,8 @@ import {
   Star,
   GripVertical,
   X,
-  MoreVertical
+  MoreVertical,
+  Link as LinkIcon
 } from 'lucide-react'
 import { adminService } from '../../services/adminServiceMethods'
 import Loader from '../../components/common/Loader'
@@ -81,6 +82,30 @@ interface AdminProductData {
   specifications?: Specification[]
   features?: string[]
   images?: unknown[]
+  colorVariants?: Array<{
+    _id?: string
+    name: string
+    value: string
+    sku?: string
+    stock?: number | null
+    images?: ProductImage[]
+  }>
+}
+
+interface RemoteImage {
+  url: string
+  public_id: string
+  alt?: string
+}
+
+interface ColorVariantDraft {
+  id: string
+  databaseId?: string
+  name: string
+  value: string
+  sku: string
+  stock: string
+  imageRefs: string[]
 }
 
 const getErrorMessage = (error: unknown, fallback: string) => {
@@ -124,6 +149,10 @@ const AdminEditProduct: React.FC = () => {
   const [isInitialLoad, setIsInitialLoad] = useState(true)
   const [draggedImageIndex, setDraggedImageIndex] = useState<number | null>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState<string | null>(null)
+  const [remoteImages, setRemoteImages] = useState<RemoteImage[]>([])
+  const [remoteImageUrl, setRemoteImageUrl] = useState('')
+  const [isImportingImage, setIsImportingImage] = useState(false)
+  const [colorVariants, setColorVariants] = useState<ColorVariantDraft[]>([])
   
   const touchStartRef = useRef<{ index: number; y: number } | null>(null)
 
@@ -177,6 +206,18 @@ const AdminEditProduct: React.FC = () => {
               };
             });
             setExistingImages(processedImages);
+            setColorVariants((productData.colorVariants || []).map((variant, variantIndex) => ({
+              id: variant._id || `color-${variantIndex}`,
+              databaseId: variant._id,
+              name: variant.name,
+              value: variant.value,
+              sku: variant.sku || '',
+              stock: variant.stock === null || variant.stock === undefined ? '' : String(variant.stock),
+              imageRefs: (variant.images || []).map((variantImage) => {
+                const matchingImage = processedImages.find((image) => image.url === variantImage.url || (variantImage.public_id && image.public_id === variantImage.public_id))
+                return matchingImage ? `existing:${matchingImage._id || matchingImage.url}` : ''
+              }).filter(Boolean),
+            })));
             
             let categoryId = '';
             if (productData.categoryId) {
@@ -272,14 +313,48 @@ const AdminEditProduct: React.FC = () => {
   const handleRemoveNewImage = (index: number) => {
     setNewImages(newImages.filter((_, i) => i !== index))
     setImagePreviews(imagePreviews.filter((_, i) => i !== index))
+    setColorVariants((previous) => previous.map((variant) => ({ ...variant, imageRefs: variant.imageRefs.filter((ref) => !ref.startsWith('local:')) })))
   }
 
   const handleRemoveExistingImage = (image: ProductImage, index: number) => {
     if (!window.confirm('Are you sure you want to delete this image?')) return
     setImagesToDelete(prev => [...prev, image])
     setExistingImages(prev => prev.filter((_, i) => i !== index))
+    const ref = `existing:${image._id || image.url}`
+    setColorVariants((previous) => previous.map((variant) => ({ ...variant, imageRefs: variant.imageRefs.filter((item) => item !== ref) })))
     toast.success('Image marked for deletion')
     setMobileMenuOpen(null)
+  }
+
+  const handleRemoteImageImport = async () => {
+    const url = remoteImageUrl.trim()
+    if (!url) return toast.error('Enter a public image URL')
+    try {
+      setIsImportingImage(true)
+      const response = await adminService.importRemoteProductImage(url)
+      const imported = response.data
+      if (!imported?.url || !imported.public_id) throw new Error('The image import did not return a valid file')
+      setRemoteImages((previous) => [...previous, imported])
+      setRemoteImageUrl('')
+      toast.success('Web image imported securely')
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Could not import that image URL'))
+    } finally {
+      setIsImportingImage(false)
+    }
+  }
+
+  const addColorVariant = () => setColorVariants((previous) => [...previous, {
+    id: `color-${Date.now()}`,
+    name: '',
+    value: '#000000',
+    sku: '',
+    stock: '',
+    imageRefs: [],
+  }])
+
+  const updateColorVariant = (id: string, updates: Partial<ColorVariantDraft>) => {
+    setColorVariants((previous) => previous.map((variant) => variant.id === id ? { ...variant, ...updates } : variant))
   }
 
   // ==================== DRAG & DROP ====================
@@ -417,7 +492,7 @@ const AdminEditProduct: React.FC = () => {
         return;
       }
       
-      const totalImages = existingImages.length + newImages.length;
+      const totalImages = existingImages.length + newImages.length + remoteImages.length;
       if (totalImages === 0) {
         toast.error('Product must have at least one image');
         setIsSubmitting(false);
@@ -471,6 +546,11 @@ const AdminEditProduct: React.FC = () => {
       
       // New image files
       newImages.forEach(image => formData.append('images', image));
+      if (remoteImages.length) formData.append('preuploadedImages', JSON.stringify(remoteImages));
+      formData.append('imageOrder', JSON.stringify([
+        ...newImages.map((_, index) => ({ kind: 'local', index })),
+        ...remoteImages.map((_, index) => ({ kind: 'remote', index })),
+      ]));
       
       // ✅ KEY FIX: Send existing images WITH their current order to backend
       // Backend uses this array to reorder product.images permanently
@@ -483,6 +563,23 @@ const AdminEditProduct: React.FC = () => {
       }));
       
       formData.append('existingImages', JSON.stringify(orderedExistingImages));
+      const resolveImageIndex = (ref: string) => {
+        if (ref.startsWith('existing:')) {
+          const identity = ref.slice('existing:'.length)
+          return existingImages.findIndex((image) => (image._id || image.url) === identity)
+        }
+        if (ref.startsWith('local:')) return existingImages.length + Number(ref.slice('local:'.length))
+        if (ref.startsWith('remote:')) return existingImages.length + newImages.length + Number(ref.slice('remote:'.length))
+        return -1
+      }
+      formData.append('colorVariants', JSON.stringify(colorVariants.map((variant) => ({
+        _id: variant.databaseId,
+        name: variant.name,
+        value: variant.value,
+        sku: variant.sku,
+        stock: variant.stock,
+        imageIndexes: variant.imageRefs.map(resolveImageIndex).filter((index) => Number.isInteger(index) && index >= 0),
+      }))));
       
       console.log('📤 Submitting:', {
         imagesToDelete: imagesToDelete.length,
@@ -1001,14 +1098,43 @@ const AdminEditProduct: React.FC = () => {
                         </div>
                       </div>
                     ))}
+
+                    {remoteImages.map((image, index) => (
+                      <div key={image.public_id} className="relative overflow-hidden rounded-lg border-2 border-purple-300">
+                        <img src={image.url} alt={`Imported web image ${index + 1}`} className="h-32 w-full object-cover" />
+                        <span className="absolute left-1.5 top-1.5 rounded bg-purple-600 px-1.5 py-0.5 text-xs text-white">Web</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRemoteImages((previous) => previous.filter((_, remoteIndex) => remoteIndex !== index))
+                            setColorVariants((previous) => previous.map((variant) => ({ ...variant, imageRefs: variant.imageRefs.filter((ref) => !ref.startsWith('remote:')) })))
+                          }}
+                          className="absolute right-1.5 top-1.5 rounded-full bg-red-600 p-1.5 text-white"
+                          aria-label="Remove imported image"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
                     
                     {/* Upload button */}
                     <label className="h-32 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition active:bg-blue-100">
                       <Upload className="h-7 w-7 text-gray-400 mb-1" />
                       <span className="text-sm text-gray-600">Upload</span>
                       <span className="text-xs text-gray-500">Max 5MB</span>
-                      <input type="file" accept="image/*" multiple onChange={handleImageUpload} className="hidden" />
+                      <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple onChange={handleImageUpload} className="hidden" />
                     </label>
+                  </div>
+
+                  <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+                    <label className="mb-2 block text-sm font-medium text-gray-700">Import a public web image</label>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <input type="url" value={remoteImageUrl} onChange={(event) => setRemoteImageUrl(event.target.value)} placeholder="https://example.com/product.jpg" className="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+                      <button type="button" onClick={handleRemoteImageImport} disabled={isImportingImage} className="inline-flex items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60">
+                        <LinkIcon className="h-4 w-4" /> {isImportingImage ? 'Importing…' : 'Import image'}
+                      </button>
+                    </div>
+                    <p className="mt-2 text-xs text-gray-500">The server validates the URL, file type, size, redirects, and private network addresses.</p>
                   </div>
                   
                   {/* Status messages */}
@@ -1023,10 +1149,52 @@ const AdminEditProduct: React.FC = () => {
                         ✓ {newImages.length} new image(s) ready to upload
                       </p>
                     )}
-                    {existingImages.length === 0 && newImages.length === 0 && (
+                    {remoteImages.length > 0 && <p className="font-medium text-purple-600">✓ {remoteImages.length} web image(s) imported</p>}
+                    {existingImages.length === 0 && newImages.length === 0 && remoteImages.length === 0 && (
                       <p className="text-red-500">Please add at least one image</p>
                     )}
                   </div>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-gray-200 bg-white p-6">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900">Product colors</h2>
+                    <p className="text-sm text-gray-500">Optional color-specific stock, SKU, and images.</p>
+                  </div>
+                  <button type="button" onClick={addColorVariant} className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700"><Plus className="h-4 w-4" /> Add color</button>
+                </div>
+                <div className="space-y-4">
+                  {colorVariants.map((variant) => (
+                    <div key={variant.id} className="rounded-xl border border-gray-200 p-4">
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <label className="text-sm font-medium text-gray-700">Color name<input required value={variant.name} onChange={(event) => updateColorVariant(variant.id, { name: event.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" /></label>
+                        <label className="text-sm font-medium text-gray-700">Color<input type="color" value={variant.value} onChange={(event) => updateColorVariant(variant.id, { value: event.target.value })} className="mt-1 h-10 w-full rounded-lg border p-1" /></label>
+                        <label className="text-sm font-medium text-gray-700">Variant SKU (optional)<input value={variant.sku} onChange={(event) => updateColorVariant(variant.id, { sku: event.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" /></label>
+                        <label className="text-sm font-medium text-gray-700">Variant stock (optional)<input type="number" min="0" value={variant.stock} onChange={(event) => updateColorVariant(variant.id, { stock: event.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" /></label>
+                      </div>
+                      <div className="mt-3">
+                        <p className="mb-2 text-sm font-medium text-gray-700">Images for this color</p>
+                        <div className="flex flex-wrap gap-2">
+                          {existingImages.map((image, index) => {
+                            const ref = `existing:${image._id || image.url}`
+                            return <label key={ref} className={`cursor-pointer rounded-lg border p-1 ${variant.imageRefs.includes(ref) ? 'border-blue-600 ring-2 ring-blue-100' : 'border-gray-200'}`}><input type="checkbox" className="sr-only" checked={variant.imageRefs.includes(ref)} onChange={() => updateColorVariant(variant.id, { imageRefs: variant.imageRefs.includes(ref) ? variant.imageRefs.filter((item) => item !== ref) : [...variant.imageRefs, ref] })} /><img src={image.url} alt={`Existing image ${index + 1}`} className="h-12 w-12 rounded object-cover" /></label>
+                          })}
+                          {imagePreviews.map((preview, index) => {
+                            const ref = `local:${index}`
+                            return <label key={ref} className={`cursor-pointer rounded-lg border p-1 ${variant.imageRefs.includes(ref) ? 'border-blue-600 ring-2 ring-blue-100' : 'border-gray-200'}`}><input type="checkbox" className="sr-only" checked={variant.imageRefs.includes(ref)} onChange={() => updateColorVariant(variant.id, { imageRefs: variant.imageRefs.includes(ref) ? variant.imageRefs.filter((item) => item !== ref) : [...variant.imageRefs, ref] })} /><img src={preview} alt={`New image ${index + 1}`} className="h-12 w-12 rounded object-cover" /></label>
+                          })}
+                          {remoteImages.map((image, index) => {
+                            const ref = `remote:${index}`
+                            return <label key={ref} className={`cursor-pointer rounded-lg border p-1 ${variant.imageRefs.includes(ref) ? 'border-blue-600 ring-2 ring-blue-100' : 'border-gray-200'}`}><input type="checkbox" className="sr-only" checked={variant.imageRefs.includes(ref)} onChange={() => updateColorVariant(variant.id, { imageRefs: variant.imageRefs.includes(ref) ? variant.imageRefs.filter((item) => item !== ref) : [...variant.imageRefs, ref] })} /><img src={image.url} alt={`Web image ${index + 1}`} className="h-12 w-12 rounded object-cover" /></label>
+                          })}
+                        </div>
+                      </div>
+                      <button type="button" onClick={() => setColorVariants((previous) => previous.filter((item) => item.id !== variant.id))} className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-red-600"><Trash2 className="h-4 w-4" /> Remove color</button>
+                    </div>
+                  ))}
+                  {colorVariants.length === 0 && <p className="rounded-lg bg-gray-50 p-3 text-sm text-gray-500">No color variants.</p>}
                 </div>
               </div>
 
@@ -1097,7 +1265,7 @@ const AdminEditProduct: React.FC = () => {
                     <>
                       <button
                         type="submit"
-                        disabled={isSubmitting || (existingImages.length === 0 && newImages.length === 0)}
+                        disabled={isSubmitting || (existingImages.length === 0 && newImages.length === 0 && remoteImages.length === 0)}
                         className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center justify-center font-medium disabled:opacity-70 disabled:cursor-not-allowed"
                       >
                         <Save className="h-5 w-5 mr-2" />

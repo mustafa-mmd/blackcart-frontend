@@ -31,11 +31,15 @@ const ProductTabs: React.FC<ProductTabsProps> = ({
   onHelpfulClick // ✅ ADDED: Destructure the new prop
 }) => {
   return (
-    <div className="mt-12">
+    <div id="product-details" className="mt-6 scroll-mt-24 md:mt-8">
       {/* Tab Headers */}
       <div className="border-b border-gray-200 overflow-x-auto">
-        <nav className="flex space-x-8 min-w-max">
+        <nav className="flex min-w-max space-x-8" role="tablist" aria-label="Product information">
           <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'description'}
+            aria-controls="product-tab-panel"
             onClick={() => onTabChange('description')}
             className={`py-4 px-1 border-b-2 font-medium flex items-center gap-2 whitespace-nowrap ${
               activeTab === 'description'
@@ -48,6 +52,10 @@ const ProductTabs: React.FC<ProductTabsProps> = ({
           </button>
           
           <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'specifications'}
+            aria-controls="product-tab-panel"
             onClick={() => onTabChange('specifications')}
             className={`py-4 px-1 border-b-2 font-medium flex items-center gap-2 whitespace-nowrap ${
               activeTab === 'specifications'
@@ -60,6 +68,10 @@ const ProductTabs: React.FC<ProductTabsProps> = ({
           </button>
           
           <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'reviews'}
+            aria-controls="product-tab-panel"
             onClick={() => onTabChange('reviews')}
             className={`py-4 px-1 border-b-2 font-medium flex items-center gap-2 whitespace-nowrap ${
               activeTab === 'reviews'
@@ -72,6 +84,10 @@ const ProductTabs: React.FC<ProductTabsProps> = ({
           </button>
           
           <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'shipping'}
+            aria-controls="product-tab-panel"
             onClick={() => onTabChange('shipping')}
             className={`py-4 px-1 border-b-2 font-medium flex items-center gap-2 whitespace-nowrap ${
               activeTab === 'shipping'
@@ -86,7 +102,7 @@ const ProductTabs: React.FC<ProductTabsProps> = ({
       </div>
 
       {/* Tab Content */}
-      <div className="py-8">
+      <div id="product-tab-panel" className="py-8" role="tabpanel" tabIndex={0}>
         {activeTab === 'description' && (
           <div className="prose prose-gray max-w-none">
             <h3 className="text-2xl font-bold text-gray-900 mb-6">Product Description</h3>
@@ -162,9 +178,8 @@ const ProductTabs: React.FC<ProductTabsProps> = ({
                     <h4 className="font-semibold text-gray-900">Delivery</h4>
                   </div>
                   <ul className="space-y-2 text-gray-600">
-                    <li>• Free delivery on orders over PKR 5,000</li>
-                    <li>• Standard delivery: 3-7 business days</li>
-                    <li>• Express delivery: 1-2 business days</li>
+                    <li>• Normal delivery: PKR 200, 4-6 working days</li>
+                    <li>• Express delivery: PKR 350, 2-3 working days</li>
                     <li>• Cash on Delivery available</li>
                   </ul>
                 </div>
@@ -201,7 +216,7 @@ const ProductTabs: React.FC<ProductTabsProps> = ({
                     <h4 className="font-semibold text-gray-900">Returns</h4>
                   </div>
                   <ul className="space-y-2 text-gray-600">
-                    <li>• 14-day return policy</li>
+                    <li>• 3-day return policy for eligible products</li>
                     <li>• Products must be unused</li>
                     <li>• Original packaging required</li>
                     <li>• Free returns for defective items</li>

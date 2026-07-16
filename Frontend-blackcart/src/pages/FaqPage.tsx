@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -11,7 +12,8 @@ import {
   Package,
   RotateCcw,
   ChevronDown,
-  ChevronUp
+  Mail,
+  MessageSquare
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
@@ -60,7 +62,7 @@ const FaqPage: React.FC = () => {
       id: 4,
       category: 'shipping',
       question: 'How long does delivery take?',
-      answer: 'Delivery times vary by location. Within major cities: 2-3 business days. Other cities: 3-7 business days. Remote areas: 7-14 business days.'
+      answer: 'Choose Normal Delivery for PKR 200 (4-6 working days) or Express Delivery for PKR 350 (2-3 working days) at checkout.'
     },
     {
       id: 5,
@@ -80,7 +82,7 @@ const FaqPage: React.FC = () => {
       id: 7,
       category: 'returns',
       question: 'What is your return policy?',
-      answer: 'We offer a 14-day return policy for most products. Products must be in original condition with all accessories and packaging.'
+      answer: 'Eligible products can be returned within 3 days of delivery. Products must be unused and in original condition with all accessories and packaging.'
     },
     {
       id: 8,
@@ -106,7 +108,7 @@ const FaqPage: React.FC = () => {
       id: 11,
       category: 'products',
       question: 'Can I get technical support for products?',
-      answer: 'Yes, we provide technical support for all products sold. Contact our support team via email, phone, or live chat.'
+      answer: 'Yes. Contact our support team at blackcart.ak25@gmail.com, +92 314 696 5599, or WhatsApp.'
     },
     {
       id: 12,
@@ -176,211 +178,202 @@ const FaqPage: React.FC = () => {
         <meta property="og:url" content="https://blackcart.store/faq" />
         <link rel="canonical" href="https://blackcart.store/faq" />
       </Helmet>
+
       {/* Hero Section */}
-      <section className="bg-gradient-to-r from-blue-600 to-blue-800 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      <section className="bg-gradient-to-r from-blue-700 to-blue-900 text-white py-16 md:py-20 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-600/30 via-transparent to-transparent pointer-events-none" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-center"
+            className="flex flex-col items-center"
           >
-            <div className="flex justify-center mb-4">
-              <HelpCircle className="h-12 w-12" />
-            </div>
+            <span className="bg-blue-600/30 text-blue-200 text-xs font-semibold tracking-wider uppercase px-3 py-1 rounded-full mb-3 inline-block border border-blue-500/20">
+              Help Center
+            </span>
             <h1 className="text-4xl md:text-5xl font-bold mb-4">Frequently Asked Questions</h1>
-            <p className="text-xl text-white/80 max-w-2xl mx-auto">
-              Find quick answers to common questions about shopping with BlackCart
+            <p className="text-lg md:text-xl text-blue-100 max-w-2xl mx-auto font-light mb-8">
+              Quickly find answers to your questions or browse through popular topics below.
             </p>
+
+            {/* Search Bar */}
+            <div className="relative w-full max-w-2xl">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search for questions, keywords, or topics..."
+                className="w-full pl-12 pr-4 py-4 bg-white text-gray-900 rounded-2xl shadow-lg border-0 outline-none focus:ring-2 focus:ring-blue-500 text-base"
+              />
+            </div>
           </motion.div>
         </div>
       </section>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Search Bar */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <div className="relative max-w-2xl mx-auto">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search for answers..."
-              className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-            />
-          </div>
-        </motion.div>
-
-        {/* Categories */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="mb-12"
-        >
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">Browse by Category</h2>
-          <div className="flex flex-wrap gap-3">
-            <button
-              onClick={() => setActiveCategory(null)}
-              className={`px-4 py-2 rounded-lg border transition-colors ${
-                !activeCategory 
-                  ? 'bg-blue-600 text-white border-blue-600' 
-                  : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
-              }`}
-            >
-              All Categories
-            </button>
-            {categories.map(category => (
+      {/* FAQ Layout */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
+          
+          {/* Left Sidebar - Categories */}
+          <div className="lg:col-span-1 bg-white rounded-2xl border border-gray-200 p-5 shadow-sm sticky top-24">
+            <h3 className="text-base font-bold text-gray-900 mb-4 px-2 uppercase tracking-wider text-xs text-gray-400">
+              Browse Categories
+            </h3>
+            <div className="space-y-1.5">
               <button
-                key={category.id}
-                onClick={() => setActiveCategory(category.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
-                  activeCategory === category.id
-                    ? 'bg-blue-600 text-white border-blue-600'
-                    : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
+                onClick={() => setActiveCategory(null)}
+                className={`flex items-center gap-3 w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                  !activeCategory 
+                    ? 'bg-blue-50 text-blue-700 font-bold' 
+                    : 'text-gray-600 hover:bg-gray-50'
                 }`}
               >
-                {category.icon}
-                {category.name}
+                <HelpCircle className="h-5 w-5" />
+                <span>All Categories</span>
               </button>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* FAQs */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="space-y-4"
-        >
-          {filteredFaqs.length > 0 ? (
-            filteredFaqs.map(faq => (
-              <div
-                key={faq.id}
-                className="bg-white rounded-xl border border-gray-200 overflow-hidden"
-              >
+              {categories.map(category => (
                 <button
-                  onClick={() => toggleItem(faq.id)}
-                  className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                  key={category.id}
+                  onClick={() => setActiveCategory(category.id)}
+                  className={`flex items-center gap-3 w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                    activeCategory === category.id
+                      ? 'bg-blue-50 text-blue-700 font-bold'
+                      : 'text-gray-600 hover:bg-gray-50'
+                  }`}
                 >
-                  <div className="text-left">
-                    <h3 className="font-semibold text-gray-800">{faq.question}</h3>
-                    <span className="text-sm text-gray-500 mt-1">
-                      {categories.find(c => c.id === faq.category)?.name}
-                    </span>
-                  </div>
-                  {expandedItems.includes(faq.id) ? (
-                    <ChevronUp className="h-5 w-5 text-gray-500" />
-                  ) : (
-                    <ChevronDown className="h-5 w-5 text-gray-500" />
-                  )}
+                  <span className={activeCategory === category.id ? 'text-blue-600' : 'text-gray-400'}>
+                    {category.icon}
+                  </span>
+                  <span>{category.name}</span>
                 </button>
-                
-                <AnimatePresence>
-                  {expandedItems.includes(faq.id) && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.3 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="px-6 py-4 border-t border-gray-100 bg-gray-50">
-                        <p className="text-gray-600">{faq.answer}</p>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            ))
-          ) : (
-            <div className="text-center py-12">
-              <HelpCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-700 mb-2">No results found</h3>
-              <p className="text-gray-600 mb-6">Try searching with different keywords or browse categories</p>
-              <button
-                onClick={() => {
-                  setSearchQuery('')
-                  setActiveCategory(null)
-                }}
-                className="text-blue-600 hover:text-blue-700 font-medium"
-              >
-                Clear filters
-              </button>
-            </div>
-          )}
-        </motion.div>
-
-        {/* Still Need Help Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="mt-16 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-8 border border-blue-100"
-        >
-          <div className="text-center">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Still need help?</h2>
-            <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
-              Can't find the answer you're looking for? Our support team is here to help.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link
-                to="/contact"
-                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
-              >
-                Contact Support
-              </Link>
-              <button className="bg-white hover:bg-gray-50 text-blue-600 font-semibold py-3 px-6 rounded-lg border border-blue-200 transition-colors">
-                Live Chat
-              </button>
+              ))}
             </div>
           </div>
-        </motion.div>
 
-        {/* Quick Links */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6"
-        >
-          <Link
-            to="/shipping-policy"
-            className="bg-white p-6 rounded-xl border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all"
-          >
-            <div className="flex items-center gap-3 mb-3">
-              <Truck className="h-6 w-6 text-blue-600" />
-              <h3 className="font-semibold text-gray-800">Shipping Policy</h3>
+          {/* Right Content - Accordion list */}
+          <div className="lg:col-span-3 space-y-6">
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 shadow-sm">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6 border-b pb-4">
+                {activeCategory 
+                  ? categories.find(c => c.id === activeCategory)?.name 
+                  : 'Popular Questions'}
+              </h2>
+              
+              <div className="divide-y divide-gray-100">
+                {filteredFaqs.length > 0 ? (
+                  filteredFaqs.map(faq => {
+                    const isExpanded = expandedItems.includes(faq.id)
+                    return (
+                      <div key={faq.id} className="py-4.5 first:pt-0 last:pb-0">
+                        <button
+                          onClick={() => toggleItem(faq.id)}
+                          className="flex justify-between items-start gap-4 w-full text-left font-bold text-gray-800 hover:text-blue-600 transition-colors text-base md:text-lg"
+                        >
+                          <span>{faq.question}</span>
+                          <ChevronDown className={`h-5 w-5 text-gray-400 shrink-0 mt-1 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                        </button>
+                        
+                        <AnimatePresence initial={false}>
+                          {isExpanded && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.2 }}
+                              className="overflow-hidden"
+                            >
+                              <div className="mt-4 p-4 bg-gray-50/60 border border-gray-100 rounded-2xl text-gray-600 text-sm leading-relaxed">
+                                {faq.answer}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    )
+                  })
+                ) : (
+                  <div className="text-center py-12">
+                    <HelpCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold text-gray-700 mb-2">No results found</h3>
+                    <p className="text-gray-600 mb-6">Try searching with different keywords or select a category.</p>
+                    <button
+                      onClick={() => {
+                        setSearchQuery('')
+                        setActiveCategory(null)
+                      }}
+                      className="bg-blue-600 text-white font-medium px-4 py-2 rounded-xl hover:bg-blue-700 transition"
+                    >
+                      Reset Filters
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
-            <p className="text-gray-600">Learn about our shipping methods, delivery times, and costs</p>
-          </Link>
 
-          <Link
-            to="/returns-policy"
-            className="bg-white p-6 rounded-xl border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all"
-          >
-            <div className="flex items-center gap-3 mb-3">
-              <RotateCcw className="h-6 w-6 text-blue-600" />
-              <h3 className="font-semibold text-gray-800">Returns Policy</h3>
+            {/* Still Need Help Support Card */}
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-8 border border-blue-100/60 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="min-w-0 flex-1">
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Still need help?</h2>
+                <p className="text-gray-600 text-sm leading-relaxed">
+                  If you cannot find the answer to your question, feel free to contact our support desk. We are online during business hours!
+                </p>
+              </div>
+              <div className="flex gap-3 shrink-0">
+                <Link
+                  to="/contact"
+                  className="bg-white border border-gray-300 text-gray-800 hover:bg-gray-50 font-semibold py-3 px-6 rounded-xl transition"
+                >
+                  Message Form
+                </Link>
+                <a
+                  href="https://wa.me/923146965599"
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-xl transition flex items-center gap-2"
+                >
+                  <MessageSquare className="h-4.5 w-4.5" />
+                  WhatsApp
+                </a>
+              </div>
             </div>
-            <p className="text-gray-600">Understand our return, exchange, and refund procedures</p>
-          </Link>
 
-          <Link
-            to="/privacy-policy"
-            className="bg-white p-6 rounded-xl border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all"
-          >
-            <div className="flex items-center gap-3 mb-3">
-              <Shield className="h-6 w-6 text-blue-600" />
-              <h3 className="font-semibold text-gray-800">Privacy Policy</h3>
+            {/* Help Guides / Quick Links Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Link
+                to="/shipping-policy"
+                className="bg-white p-6 rounded-xl border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all flex flex-col h-full group"
+              >
+                <div className="flex items-center gap-3 mb-3 text-blue-600">
+                  <Truck className="h-6 w-6" />
+                  <h3 className="font-semibold text-gray-800 group-hover:text-blue-600 transition-colors">Shipping Policy</h3>
+                </div>
+                <p className="text-gray-500 text-sm leading-relaxed">Detailed info on delivery locations, shipping fees (Express/Normal), and timeline estimates.</p>
+              </Link>
+
+              <Link
+                to="/returns-policy"
+                className="bg-white p-6 rounded-xl border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all flex flex-col h-full group"
+              >
+                <div className="flex items-center gap-3 mb-3 text-blue-600">
+                  <RotateCcw className="h-6 w-6" />
+                  <h3 className="font-semibold text-gray-800 group-hover:text-blue-600 transition-colors">Returns Policy</h3>
+                </div>
+                <p className="text-gray-500 text-sm leading-relaxed">Easy step-by-step procedure to return products within our 3-day eligible policy window.</p>
+              </Link>
+
+              <Link
+                to="/privacy-policy"
+                className="bg-white p-6 rounded-xl border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all flex flex-col h-full group"
+              >
+                <div className="flex items-center gap-3 mb-3 text-blue-600">
+                  <Shield className="h-6 w-6" />
+                  <h3 className="font-semibold text-gray-800 group-hover:text-blue-600 transition-colors">Privacy Policy</h3>
+                </div>
+                <p className="text-gray-500 text-sm leading-relaxed">Learn how we securely encrypt transactions and protect your personal information at BlackCart.</p>
+              </Link>
             </div>
-            <p className="text-gray-600">Read about how we protect your personal information</p>
-          </Link>
-        </motion.div>
+
+          </div>
+        </div>
       </div>
     </div>
   )

@@ -1,15 +1,14 @@
 import React, { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
-import { Menu, Search, ShoppingCart, X } from 'lucide-react';
-import { useCart } from '../../context/CartContext';
+import { Menu, Search, X } from 'lucide-react';
 import { useSettings } from '../../context/SettingsContext';
 import SearchDropdown from '../search/SearchDropdown';
+import MiniCart from '../cart/MiniCart';
 
 const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [failedLogoUrl, setFailedLogoUrl] = useState('');
-  const { itemCount } = useCart();
   const { settings, loading } = useSettings();
 
   const logoUrl = settings?.logo?.url
@@ -75,18 +74,7 @@ const Header: React.FC = () => {
               <button onClick={() => setIsMobileSearchOpen(true)} className="p-2 text-gray-600 hover:text-primary-600 lg:hidden" aria-label="Open search">
                 <Search className="h-6 w-6" />
               </button>
-              <NavLink
-                to="/cart"
-                className={({ isActive }) =>
-                  `relative rounded-lg p-2 transition-colors ${
-                    isActive ? 'bg-primary-50 text-primary-700' : 'text-gray-600 hover:text-primary-600'
-                  }`
-                }
-                aria-label={`Cart with ${itemCount} items`}
-              >
-                <ShoppingCart className="h-6 w-6" />
-                {itemCount > 0 && <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary-600 text-xs text-white">{itemCount}</span>}
-              </NavLink>
+              <MiniCart />
               <button onClick={() => setIsMenuOpen(open => !open)} className="p-2 text-gray-600 hover:text-primary-600 md:hidden" aria-label="Toggle menu">
                 {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
               </button>

@@ -11,6 +11,8 @@ type CreateOrderData = {
     quantity: number;
     sku: string;
     variant?: string;
+    selectedAttributes?: Record<string, string>;
+    selectedColor?: { name: string; value: string };
   }>;
   shippingAddress: ShippingAddress;
   paymentMethod: Order['paymentMethod'];
@@ -20,6 +22,7 @@ type CreateOrderData = {
   totalPrice: number;
   coupon?: { code: string; discount: number; discountType?: 'percentage' | 'fixed' };
   notes?: string;
+  shippingMethod: 'normal' | 'express';
 };
 
 type PaymentProofData = {
@@ -37,6 +40,12 @@ export const orderService = {
 
   getPaymentMethods: async (amount?: number) => (
     await api.get('/orders/payment/methods', { params: { amount } })
+  ).data,
+
+  getShippingMethods: async () => (await api.get('/orders/shipping-methods')).data,
+
+  calculateShipping: async (city: string, deliveryMethod: 'normal' | 'express') => (
+    await api.post('/orders/shipping/estimate', { city, deliveryMethod })
   ).data,
 
   createPaymentRequest: async (

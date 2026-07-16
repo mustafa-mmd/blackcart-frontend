@@ -7,19 +7,19 @@ const ReturnsPolicy: React.FC = () => {
     {
       condition: 'Defective or Damaged Product',
       eligible: true,
-      timeframe: '14 days from delivery',
+      timeframe: '3 days from delivery',
       requirements: 'Photos of damage, original packaging'
     },
     {
       condition: 'Wrong Product Shipped',
       eligible: true,
-      timeframe: '7 days from delivery',
+      timeframe: '3 days from delivery',
       requirements: 'Photos of received product'
     },
     {
       condition: 'Change of Mind',
       eligible: true,
-      timeframe: '14 days from delivery',
+      timeframe: '3 days from delivery',
       requirements: 'Unused, original condition, all accessories'
     },
     {
@@ -99,7 +99,7 @@ const ReturnsPolicy: React.FC = () => {
               We want you to be completely satisfied with your purchase. Learn about our return and refund procedures.
             </p>
             <p className="text-sm text-white/60 mt-4">
-              14-Day Return Policy for Most Products
+              3-Day Return Policy for Eligible Products
             </p>
           </motion.div>
         </div>
@@ -117,7 +117,7 @@ const ReturnsPolicy: React.FC = () => {
             <div className="text-center p-6 bg-blue-50 rounded-lg">
               <Clock className="h-8 w-8 text-blue-600 mx-auto mb-3" />
               <h3 className="font-bold text-gray-800 mb-1">Return Window</h3>
-              <p className="text-gray-600">14 days from delivery date</p>
+              <p className="text-gray-600">3 days from delivery date</p>
             </div>
             <div className="text-center p-6 bg-green-50 rounded-lg">
               <Package className="h-8 w-8 text-green-600 mx-auto mb-3" />

@@ -324,7 +324,7 @@
 //             Shipping Estimate
 //           </h3>
 //           <p className="text-sm text-blue-800">
-//             Delivery to <span className="font-semibold">{selectedCity}</span>: 3-5 business days
+//             Delivery to <span className="font-semibold">{selectedCity}</span>: Normal 4-6 or Express 2-3 working days
 //             <br />
 //             <span className="text-xs">Estimated shipping cost: PKR 200 (FREE on orders above PKR 5,000)</span>
 //           </p>
@@ -332,18 +332,12 @@
 //       )}
 //     </motion.div>
 //   )
-// }
-
-// export default AddressForm
-
-
-
-import React, { useEffect } from 'react'
+import React, { useImperativeHandle, forwardRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { motion } from 'framer-motion'
-import { MapPin, User, Home, Phone, Check, Building } from 'lucide-react'
+import { MapPin, User, Home, Phone, Building } from 'lucide-react'
 import { pakistanCities } from '../../utils/pakistanCities'
 
 // ✅ FIXED: Updated schema to match what the backend actually expects
@@ -367,23 +361,26 @@ const addressSchema = z.object({
 type AddressFormData = z.infer<typeof addressSchema>
 
 interface AddressFormProps {
-  onSubmit: (data: any) => void
-  initialData?: any
+  onSubmit: (data: AddressFormData) => void
+  initialData?: Partial<AddressFormData> & { name?: string }
   isSubmitting?: boolean
   onCancel?: () => void
 }
 
-const AddressForm: React.FC<AddressFormProps> = ({
+export interface AddressFormRef {
+  submitForm: () => void
+}
+
+const AddressForm = forwardRef<AddressFormRef, AddressFormProps>(({
   onSubmit,
   initialData,
   isSubmitting = false,
   onCancel
-}) => {
+}, ref) => {
   const {
     register,
     handleSubmit,
     watch,
-    setValue,
     formState: { errors },
   } = useForm<AddressFormData>({
     resolver: zodResolver(addressSchema),
@@ -397,6 +394,12 @@ const AddressForm: React.FC<AddressFormProps> = ({
       isDefault: initialData?.isDefault || false,
     },
   })
+
+  useImperativeHandle(ref, () => ({
+    submitForm: () => {
+      handleSubmit(onFormSubmit)()
+    }
+  }))
 
   // Capture registrations once so we can wrap their onChange handlers
   // with real-time input filtering, without breaking react-hook-form's
@@ -510,7 +513,7 @@ const AddressForm: React.FC<AddressFormProps> = ({
               inputMode="text"
               autoComplete="name"
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
-              placeholder="John Doe"
+              placeholder="Your full name"
               disabled={isSubmitting}
             />
           </div>
@@ -676,37 +679,6 @@ const AddressForm: React.FC<AddressFormProps> = ({
             Set as default shipping address
           </label>
         </div>
-
-        {/* Form Actions */}
-        <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
-          {onCancel && (
-            <button
-              type="button"
-              onClick={onCancel}
-              disabled={isSubmitting}
-              className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Cancel
-            </button>
-          )}
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-          >
-            {isSubmitting ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                Saving...
-              </>
-            ) : (
-              <>
-                <Check className="h-4 w-4 mr-2" />
-                Save Address
-              </>
-            )}
-          </button>
-        </div>
       </form>
 
       {/* Shipping Estimate */}
@@ -717,7 +689,7 @@ const AddressForm: React.FC<AddressFormProps> = ({
             Shipping Estimate
           </h3>
           <p className="text-sm text-blue-800">
-            Delivery to <span className="font-semibold">{selectedCity}</span>: 3-5 business days
+            Delivery to <span className="font-semibold">{selectedCity}</span>: Normal 4-6 or Express 2-3 working days
             <br />
             <span className="text-xs">Estimated shipping cost: PKR 200 (FREE on orders above PKR 5,000)</span>
           </p>
@@ -725,6 +697,6 @@ const AddressForm: React.FC<AddressFormProps> = ({
       )}
     </motion.div>
   )
-}
+})
 
 export default AddressForm

@@ -379,49 +379,26 @@ export const getProvinces = (): string[] => {
 // Calculate shipping cost
 export const calculateShipping = (
   cityId: string, 
-  orderAmount: number, 
+  _orderAmount: number,
   isExpress: boolean = false
 ): { cost: number; deliveryDays: string; available: boolean } => {
   const city = getCityById(cityId)
   
   if (!city) {
-    return { cost: 0, deliveryDays: '7-10 business days', available: false }
+    return { cost: 0, deliveryDays: isExpress ? '2-3 working days' : '4-6 working days', available: false }
   }
-  
-  // Free shipping for orders above 5000 (standard shipping only)
-  if (orderAmount >= 5000 && !isExpress) {
-    return { 
-      cost: 0, 
-      deliveryDays: `${city.minDeliveryDays}-${city.maxDeliveryDays} business days`,
-      available: true 
-    }
-  }
-  
-  const shippingCost = isExpress && city.expressShippingAvailable
-    ? city.expressShippingCost || city.shippingCost * 1.5
-    : city.shippingCost
-  
-  const deliveryDays = isExpress && city.expressShippingAvailable
-    ? `${city.expressDeliveryDays || city.minDeliveryDays} business days`
-    : `${city.minDeliveryDays}-${city.maxDeliveryDays} business days`
   
   return {
-    cost: shippingCost,
-    deliveryDays,
+    cost: isExpress ? 350 : 200,
+    deliveryDays: isExpress ? '2-3 working days' : '4-6 working days',
     available: true
   }
 }
 
 // Get delivery estimate
 export const getDeliveryEstimate = (cityId: string, isExpress: boolean = false): string => {
-  const city = getCityById(cityId)
-  if (!city) return '5-7 business days'
-  
-  if (isExpress && city.expressShippingAvailable) {
-    return `${city.expressDeliveryDays || city.minDeliveryDays} business days`
-  }
-  
-  return `${city.minDeliveryDays}-${city.maxDeliveryDays} business days`
+  void cityId
+  return isExpress ? '2-3 working days' : '4-6 working days'
 }
 
 // Check if COD is available for city and amount
@@ -484,8 +461,6 @@ export const validateCityForShipping = (cityId: string, amount: number): {
   }
   
   const shipping = calculateShipping(cityId, amount)
-  const expressShipping = calculateShipping(cityId, amount, true)
-  
   return {
     isValid: true,
     message: 'City is valid for shipping',

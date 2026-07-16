@@ -87,10 +87,20 @@ export interface Product {
   dimensions?: Dimensions
   warranty?: string
   variants?: ProductVariant[]
+  colorVariants?: ProductColorVariant[]
   metaTitle?: string
   metaDescription?: string
   createdAt: string
   updatedAt: string
+}
+
+export interface ProductColorVariant {
+  _id?: string
+  name: string
+  value: string
+  sku?: string
+  stock?: number | null
+  images: (string | ProductImage)[]
 }
 
 export type StorefrontProduct = Omit<Product, 'categoryId' | 'category'> & {
@@ -181,7 +191,8 @@ export interface CartItem {
   product: string | Product | null  // Add null here
   quantity: number
   addedAt: string
-  variant?: ProductVariant | string
+  variant?: ProductVariant | ProductColorVariant | string
+  selectedColor?: Pick<ProductColorVariant, 'name' | 'value'>
   selectedAttributes?: Record<string, string>
   // Add this if it doesn't exist
   image?: string
@@ -205,13 +216,14 @@ export interface Cart {
 export interface OrderItem {
   _id?: string
   product: string | Product
-  variant?: ProductVariant | string
+  variant?: ProductVariant | ProductColorVariant | string
   name: string
   image: string
   price: number
   quantity: number
   sku: string
   selectedAttributes?: Record<string, string>
+  selectedColor?: Pick<ProductColorVariant, 'name' | 'value'>
 }
 
 export interface Order {
@@ -240,6 +252,7 @@ export interface Order {
   shippingCarrier?: string
   shippingMethod: ShippingMethod
   estimatedDelivery?: string
+  deliveryEstimate?: string
   invoiceNumber: string
   pakistanData?: PakistanOrderData
   notes?: string
@@ -249,7 +262,7 @@ export interface Order {
 
 export type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'refunded' | 'returned'
 
-export type ShippingMethod = 'standard' | 'express' | 'overnight' | 'free'
+export type ShippingMethod = 'normal' | 'express' | 'standard' | 'overnight' | 'free'
 
 export type PaymentMethodType = 
   | 'easypaisa' 

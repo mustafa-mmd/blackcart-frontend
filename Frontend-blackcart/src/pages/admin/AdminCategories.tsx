@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { 
   Folder, Plus, Edit2, Trash2, Eye, EyeOff, Search, 
-  RefreshCw, Package, TrendingUp, TrendingDown, Upload 
+  RefreshCw, Package, Upload, LayoutGrid, List
 } from 'lucide-react';
 import { adminService } from '../../services/adminServiceMethods';
 import Loader from '../../components/common/Loader';
@@ -20,6 +20,12 @@ const AdminCategories: React.FC = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>(() => localStorage.getItem('admin-categories-view') === 'grid' ? 'grid' : 'list');
+
+  const changeViewMode = (mode: 'list' | 'grid') => {
+    setViewMode(mode);
+    localStorage.setItem('admin-categories-view', mode);
+  };
   
   // Form states
   const [newCategory, setNewCategory] = useState({
@@ -322,8 +328,8 @@ const AdminCategories: React.FC = () => {
           </div>
 
           {/* Search */}
-          <div className="mt-6">
-            <div className="relative max-w-md">
+          <div className="mt-6 flex items-center justify-between gap-3">
+            <div className="relative max-w-md flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
                 type="text"
@@ -332,6 +338,10 @@ const AdminCategories: React.FC = () => {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
               />
+            </div>
+            <div className="flex rounded-lg border border-gray-300 bg-white p-1" aria-label="Category view">
+              <button type="button" onClick={() => changeViewMode('list')} aria-pressed={viewMode === 'list'} className={`rounded-md p-1.5 ${viewMode === 'list' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`} title="List view"><List className="h-4 w-4" /></button>
+              <button type="button" onClick={() => changeViewMode('grid')} aria-pressed={viewMode === 'grid'} className={`rounded-md p-1.5 ${viewMode === 'grid' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`} title="Grid view"><LayoutGrid className="h-4 w-4" /></button>
             </div>
           </div>
         </div>
@@ -358,7 +368,7 @@ const AdminCategories: React.FC = () => {
 
         {/* Categories Table */}
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className={viewMode === 'list' ? 'overflow-x-auto' : 'hidden'}>
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -483,6 +493,29 @@ const AdminCategories: React.FC = () => {
               </tbody>
             </table>
           </div>
+
+          {viewMode === 'grid' && filteredCategories.length > 0 && (
+            <div className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {filteredCategories.map((category) => {
+                const imageUrl = getCategoryImage(category)
+                return (
+                  <article key={category._id} className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+                    {imageUrl ? <img src={imageUrl} alt={category.name} onError={handleImageError} className="aspect-[4/3] w-full bg-gray-100 object-cover" loading="lazy" /> : <div className="flex aspect-[4/3] items-center justify-center bg-blue-50"><Folder className="h-12 w-12 text-blue-500" /></div>}
+                    <div className="p-4">
+                      <div className="flex items-start justify-between gap-2"><h2 className="font-semibold text-gray-900">{category.name}</h2><span className={`rounded-full px-2 py-1 text-xs font-medium ${category.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{category.isActive ? 'Active' : 'Inactive'}</span></div>
+                      <p className="mt-1 line-clamp-2 min-h-10 text-sm text-gray-500">{category.description || 'No description'}</p>
+                      <p className="mt-3 text-sm font-medium text-gray-700">{category.productCount || 0} products</p>
+                    </div>
+                    <div className="flex items-center justify-end gap-3 border-t px-4 py-3">
+                      <button onClick={() => openEditModal(category)} className="text-blue-600" title="Edit"><Edit2 className="h-4 w-4" /></button>
+                      <button onClick={() => handleToggleStatus(category._id, category.isActive)} className={category.isActive ? 'text-yellow-600' : 'text-green-600'} title={category.isActive ? 'Deactivate' : 'Activate'}>{category.isActive ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button>
+                      <button onClick={() => handleDeleteCategory(category._id, category.name)} className="text-red-600" title="Delete"><Trash2 className="h-4 w-4" /></button>
+                    </div>
+                  </article>
+                )
+              })}
+            </div>
+          )}
 
           {/* Empty State */}
           {filteredCategories.length === 0 && (

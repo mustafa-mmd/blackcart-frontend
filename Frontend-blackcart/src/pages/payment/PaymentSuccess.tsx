@@ -177,7 +177,7 @@ const PaymentSuccess: React.FC = () => {
                   <div className="ml-4">
                     <h4 className="font-medium text-gray-900">Shipment</h4>
                     <p className="text-gray-600 text-sm">
-                      Your order will be shipped via {order.shippingMethod || 'Standard Delivery'}.
+                      Your order will be shipped via {order.shippingMethod || 'Normal Delivery'}.
                       Estimated delivery: {formatDate(estimatedDelivery, 'long')}
                     </p>
                   </div>

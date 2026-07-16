@@ -260,6 +260,7 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({
                         <div>
                           <p className="text-sm font-medium text-gray-900">{item.name}</p>
                           <p className="text-xs text-gray-500">SKU: {item.sku}</p>
+                          {item.selectedColor && <p className="text-xs text-gray-500">Color: {item.selectedColor.name}</p>}
                         </div>
                       </div>
                     </td>
@@ -316,8 +317,9 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({
             <div className="bg-gray-50 rounded-lg p-4">
               <div className="flex justify-between mb-2">
                 <span className="text-gray-600">Shipping Method:</span>
-                <span className="font-medium">{order.shippingMethod || 'Standard'}</span>
+                <span className="font-medium">{order.shippingMethod || 'Normal'}</span>
               </div>
+              {order.deliveryEstimate && <div className="flex justify-between mb-2"><span className="text-gray-600">Delivery Estimate:</span><span className="font-medium">{order.deliveryEstimate}</span></div>}
               <div className="flex justify-between mb-2">
                 <span className="text-gray-600">Order Status:</span>
                 <span className="font-medium capitalize">{order.orderStatus}</span>
@@ -345,7 +347,7 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({
               <span className="font-medium">{formatPrice(order.shippingPrice)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Tax (16% GST):</span>
+              <span className="text-gray-600">Tax:</span>
               <span className="font-medium">{formatPrice(order.taxPrice)}</span>
             </div>
             {order.codCharges && order.codCharges > 0 && (

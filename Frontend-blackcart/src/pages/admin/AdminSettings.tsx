@@ -3,14 +3,10 @@ import {
   Save, 
   Bell, 
   Shield, 
-  Mail, 
   CreditCard,
   Truck,
   Globe,
-  Users,
-  Package,
   RefreshCw,
-  AlertCircle,
   CheckCircle,
   Camera,
   Upload,
@@ -120,9 +116,9 @@ const AdminSettings: React.FC = () => {
     shipping: {
       freeShippingThreshold: 5000,
       standardShippingCharges: 200,
-      expressShippingCharges: 500,
-      estimatedDeliveryDays: '3-5',
-      returnPolicyDays: 14,
+      expressShippingCharges: 350,
+      estimatedDeliveryDays: '4-6',
+      returnPolicyDays: 3,
       shippingZones: [],
     },
     security: {
@@ -819,22 +815,7 @@ const AdminSettings: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Free Shipping Threshold (PKR)
-              </label>
-              <input
-                type="number"
-                value={settings.shipping.freeShippingThreshold}
-                onChange={(e) => handleInputChange('shipping', 'freeShippingThreshold', parseInt(e.target.value) || 0)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                min="0"
-                step="500"
-              />
-              <p className="text-xs text-gray-500 mt-1">Orders above this amount get free shipping</p>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Standard Shipping (PKR)
+                Normal Delivery (PKR)
               </label>
               <input
                 type="number"
@@ -848,7 +829,7 @@ const AdminSettings: React.FC = () => {
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Express Shipping (PKR)
+                Express Delivery (PKR)
               </label>
               <input
                 type="number"
@@ -869,7 +850,7 @@ const AdminSettings: React.FC = () => {
                 value={settings.shipping.estimatedDeliveryDays}
                 onChange={(e) => handleInputChange('shipping', 'estimatedDeliveryDays', e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                placeholder="3-5"
+                placeholder="4-6"
               />
             </div>
             

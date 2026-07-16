@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
-  Star, Truck, Shield, RefreshCw, ShoppingCart,
+  Truck, Shield, RefreshCw, ShoppingCart,
   Minus, Plus, Share2, Package, AlertCircle, CheckCircle,
   Facebook, Twitter, Linkedin
 } from 'lucide-react'
@@ -15,7 +15,7 @@ import Loader from '../../components/common/Loader'
 import ProductRail from '../../components/product/ProductRail'
 import ProductTabs from '../../components/product/ProductTabs'
 import ImageGallery from '../../components/product/ImageGallery'
-import type { Product, ProductImage } from '../../types'
+import type { Product, ProductColorVariant, ProductImage } from '../../types'
 import { getImageUrl } from '../../utils/imageUtils'
 import { recordProductView } from '../../utils/browsingHistory'
 import { BrandIcon } from '../../components/common/BrandIcon'
@@ -23,10 +23,11 @@ import { BrandIcon } from '../../components/common/BrandIcon'
 const ProductDetailPage: React.FC = () => {
   const { identifier } = useParams<{ identifier: string }>()
   const navigate = useNavigate()
-  const { addToCart, isInCart, cartItems } = useCart()
+  const { addToCart, isInCart } = useCart()
 
   const [selectedImage, setSelectedImage] = useState(0)
   const [quantity, setQuantity] = useState(1)
+  const [selectedColorId, setSelectedColorId] = useState('')
   const [activeTab, setActiveTab] = useState<'description' | 'specifications' | 'reviews' | 'shipping'>('description')
 
   // Fetch product data
@@ -42,6 +43,10 @@ const ProductDetailPage: React.FC = () => {
   })
 
   const product = productData?.data?.product || productData?.data
+  const colorVariants: ProductColorVariant[] = Array.isArray(product?.colorVariants)
+    ? product.colorVariants
+    : []
+  const selectedColor = colorVariants.find((variant) => String(variant._id) === selectedColorId)
   const reviews = product?.reviews || []
   const ratingStats = product?.ratingStats
   const categorySlug = product?.categorySlug
@@ -76,9 +81,10 @@ const ProductDetailPage: React.FC = () => {
   }, [categorySlug, product?._id])
 
   const productImages = (() => {
-    if (!Array.isArray(product?.images)) return ['/placeholder.png']
+    const sourceImages = selectedColor?.images?.length ? selectedColor.images : product?.images
+    if (!Array.isArray(sourceImages)) return ['/placeholder.png']
 
-    const images = product.images
+    const images = sourceImages
       .map((image: string | ProductImage) => {
         try {
           return getImageUrl(image)
@@ -92,6 +98,10 @@ const ProductDetailPage: React.FC = () => {
 
     return images.length > 0 ? images : ['/placeholder.png']
   })()
+
+  const availableStock = selectedColor && Number.isFinite(selectedColor.stock)
+    ? Number(selectedColor.stock)
+    : Number(product?.stock || 0)
 
   // ✅ FIXED: Check wishlist status
   // ✅ FIXED: Fetch related products
@@ -112,12 +122,17 @@ const ProductDetailPage: React.FC = () => {
   const handleAddToCart = () => {
     if (!product) return
 
-    if (product.stock === 0) {
+    if (colorVariants.length > 0 && !selectedColor) {
+      toast.error('Please select a color')
+      return
+    }
+
+    if (availableStock === 0) {
       toast.error('This product is out of stock')
       return
     }
 
-    if (quantity > product.stock) {
+    if (quantity > availableStock) {
       toast.error('The requested quantity is not available')
       return
     }
@@ -130,8 +145,7 @@ const ProductDetailPage: React.FC = () => {
       stock: Number(product.stock || 0),
     }
 
-    addToCart(cartProduct, quantity)
-    toast.success('Added to cart!')
+    addToCart(cartProduct, quantity, selectedColor)
   }
 
   // Handle buy now
@@ -150,7 +164,7 @@ const ProductDetailPage: React.FC = () => {
     if (!product) return
 
     if (type === 'increase') {
-      if (quantity >= (product.stock || 0)) {
+      if (quantity >= availableStock) {
         toast.error('The requested quantity is not available')
         return
       }
@@ -325,7 +339,7 @@ const ProductDetailPage: React.FC = () => {
       {/* Review Form Modal */}
       {/* Main Product Section */}
       <div className="container mx-auto px-4 py-3">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
           {/* Left Column - Images */}
           <div>
             <ImageGallery
@@ -348,7 +362,7 @@ const ProductDetailPage: React.FC = () => {
                 </span>
                 <div className="flex items-center space-x-2">
                   <span className="text-sm text-gray-500">SKU:</span>
-                  <span className="text-sm font-medium text-gray-900">{product.sku}</span>
+                  <span className="text-sm font-medium text-gray-900">{selectedColor?.sku || product.sku}</span>
                 </div>
               </div>
 
@@ -357,32 +371,9 @@ const ProductDetailPage: React.FC = () => {
                 {product.name}
               </h1>
 
-              <div className="flex items-center space-x-4 mb-4">
-                <div className="flex items-center">
-                  <div className="flex">
-                    {[...Array(5)].map((_, index) => (
-                      <Star
-                        key={index}
-                        className={`h-5 w-5 ${index < Math.floor(product.rating || 0)
-                            ? 'text-yellow-400 fill-current'
-                            : 'text-gray-300'
-                          }`}
-                      />
-                    ))}
-                  </div>
-                  <span className="ml-2 font-medium text-gray-700">
-                    {product.rating?.toFixed(1) || '0.0'}
-                  </span>
-                  <span className="mx-2 text-gray-400">•</span>
-                  <span className="text-gray-500">
-                    {product.numReviews || 0} reviews
-                  </span>
-                </div>
-
-                <div className="flex items-center text-green-600">
-                  <CheckCircle className="h-4 w-4 mr-1" />
-                  <span className="text-sm">Verified Product</span>
-                </div>
+              <div className="mb-4 flex items-center text-green-600">
+                <CheckCircle className="mr-1 h-4 w-4" />
+                <span className="text-sm">Verified Product</span>
               </div>
             </div>
 
@@ -406,7 +397,7 @@ const ProductDetailPage: React.FC = () => {
               </div>
 
               <p className="text-sm text-gray-600">
-                <span className="font-medium">Inclusive of all taxes</span> • Free shipping on orders over PKR 5,000
+                <span className="font-medium">Inclusive of all taxes</span> • Choose Normal or Express delivery at checkout
               </p>
             </div>
 
@@ -416,6 +407,43 @@ const ProductDetailPage: React.FC = () => {
                 <h3 className="font-semibold text-gray-900 mb-2">Quick Overview</h3>
                 <p className="text-gray-600">{product.shortDescription}</p>
               </div>
+            )}
+
+
+            {colorVariants.length > 0 && (
+              <fieldset className="rounded-xl border border-gray-200 bg-white p-4">
+                <legend className="px-1 text-sm font-semibold text-gray-900">Choose a color</legend>
+                <div className="mt-2 flex flex-wrap gap-3">
+                  {colorVariants.map((variant) => {
+                    const id = String(variant._id || variant.name)
+                    const isSelected = selectedColorId === id
+                    const isUnavailable = Number.isFinite(variant.stock) && Number(variant.stock) <= 0
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        disabled={isUnavailable}
+                        onClick={() => {
+                          setSelectedColorId(id)
+                          setSelectedImage(0)
+                          setQuantity(1)
+                        }}
+                        aria-pressed={isSelected}
+                        aria-label={`${variant.name}${isUnavailable ? ' - out of stock' : ''}`}
+                        className={`flex items-center gap-2 rounded-full border px-3 py-2 text-sm font-medium transition ${
+                          isSelected ? 'border-blue-600 bg-blue-50 text-blue-800 ring-2 ring-blue-100' : 'border-gray-200 hover:border-gray-400'
+                        } disabled:cursor-not-allowed disabled:opacity-40`}
+                      >
+                        <span
+                          className="h-5 w-5 rounded-full border border-black/10 shadow-inner"
+                          style={{ backgroundColor: variant.value }}
+                        />
+                        {variant.name}
+                      </button>
+                    )
+                  })}
+                </div>
+              </fieldset>
             )}
 
             {/* Quantity & Actions */}
@@ -437,7 +465,7 @@ const ProductDetailPage: React.FC = () => {
                     <button
                       onClick={() => handleQuantityChange('increase')}
                       className="flex items-center justify-center w-12 h-12 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                      disabled={product.stock && quantity >= product.stock}
+                      disabled={quantity >= availableStock}
                     >
                       <Plus className="h-5 w-5" />
                     </button>
@@ -448,8 +476,8 @@ const ProductDetailPage: React.FC = () => {
               <div className="flex flex-col sm:flex-row gap-4">
                 <button
                   onClick={handleAddToCart}
-                  disabled={product.stock === 0}
-                  className={`flex-1 flex items-center justify-center gap-3 py-4 px-6 rounded-xl transition-all ${product.stock === 0
+                  disabled={availableStock === 0}
+                  className={`flex-1 flex items-center justify-center gap-3 py-4 px-6 rounded-xl transition-all ${availableStock === 0
                       ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                       : 'bg-blue-600 hover:bg-blue-700 text-white'
                     }`}
@@ -457,8 +485,8 @@ const ProductDetailPage: React.FC = () => {
                   <ShoppingCart className="h-5 w-5" />
                   <span className="font-medium">
                     {isInCart(product._id)
-                      ? `Update Cart (${cartItems.find(item => item._id === product._id)?.quantity || 0})`
-                      : product.stock === 0
+                      ? 'Add Another'
+                      : availableStock === 0
                         ? 'Out of Stock'
                         : 'Add to Cart'
                     }
@@ -467,8 +495,8 @@ const ProductDetailPage: React.FC = () => {
 
                 <button
                   onClick={handleBuyNow}
-                  disabled={product.stock === 0}
-                  className={`flex-1 py-4 px-6 rounded-xl font-medium transition-all ${product.stock === 0
+                  disabled={availableStock === 0}
+                  className={`flex-1 py-4 px-6 rounded-xl font-medium transition-all ${availableStock === 0
                       ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                       : 'bg-gray-900 hover:bg-black text-white'
                     }`}
@@ -514,8 +542,8 @@ const ProductDetailPage: React.FC = () => {
               <div className="flex items-center gap-3">
                 <Truck className="h-5 w-5 text-green-600" />
                 <div>
-                  <div className="font-medium">Free Delivery</div>
-                  <div className="text-sm text-gray-500">All over Pakistan</div>
+                  <div className="font-medium">Nationwide Delivery</div>
+                  <div className="text-sm text-gray-500">From PKR 200</div>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -529,7 +557,7 @@ const ProductDetailPage: React.FC = () => {
                 <RefreshCw className="h-5 w-5 text-purple-600" />
                 <div>
                   <div className="font-medium">Easy Returns</div>
-                  <div className="text-sm text-gray-500">14-Day Policy</div>
+                  <div className="text-sm text-gray-500">3-Day Policy</div>
                 </div>
               </div>
               <div className="flex items-center gap-3">

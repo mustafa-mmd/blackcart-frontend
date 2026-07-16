@@ -5,8 +5,7 @@ import { motion } from 'framer-motion'
 import {
   Package, Truck, CheckCircle, Clock, MapPin, CreditCard,
   Printer, Download, Share2, AlertCircle, ArrowLeft,
-  Phone, Mail, Home, DollarSign, Calendar, Hash, XCircle,
-  FileText, ChevronRight, Eye, ShoppingBag
+  DollarSign, XCircle, FileText, ShoppingBag
 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { orderService } from '../../services/orderService'
@@ -411,6 +410,7 @@ const OrderDetailsPage: React.FC = () => {
                         <div className="flex-1">
                           <h3 className="font-medium text-gray-900 mb-1">{item.name}</h3>
                           <p className="text-sm text-gray-600 mb-2">SKU: {item.sku}</p>
+                          {item.selectedColor && <p className="mb-2 flex items-center gap-2 text-sm text-gray-600"><span className="h-3.5 w-3.5 rounded-full border" style={{ backgroundColor: item.selectedColor.value }} />Color: {item.selectedColor.name}</p>}
                           <div className="flex items-center justify-between">
                             <div className="text-sm text-gray-600">
                               Quantity: {item.quantity}
@@ -457,11 +457,12 @@ const OrderDetailsPage: React.FC = () => {
                       <span>PKR {order.itemsPrice?.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Shipping</span>
+                      <span className="text-gray-600">{order.shippingMethod === 'express' ? 'Express delivery' : 'Normal delivery'}</span>
                       <span>
                         {order.shippingPrice === 0 ? 'FREE' : `PKR ${order.shippingPrice?.toLocaleString()}`}
                       </span>
                     </div>
+                    {order.deliveryEstimate && <p className="text-xs text-gray-500">Estimated delivery: {order.deliveryEstimate}</p>}
                     {/* TAX SECTION COMPLETELY REMOVED */}
                     {order.codCharges > 0 && (
                       <div className="flex justify-between">

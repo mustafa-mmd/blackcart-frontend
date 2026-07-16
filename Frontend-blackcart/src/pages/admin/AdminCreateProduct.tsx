@@ -17,7 +17,8 @@ import {
   Save,
   GripVertical,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Link as LinkIcon
 } from 'lucide-react'
 import { adminService } from '../../services/adminServiceMethods'
 import Loader from '../../components/common/Loader'
@@ -55,8 +56,18 @@ interface Category {
 
 interface PendingImage {
   id: string
-  file: File
+  file?: File
+  remote?: { url: string; public_id: string; alt?: string }
   previewUrl: string
+}
+
+interface ColorVariantDraft {
+  id: string
+  name: string
+  value: string
+  sku: string
+  stock: string
+  imageIds: string[]
 }
 
 const getErrorMessage = (error: unknown, fallback: string) =>
@@ -73,6 +84,9 @@ const AdminCreateProduct: React.FC = () => {
   const [features, setFeatures] = useState<string[]>([''])
   const [categories, setCategories] = useState<Category[]>([])
   const [loadingCategories, setLoadingCategories] = useState(false)
+  const [remoteImageUrl, setRemoteImageUrl] = useState('')
+  const [isImportingImage, setIsImportingImage] = useState(false)
+  const [colorVariants, setColorVariants] = useState<ColorVariantDraft[]>([])
 
   // Fetch categories on component mount
   useEffect(() => {
@@ -117,11 +131,8 @@ const AdminCreateProduct: React.FC = () => {
     }
   })
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files) return
-
+  const addLocalImages = (selectedFiles: File[]) => {
     const availableSlots = Math.max(10 - images.length, 0)
-    const selectedFiles = Array.from(e.target.files)
     const files = selectedFiles.slice(0, availableSlots)
     console.log(`📁 Selected ${files.length} files`);
 
@@ -150,7 +161,6 @@ const AdminCreateProduct: React.FC = () => {
     })
     
     if (validFiles.length === 0) {
-      e.target.value = ''
       return
     }
 
@@ -165,16 +175,68 @@ const AdminCreateProduct: React.FC = () => {
       }
     })
     setImages(previous => [...previous, ...pendingImages])
+  }
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return
+    addLocalImages(Array.from(e.target.files))
     e.target.value = ''
+  }
+
+  const handleImageDrop = (event: React.DragEvent<HTMLLabelElement>) => {
+    event.preventDefault()
+    addLocalImages(Array.from(event.dataTransfer.files))
+  }
+
+  const handleRemoteImageImport = async () => {
+    const url = remoteImageUrl.trim()
+    if (!url) return toast.error('Enter a public image URL')
+    if (images.length >= 10) return toast.error('You can upload a maximum of 10 images')
+    try {
+      setIsImportingImage(true)
+      const response = await adminService.importRemoteProductImage(url)
+      const imported = response.data
+      if (!imported?.url || !imported.public_id) throw new Error('The image import did not return a valid file')
+      setImages((previous) => [...previous, {
+        id: `remote-${imported.public_id}-${Date.now()}`,
+        remote: imported,
+        previewUrl: imported.url,
+      }])
+      setRemoteImageUrl('')
+      toast.success('Web image imported securely')
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Could not import that image URL'))
+    } finally {
+      setIsImportingImage(false)
+    }
+  }
+
+  const addColorVariant = () => setColorVariants((previous) => [...previous, {
+    id: `color-${Date.now()}`,
+    name: '',
+    value: '#000000',
+    sku: '',
+    stock: '',
+    imageIds: [],
+  }])
+
+  const updateColorVariant = (id: string, updates: Partial<ColorVariantDraft>) => {
+    setColorVariants((previous) => previous.map((variant) => variant.id === id ? { ...variant, ...updates } : variant))
   }
 
   const handleRemoveImage = (index: number) => {
     const image = images[index]
-    if (image) {
+    if (image?.file) {
       URL.revokeObjectURL(image.previewUrl)
       previewUrlsRef.current.delete(image.previewUrl)
     }
     setImages(previous => previous.filter((_, imageIndex) => imageIndex !== index))
+    if (image) {
+      setColorVariants((previous) => previous.map((variant) => ({
+        ...variant,
+        imageIds: variant.imageIds.filter((id) => id !== image.id),
+      })))
+    }
     console.log(`🗑️ Removed image at index ${index}`)
   }
 
@@ -340,12 +402,21 @@ const AdminCreateProduct: React.FC = () => {
         }
       });
       
-      // Add images
-      if (images.length > 0) {
-        images.forEach((image) => {
-          formData.append('images', image.file, image.file.name);
-        });
-      }
+      const localImages = images.filter((image): image is PendingImage & { file: File } => Boolean(image.file))
+      const remoteImages = images.filter((image): image is PendingImage & { remote: NonNullable<PendingImage['remote']> } => Boolean(image.remote))
+      localImages.forEach((image) => formData.append('images', image.file, image.file.name))
+      if (remoteImages.length) formData.append('preuploadedImages', JSON.stringify(remoteImages.map((image) => image.remote)))
+      formData.append('imageOrder', JSON.stringify(images.map((image) => ({
+        kind: image.file ? 'local' : 'remote',
+        index: image.file ? localImages.findIndex((candidate) => candidate.id === image.id) : remoteImages.findIndex((candidate) => candidate.id === image.id),
+      }))))
+      formData.append('colorVariants', JSON.stringify(colorVariants.map((variant) => ({
+        name: variant.name,
+        value: variant.value,
+        sku: variant.sku,
+        stock: variant.stock,
+        imageIndexes: variant.imageIds.map((imageId) => images.findIndex((image) => image.id === imageId)).filter((index) => index >= 0),
+      }))))
       
       // Debug form data
       console.log('📦 FormData contents:');
@@ -774,7 +845,7 @@ const AdminCreateProduct: React.FC = () => {
                         <div className="relative">
                           <img
                             src={image.previewUrl}
-                            alt={`${image.file.name}, position ${index + 1}`}
+                            alt={`${image.file?.name || 'Imported web image'}, position ${index + 1}`}
                             draggable="false"
                             className="h-28 w-full rounded-lg object-cover sm:h-32"
                           />
@@ -813,7 +884,7 @@ const AdminCreateProduct: React.FC = () => {
                           >
                             <ChevronLeft className="h-4 w-4" />
                           </button>
-                          <span className="min-w-0 truncate text-xs text-gray-500" title={image.file.name}>
+                          <span className="min-w-0 truncate text-xs text-gray-500" title={image.file?.name || image.remote?.url}>
                             {index + 1} of {images.length}
                           </span>
                           <button
@@ -830,7 +901,11 @@ const AdminCreateProduct: React.FC = () => {
                     ))}
 
                     {images.length < 10 && (
-                      <label className="flex h-40 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 transition hover:border-blue-400 hover:bg-blue-50 sm:h-[11.25rem]">
+                      <label
+                        onDragOver={(event) => event.preventDefault()}
+                        onDrop={handleImageDrop}
+                        className="flex h-40 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 transition hover:border-blue-400 hover:bg-blue-50 sm:h-[11.25rem]"
+                      >
                         <Upload className="mb-2 h-8 w-8 text-gray-400" />
                         <span className="text-sm text-gray-600">Upload Images</span>
                         <span className="mt-1 text-xs text-gray-500">Max 5MB each · {10 - images.length} left</span>
@@ -844,6 +919,29 @@ const AdminCreateProduct: React.FC = () => {
                       </label>
                     )}
                   </div>
+
+                  <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+                    <label className="mb-2 block text-sm font-medium text-gray-700">Import a public web image</label>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <input
+                        type="url"
+                        value={remoteImageUrl}
+                        onChange={(event) => setRemoteImageUrl(event.target.value)}
+                        placeholder="https://example.com/product.jpg"
+                        className="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleRemoteImageImport}
+                        disabled={isImportingImage}
+                        className="inline-flex items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+                      >
+                        <LinkIcon className="h-4 w-4" />
+                        {isImportingImage ? 'Importing…' : 'Import image'}
+                      </button>
+                    </div>
+                    <p className="mt-2 text-xs text-gray-500">HTTPS/HTTP only. The server validates type, size, redirects, and private network addresses before saving to Cloudinary.</p>
+                  </div>
                   
                   <div className="text-sm">
                     <p className="text-gray-500">
@@ -855,6 +953,60 @@ const AdminCreateProduct: React.FC = () => {
                       </p>
                     )}
                   </div>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-gray-200 bg-white p-6">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900">Product colors</h2>
+                    <p className="text-sm text-gray-500">Optional. Customers must select a color when one or more colors are added.</p>
+                  </div>
+                  <button type="button" onClick={addColorVariant} className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700">
+                    <Plus className="h-4 w-4" /> Add color
+                  </button>
+                </div>
+                <div className="space-y-4">
+                  {colorVariants.map((variant) => (
+                    <div key={variant.id} className="rounded-xl border border-gray-200 p-4">
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <label className="text-sm font-medium text-gray-700">Color name
+                          <input value={variant.name} onChange={(event) => updateColorVariant(variant.id, { name: event.target.value })} required className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" placeholder="Midnight Black" />
+                        </label>
+                        <label className="text-sm font-medium text-gray-700">Color
+                          <input type="color" value={variant.value} onChange={(event) => updateColorVariant(variant.id, { value: event.target.value })} className="mt-1 h-10 w-full rounded-lg border border-gray-300 p-1" />
+                        </label>
+                        <label className="text-sm font-medium text-gray-700">Variant SKU (optional)
+                          <input value={variant.sku} onChange={(event) => updateColorVariant(variant.id, { sku: event.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+                        </label>
+                        <label className="text-sm font-medium text-gray-700">Variant stock (optional)
+                          <input type="number" min="0" value={variant.stock} onChange={(event) => updateColorVariant(variant.id, { stock: event.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+                        </label>
+                      </div>
+                      {images.length > 0 && (
+                        <div className="mt-3">
+                          <p className="mb-2 text-sm font-medium text-gray-700">Images for this color</p>
+                          <div className="flex flex-wrap gap-2">
+                            {images.map((image, imageIndex) => (
+                              <label key={image.id} className={`cursor-pointer rounded-lg border p-1 ${variant.imageIds.includes(image.id) ? 'border-blue-600 ring-2 ring-blue-100' : 'border-gray-200'}`}>
+                                <input
+                                  type="checkbox"
+                                  className="sr-only"
+                                  checked={variant.imageIds.includes(image.id)}
+                                  onChange={() => updateColorVariant(variant.id, { imageIds: variant.imageIds.includes(image.id) ? variant.imageIds.filter((id) => id !== image.id) : [...variant.imageIds, image.id] })}
+                                />
+                                <img src={image.previewUrl} alt={`Image ${imageIndex + 1}`} className="h-12 w-12 rounded object-cover" />
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      <button type="button" onClick={() => setColorVariants((previous) => previous.filter((item) => item.id !== variant.id))} className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-red-600">
+                        <Trash2 className="h-4 w-4" /> Remove color
+                      </button>
+                    </div>
+                  ))}
+                  {colorVariants.length === 0 && <p className="rounded-lg bg-gray-50 p-3 text-sm text-gray-500">No color variants. This product will use its regular image gallery and stock.</p>}
                 </div>
               </div>
 

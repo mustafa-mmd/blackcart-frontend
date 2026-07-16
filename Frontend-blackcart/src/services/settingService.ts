@@ -154,7 +154,7 @@ class SettingService {
         freeShippingThreshold: 5000,
         standardShippingCharges: 200,
         expressShippingCharges: 500,
-        estimatedDeliveryDays: '3-5',
+        estimatedDeliveryDays: '4-6',
         returnPolicyDays: 14,
         shippingZones: [],
       },

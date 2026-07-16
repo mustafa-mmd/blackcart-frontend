@@ -1206,7 +1206,7 @@ const AdminProducts: React.FC = () => {
         )}
 
         {/* Bulk Actions */}
-        <div className="mt-6 bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+        {/* <div className="mt-6 bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             Bulk Actions
           </h3>
@@ -1269,7 +1269,7 @@ const AdminProducts: React.FC = () => {
               </span>
             )}
           </div>
-        </div>
+        </div> */}
       </div>
 
       {showPriceDialog && (

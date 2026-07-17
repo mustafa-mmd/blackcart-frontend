@@ -746,7 +746,6 @@ import { Helmet } from "react-helmet-async";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Truck,
-  Shield,
   RefreshCw,
   ShoppingCart,
   Minus,
@@ -846,11 +845,13 @@ const ProductDetailPage: React.FC = () => {
     if (product?._id) recordProductView(String(product._id), categorySlug);
   }, [categorySlug, product?._id]);
 
+  const baseProductImages = product?.images;
+  const selectedColorImages = selectedColor?.images;
   const productImages = (() => {
-    const sourceImages = selectedColor?.images?.length
-      ? selectedColor.images
-      : product?.images;
-    if (!Array.isArray(sourceImages)) return ["/placeholder.png"];
+    const sourceImages = [
+      ...(Array.isArray(selectedColorImages) ? selectedColorImages : []),
+      ...(Array.isArray(baseProductImages) ? baseProductImages : []),
+    ];
 
     const images = sourceImages
       .map((image: string | ProductImage) => {
@@ -860,9 +861,11 @@ const ProductDetailPage: React.FC = () => {
           return null;
         }
       })
-      .filter((url: string | null): url is string =>
-        Boolean(url && url !== "/placeholder.png"),
-      );
+      .filter(
+        (url: string | null): url is string =>
+          Boolean(url && url !== "/placeholder.png"),
+      )
+      .filter((url, index, allImages) => allImages.indexOf(url) === index);
 
     return images.length > 0 ? images : ["/placeholder.png"];
   })();

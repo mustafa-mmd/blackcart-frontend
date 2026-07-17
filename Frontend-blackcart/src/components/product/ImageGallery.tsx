@@ -17,10 +17,12 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
   const safeImages = images.filter(Boolean);
   const [internalIndex, setInternalIndex] = useState(() => Math.min(initialImage, Math.max(safeImages.length - 1, 0)));
   const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [imageLoaded, setImageLoaded] = useState(false);
+  const [loadedImage, setLoadedImage] = useState<string | null>(null);
   const selectedIndex = onImageChange
     ? Math.min(initialImage, Math.max(safeImages.length - 1, 0))
     : Math.min(internalIndex, Math.max(safeImages.length - 1, 0));
+  const currentImage = safeImages[selectedIndex] || safeImages[0];
+  const imageLoaded = loadedImage === currentImage;
   const mainImageButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -28,7 +30,6 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     if (safeImages.length === 0) return;
     const nextIndex = (index + safeImages.length) % safeImages.length;
     setInternalIndex(nextIndex);
-    setImageLoaded(false);
     onImageChange?.(nextIndex);
   }, [onImageChange, safeImages.length]);
 
@@ -88,8 +89,6 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     );
   }
 
-  const currentImage = safeImages[selectedIndex] || safeImages[0];
-
   return (
     <div className="w-full" aria-label={`${productName} image gallery`}>
       <div className="relative overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
@@ -105,7 +104,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
             src={currentImage}
             alt={`${productName} - image ${selectedIndex + 1} of ${safeImages.length}`}
             className={`h-full w-full object-contain transition-opacity duration-200 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
-            onLoad={() => setImageLoaded(true)}
+            onLoad={() => setLoadedImage(currentImage)}
           />
         </button>
 

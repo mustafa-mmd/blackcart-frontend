@@ -1,5 +1,5 @@
 // src/pages/admin/AdminOrders.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Package, 
@@ -14,11 +14,20 @@ import {
   Edit,
   Calendar,
   DollarSign,
-  AlertCircle
+  AlertCircle,
+  Trash2
 } from 'lucide-react';
 import DataTable from '../../components/admin/DataTable';
-import { adminService, Order } from '../../services/adminServiceMethods';
+import { adminService } from '../../services/adminServiceMethods';
+import type { Order, OrderStatus } from '../../types';
 import toast from 'react-hot-toast';
+
+type BulkOrderAction = Extract<OrderStatus, 'processing' | 'shipped' | 'delivered' | 'cancelled'> | 'delete';
+
+const getApiErrorMessage = (error: unknown, fallback: string) => {
+  const response = (error as { response?: { data?: { message?: string; error?: string } } })?.response;
+  return response?.data?.message || response?.data?.error || fallback;
+};
 
 const AdminOrders: React.FC = () => {
   const navigate = useNavigate();
@@ -28,6 +37,7 @@ const AdminOrders: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('active'); // ✅ Changed from 'all' to 'active'
   const [paymentFilter, setPaymentFilter] = useState('all');
   const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
+  const [bulkAction, setBulkAction] = useState<BulkOrderAction | null>(null);
   const [stats, setStats] = useState({
     totalRevenue: 0,
     totalOrders: 0,
@@ -45,10 +55,10 @@ const AdminOrders: React.FC = () => {
     hasPrev: false,
   });
 
-  const fetchOrders = async (page = 1) => {
+  const fetchOrders = useCallback(async (page = 1) => {
     try {
       setLoading(true);
-      const params: any = {
+      const params: Record<string, string | number> = {
         page,
         limit: pagination.limit,
       };
@@ -74,41 +84,69 @@ const AdminOrders: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [pagination.limit, paymentFilter, searchTerm, statusFilter]);
 
   useEffect(() => {
-    fetchOrders();
-  }, [statusFilter, paymentFilter]);
-
-  const handleSearch = (value: string) => {
-    setSearchTerm(value);
-    const timeoutId = setTimeout(() => {
-      fetchOrders(1);
-    }, 500);
-    return () => clearTimeout(timeoutId);
-  };
+    const timeoutId = window.setTimeout(() => {
+      void fetchOrders(1);
+    }, searchTerm ? 400 : 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [fetchOrders, searchTerm]);
 
   const handlePageChange = (page: number) => {
     fetchOrders(page);
   };
 
-  const handleBulkStatusUpdate = async (status: string) => {
+  const handleBulkStatusUpdate = async (status: Exclude<BulkOrderAction, 'delete'>) => {
     if (selectedOrders.length === 0) {
       toast.error('Please select orders first');
       return;
     }
 
+    if (status === 'cancelled' && !window.confirm(
+      `Cancel ${selectedOrders.length} selected order${selectedOrders.length === 1 ? '' : 's'}? Reserved inventory and coupon usage will be restored.`
+    )) return;
+
     try {
+      setBulkAction(status);
       toast.loading(`Updating ${selectedOrders.length} orders...`, { id: 'bulk-update' });
-      
       const response = await adminService.bulkUpdateOrders(selectedOrders, { status });
-      
-      toast.success(`${selectedOrders.length} orders updated to ${status}`, { id: 'bulk-update' });
+
+      const modified = response.data?.modified ?? 0;
+      const skipped = response.data?.skipped ?? 0;
+      const message = response.message || `${modified} order${modified === 1 ? '' : 's'} marked as ${status}`;
+      toast.success(skipped > 0 ? `${message}; ${skipped} final or unchanged` : message, { id: 'bulk-update' });
       setSelectedOrders([]);
-      fetchOrders(pagination.page);
-    } catch (error) {
+      await fetchOrders(pagination.page);
+    } catch (error: unknown) {
       console.error('Error updating orders:', error);
-      toast.error('Failed to update orders', { id: 'bulk-update' });
+      toast.error(getApiErrorMessage(error, 'Failed to update orders'), { id: 'bulk-update' });
+    } finally {
+      setBulkAction(null);
+    }
+  };
+
+  const handleDeleteOrders = async (orderIds: string[]) => {
+    if (orderIds.length === 0) {
+      toast.error('Please select orders first');
+      return;
+    }
+    if (!window.confirm(
+      `Permanently delete ${orderIds.length} order${orderIds.length === 1 ? '' : 's'}? This cannot be undone. Inventory for active orders will be restored.`
+    )) return;
+
+    try {
+      setBulkAction('delete');
+      toast.loading(`Deleting ${orderIds.length} order${orderIds.length === 1 ? '' : 's'}...`, { id: 'bulk-delete' });
+      const response = await adminService.bulkDeleteOrders(orderIds);
+      toast.success(response.message || `${response.data?.deleted ?? 0} orders deleted`, { id: 'bulk-delete' });
+      setSelectedOrders((current) => current.filter((id) => !orderIds.includes(id)));
+      await fetchOrders(pagination.page);
+    } catch (error: unknown) {
+      console.error('Error deleting orders:', error);
+      toast.error(getApiErrorMessage(error, 'Failed to delete orders'), { id: 'bulk-delete' });
+    } finally {
+      setBulkAction(null);
     }
   };
 
@@ -122,7 +160,7 @@ const AdminOrders: React.FC = () => {
         search: searchTerm || undefined
       });
       
-      const csvData = response.data;
+      const csvData = response.data as Array<Record<string, unknown>> | undefined;
       
       if (!csvData || csvData.length === 0) {
         toast.error('No data to export', { id: 'export-orders' });
@@ -130,9 +168,9 @@ const AdminOrders: React.FC = () => {
       }
       
       const headers = Object.keys(csvData[0]).join(',');
-      const rows = csvData.map((row: any) => 
+      const rows = csvData.map((row) =>
         Object.values(row).map(value => 
-          typeof value === 'string' ? `"${value.replace(/"/g, '""')}"` : value
+          typeof value === 'string' ? `"${value.replace(/"/g, '""')}"` : value ?? ''
         ).join(',')
       );
       const csvContent = [headers, ...rows].join('\n');
@@ -212,14 +250,16 @@ const AdminOrders: React.FC = () => {
       header: (
         <input
           type="checkbox"
+          aria-label="Select all orders on this page"
           checked={selectedOrders.length === orders.length && orders.length > 0}
           onChange={handleSelectAll}
           className="h-4 w-4 text-blue-600 rounded border-gray-300"
         />
       ),
-      render: (_: any, row: Order) => (
+      render: (_: unknown, row: Order) => (
         <input
           type="checkbox"
+          aria-label={`Select order ${row.invoiceNumber || row._id}`}
           checked={selectedOrders.includes(row._id)}
           onChange={() => handleSelectOrder(row._id)}
           onClick={(e) => e.stopPropagation()}
@@ -246,7 +286,7 @@ const AdminOrders: React.FC = () => {
     {
       key: 'customer',
       header: 'Customer',
-      render: (value: any, row: Order) => (
+      render: (_value: unknown, row: Order) => (
         <div>
           <div className="font-medium text-gray-900">
             {row.user?.name || row.shippingAddress?.fullName || 'N/A'}
@@ -319,6 +359,18 @@ const AdminOrders: React.FC = () => {
       >
         <Edit className="h-4 w-4" />
       </button>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          void handleDeleteOrders([row._id]);
+        }}
+        disabled={bulkAction !== null}
+        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition disabled:cursor-not-allowed disabled:opacity-50"
+        title="Delete Order"
+        aria-label={`Delete order ${row.invoiceNumber || row._id}`}
+      >
+        <Trash2 className="h-4 w-4" />
+      </button>
     </div>
   );
 
@@ -378,7 +430,8 @@ const AdminOrders: React.FC = () => {
                   type="text"
                   placeholder="Search orders by invoice, customer name, or email..."
                   className="w-full pl-4 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  onChange={(e) => handleSearch(e.target.value)}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                 />
                 <Filter className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               </div>
@@ -467,27 +520,39 @@ const AdminOrders: React.FC = () => {
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => handleBulkStatusUpdate('processing')}
-                className="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition"
+                disabled={bulkAction !== null}
+                className="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Mark as Processing
+                {bulkAction === 'processing' ? 'Updating...' : 'Mark as Processing'}
               </button>
               <button
                 onClick={() => handleBulkStatusUpdate('shipped')}
-                className="px-4 py-2 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition"
+                disabled={bulkAction !== null}
+                className="px-4 py-2 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Mark as Shipped
+                {bulkAction === 'shipped' ? 'Updating...' : 'Mark as Shipped'}
               </button>
               <button
                 onClick={() => handleBulkStatusUpdate('delivered')}
-                className="px-4 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition"
+                disabled={bulkAction !== null}
+                className="px-4 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Mark as Delivered
+                {bulkAction === 'delivered' ? 'Updating...' : 'Mark as Delivered'}
               </button>
               <button
                 onClick={() => handleBulkStatusUpdate('cancelled')}
-                className="px-4 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition"
+                disabled={bulkAction !== null}
+                className="px-4 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Cancel Selected
+                {bulkAction === 'cancelled' ? 'Cancelling...' : 'Cancel Selected'}
+              </button>
+              <button
+                onClick={() => void handleDeleteOrders(selectedOrders)}
+                disabled={bulkAction !== null}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:cursor-not-allowed disabled:opacity-50 inline-flex items-center"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                {bulkAction === 'delete' ? 'Deleting...' : 'Delete Selected'}
               </button>
             </div>
           </div>

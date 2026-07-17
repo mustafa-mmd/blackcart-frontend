@@ -520,12 +520,13 @@ updateAdminOrder: async (id: string, data: any): Promise<ApiResponse<Order>> => 
   },
 
   // ✅ NEW: Bulk update orders (for admin quick actions)
-  bulkUpdateOrders: async (orderIds: string[], updateData: { status?: string, trackingNumber?: string, carrier?: string }): Promise<ApiResponse<{ matched: number; modified: number }>> => {
+  bulkUpdateOrders: async (orderIds: string[], updateData: { status?: string, trackingNumber?: string, carrier?: string }): Promise<ApiResponse<{ matched: number; modified: number; skipped: number; notFound: number }>> => {
     try {
       const response = await api.put('/admin/orders/bulk/update', { orderIds, updateData });
       return response.data;
-    } catch (error: any) {
-      console.error('Bulk update orders error:', error.response?.data || error.message);
+    } catch (error: unknown) {
+      const details = (error as { response?: { data?: unknown }; message?: string });
+      console.error('Bulk update orders error:', details.response?.data || details.message);
       throw error;
     }
   },
@@ -534,6 +535,17 @@ updateAdminOrder: async (id: string, data: any): Promise<ApiResponse<Order>> => 
 bulkUpdateOrderStatus: async (orderIds: string[], status: string): Promise<ApiResponse<{ matched: number; modified: number }>> => {
   return adminService.bulkUpdateOrders(orderIds, { status });
 },
+
+  bulkDeleteOrders: async (orderIds: string[]): Promise<ApiResponse<{ matched: number; deleted: number; notFound: number; inventoryRestored: number }>> => {
+    try {
+      const response = await api.delete('/admin/orders/bulk/delete', { data: { orderIds } });
+      return response.data;
+    } catch (error: unknown) {
+      const details = (error as { response?: { data?: unknown }; message?: string });
+      console.error('Bulk delete orders error:', details.response?.data || details.message);
+      throw error;
+    }
+  },
 
   // Analytics
   getSalesAnalytics: async (period: 'daily' | 'weekly' | 'monthly' | 'yearly' = 'monthly'): Promise<ApiResponse<{

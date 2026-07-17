@@ -613,6 +613,7 @@ const HomePage: React.FC = () => {
   const activeBanners = banners.length > 0 ? banners : defaultBanners;
   const activeBanner = activeBanners[currentSlide] || activeBanners[0];
   const desktopBannerUrl = resolveBannerUrl(activeBanner.url);
+  const hasMobileBannerImage = Boolean(activeBanner.mobileUrl);
   const rawMobileBannerUrl = activeBanner.mobileUrl || activeBanner.url;
   const mobileBannerUrl = resolveBannerUrl(rawMobileBannerUrl);
 
@@ -740,7 +741,7 @@ const HomePage: React.FC = () => {
       </Helmet>
       {/* ─── HERO SLIDER SECTION ──────────────────────────────────────────────────── */}
       <section
-        className="relative overflow-hidden text-white w-full aspect-[4/3] md:aspect-[16/5]"
+        className="relative overflow-hidden text-white w-full aspect-[3/5] md:aspect-[16/5]"
         style={{
           fontFamily: "'DM Sans', sans-serif",
           background: "#020817",
@@ -770,7 +771,7 @@ const HomePage: React.FC = () => {
                     alt={banner.title || "Promotional Banner"}
                     decoding="async"
                     fetchPriority="high"
-                    className="h-full w-full select-none object-cover"
+                    className={`h-full w-full select-none ${hasMobileBannerImage ? "object-cover" : "object-contain md:object-cover"}`}
                   />
                 </picture>
 

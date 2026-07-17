@@ -120,6 +120,7 @@ const generateInvoiceHTML = (invoiceData: any) => {
         table { width: 100%; border-collapse: collapse; margin: 30px 0; }
         th { background: #f3f4f6; padding: 12px; text-align: left; }
         td { padding: 12px; border-bottom: 1px solid #e5e7eb; }
+        .item-color { margin-top: 4px; color: #6b7280; font-size: 12px; }
         .totals { text-align: right; margin-top: 30px; }
         .total-row { font-size: 18px; font-weight: bold; border-top: 2px solid #000; padding-top: 10px; }
         .footer { margin-top: 50px; text-align: center; color: #6b7280; font-size: 12px; }
@@ -166,7 +167,10 @@ const generateInvoiceHTML = (invoiceData: any) => {
         <tbody>
           ${(data.items || data.orderItems || []).map((item: any) => `
             <tr>
-              <td>${item.description || item.name}</td>
+              <td>
+                <div>${item.description || item.name}</div>
+                ${item.selectedColor?.name ? `<div class="item-color">Color: ${item.selectedColor.name}</div>` : ''}
+              </td>
               <td>${item.quantity}</td>
               <td>PKR ${(item.unitPrice || item.price)?.toLocaleString()}</td>
               <td>PKR ${(item.amount || (item.price * item.quantity))?.toLocaleString()}</td>

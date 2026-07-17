@@ -18,6 +18,7 @@ export const generateDeliverySlipHTML = (slipData: any): string => {
       <td style="padding: 8px; border-bottom: 1px solid #ddd;">
         <strong>${item.name}</strong><br>
         <small style="color: #666;">SKU: ${item.sku}</small>
+        ${item.selectedColor?.name ? `<br><small style="color: #666;">Color: ${item.selectedColor.name}</small>` : ''}
       </td>
       <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: center;">${item.quantity}</td>
       <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">PKR ${item.price.toLocaleString()}</td>

@@ -60,7 +60,9 @@ const InvoicePage: React.FC = () => {
       const invoiceData = response.data
       
       // Create HTML content
-      const printContent = componentRef.current?.innerHTML || ''
+      const exportContent = componentRef.current?.cloneNode(true) as HTMLElement | undefined
+      exportContent?.querySelectorAll('[data-invoice-actions]').forEach(element => element.remove())
+      const printContent = exportContent?.innerHTML || ''
       const styles = Array.from(document.styleSheets)
         .map(sheet => {
           try {

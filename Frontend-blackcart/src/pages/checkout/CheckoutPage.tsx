@@ -1,6 +1,6 @@
 // // src/pages/checkout/CheckoutPage.tsx
 // import React, { useState, useEffect, useRef } from "react";
-// import { useNavigate } from "react-router-dom";
+// import { useNavigate, useLocation } from "react-router-dom"; // ✅ Added useLocation
 // import { motion, AnimatePresence } from "framer-motion";
 // import {
 //   ShoppingBag,
@@ -15,14 +15,14 @@
 //   Home,
 //   Check,
 //   Wallet,
+//   Zap,
+//   Clock,
 // } from "lucide-react";
 // import { useCart } from "../../context/CartContext";
 // import { useMutation } from "@tanstack/react-query";
 // import { orderService } from "../../services/orderService";
 // import { paymentService } from "../../services/paymentService";
 // import toast from "react-hot-toast";
-// // Login requirement disabled - route kept open for guest checkout
-// // import PrivateRoute from '../../components/common/PrivateRoute'
 // import AddressForm from "./AddressForm";
 // import PaymentMethods from "./PaymentMethods";
 // import Loader from "../../components/common/Loader";
@@ -68,11 +68,10 @@
 //   isDefault?: boolean;
 // }
 
-// // ✅ FIXED: Enhanced image URL extractor that handles ALL possible image formats
+// // ✅ Enhanced image URL extractor that handles ALL possible image formats
 // const getItemImageUrl = (item: any): string => {
 //   if (!item) return FALLBACK_IMAGE;
 
-//   // Helper function to check if URL is absolute
 //   const isAbsoluteUrl = (url: string) => {
 //     return (
 //       url.startsWith("http://") ||
@@ -81,7 +80,6 @@
 //     );
 //   };
 
-//   // Helper function to format URL
 //   const formatUrl = (url: string): string => {
 //     if (!url) return FALLBACK_IMAGE;
 //     if (isAbsoluteUrl(url)) return url;
@@ -92,33 +90,21 @@
 //     return `${API_BASE_URL}/uploads/${url}`;
 //   };
 
-//   // Try to get image from item.product (if product is nested)
 //   const productObj = item.product || item;
 
-//   // Case 1: Check if item has direct image property
 //   if (item.image) {
-//     if (typeof item.image === "string") {
-//       return formatUrl(item.image);
-//     }
-//     if (typeof item.image === "object" && item.image.url) {
+//     if (typeof item.image === "string") return formatUrl(item.image);
+//     if (typeof item.image === "object" && item.image.url)
 //       return formatUrl(item.image.url);
-//     }
 //   }
 
-//   // Case 2: Check product object's images array (most common)
 //   if (
 //     productObj.images &&
 //     Array.isArray(productObj.images) &&
 //     productObj.images.length > 0
 //   ) {
 //     const firstImage = productObj.images[0];
-
-//     // If first image is a string (URL)
-//     if (typeof firstImage === "string") {
-//       return formatUrl(firstImage);
-//     }
-
-//     // If first image is an object with url property
+//     if (typeof firstImage === "string") return formatUrl(firstImage);
 //     if (firstImage && typeof firstImage === "object") {
 //       if (firstImage.url) return formatUrl(firstImage.url);
 //       if (firstImage.path) return formatUrl(firstImage.path);
@@ -126,58 +112,41 @@
 //     }
 //   }
 
-//   // Case 3: Check product object's image property (single image)
 //   if (productObj.image) {
-//     if (typeof productObj.image === "string") {
+//     if (typeof productObj.image === "string")
 //       return formatUrl(productObj.image);
-//     }
-//     if (typeof productObj.image === "object" && productObj.image.url) {
+//     if (typeof productObj.image === "object" && productObj.image.url)
 //       return formatUrl(productObj.image.url);
-//     }
 //   }
 
-//   // Case 4: Check for thumbnail or mainImage
 //   if (productObj.thumbnail) {
-//     if (typeof productObj.thumbnail === "string") {
+//     if (typeof productObj.thumbnail === "string")
 //       return formatUrl(productObj.thumbnail);
-//     }
 //   }
 
 //   if (productObj.mainImage) {
-//     if (typeof productObj.mainImage === "string") {
+//     if (typeof productObj.mainImage === "string")
 //       return formatUrl(productObj.mainImage);
-//     }
 //   }
 
-//   // Case 5: Fallback to placeholder
-//   console.log(
-//     "⚠️ No image found for product:",
-//     productObj.name || "Unknown",
-//     "Item structure:",
-//     item,
-//   );
 //   return FALLBACK_IMAGE;
 // };
 
-// // ✅ FIXED: Get product name from any structure
 // const getItemName = (item: any): string => {
 //   const productObj = item.product || item;
 //   return productObj?.name || productObj?.title || "Product";
 // };
 
-// // ✅ FIXED: Get product price from any structure
 // const getItemPrice = (item: any): number => {
 //   const productObj = item.product || item;
 //   return productObj?.discountPrice || productObj?.price || 0;
 // };
 
-// // ✅ FIXED: Get product ID from any structure
 // const getItemId = (item: any): string => {
 //   const productObj = item.product || item;
 //   return productObj?._id || productObj?.id || "";
 // };
 
-// // ✅ FIXED: Get product SKU from any structure
 // const getItemSku = (item: any): string => {
 //   const productObj = item.product || item;
 //   return productObj?.sku || `SKU-${getItemId(item).slice(-6)}`;
@@ -196,6 +165,7 @@
 
 // const CheckoutPage: React.FC = () => {
 //   const navigate = useNavigate();
+//   const location = useLocation(); // ✅ Added to read state from CartPage
 //   const { cartItems, clearCart } = useCart();
 //   const addressFormRef = useRef<any>(null);
 
@@ -206,6 +176,18 @@
 //   const [orderNotes, setOrderNotes] = useState("");
 //   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 //   const [showNewAddressForm, setShowNewAddressForm] = useState(false);
+
+//   // ✅ UPDATED: Reads the deliveryMethod passed from CartPage
+//   const [deliveryMethod, setDeliveryMethod] = useState<"standard" | "express">(
+//     () => {
+//       // Check if user came from CartPage and brought a delivery choice
+//       if (location.state && (location.state as any).deliveryMethod) {
+//         return (location.state as any).deliveryMethod;
+//       }
+//       return "standard"; // Fallback to standard if they came directly to checkout
+//     },
+//   );
+
 //   const [shippingEstimate, setShippingEstimate] = useState({
 //     price: 200,
 //     days: "3-5",
@@ -220,7 +202,6 @@
 //   const addresses: Address[] = [];
 //   const addressesLoading = false;
 
-//   // ✅ FIXED: Enhanced cart items processing with better error handling
 //   const processedCartItems = React.useMemo(() => {
 //     return cartItems
 //       .filter((item) => {
@@ -267,9 +248,7 @@
 //         selectedAddress?.city,
 //       );
 //       setAvailablePaymentMethods(methods);
-//     } catch {
-//       // Non-fatal — COD is default
-//     }
+//     } catch {}
 //   };
 
 //   useEffect(() => {
@@ -279,18 +258,34 @@
 //   }, [addresses]);
 
 //   useEffect(() => {
+//     let standardCost = 0;
+//     let expressCost = 350;
+//     let standardDays = "3-5";
+//     let expressDays = "1-2";
+
+//     standardCost = orderSummary.subtotal >= 5000 ? 0 : 200;
+
 //     if (selectedAddress?.city) {
 //       const cityData = pakistanCities.find(
 //         (c) => c.name === selectedAddress.city,
 //       );
 //       if (cityData) {
-//         setShippingEstimate({
-//           price: orderSummary.subtotal >= 5000 ? 0 : cityData.shippingCost,
-//           days: `${cityData.minDeliveryDays}-${cityData.maxDeliveryDays}`,
-//         });
+//         standardDays = `${cityData.minDeliveryDays}-${cityData.maxDeliveryDays}`;
 //       }
 //     }
-//   }, [selectedAddress, orderSummary.subtotal]);
+
+//     if (deliveryMethod === "standard") {
+//       setShippingEstimate({
+//         price: standardCost,
+//         days: standardDays,
+//       });
+//     } else {
+//       setShippingEstimate({
+//         price: expressCost,
+//         days: expressDays,
+//       });
+//     }
+//   }, [selectedAddress, orderSummary.subtotal, deliveryMethod]);
 
 //   const createOrderMutation = useMutation({
 //     mutationFn: (orderData: any) => orderService.createOrder(orderData),
@@ -356,6 +351,7 @@
 //     taxPrice: 0,
 //     totalPrice: orderSummary.total,
 //     notes: orderNotes || "",
+//     deliveryMethod: deliveryMethod,
 //   });
 
 //   const validateBeforeOrder = (): boolean => {
@@ -484,7 +480,6 @@
 //     { number: 3, title: "Confirm", icon: CheckCircle },
 //   ];
 
-//   // Handle image error
 //   const handleImageError = (itemId: string) => {
 //     setImageErrors((prev) => ({ ...prev, [itemId]: true }));
 //   };
@@ -530,8 +525,6 @@
 //   }
 
 //   return (
-//     // Login requirement disabled - route kept open for guest checkout
-//     // <PrivateRoute>
 //     <div className="min-h-screen bg-gray-50 py-8">
 //       <div className="container-lg section-padding">
 //         <div className="mb-8">
@@ -558,7 +551,11 @@
 //                 <div key={stepItem.number} className="flex items-center flex-1">
 //                   <div className="flex flex-col items-center">
 //                     <div
-//                       className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 ${isActive ? "bg-primary-600 text-white" : "bg-gray-200 text-gray-600"}`}
+//                       className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 ${
+//                         isActive
+//                           ? "bg-primary-600 text-white"
+//                           : "bg-gray-200 text-gray-600"
+//                       }`}
 //                     >
 //                       {isCompleted ? (
 //                         <CheckCircle className="h-6 w-6" />
@@ -567,14 +564,18 @@
 //                       )}
 //                     </div>
 //                     <span
-//                       className={`text-sm font-medium ${isActive ? "text-primary-600" : "text-gray-500"}`}
+//                       className={`text-sm font-medium ${
+//                         isActive ? "text-primary-600" : "text-gray-500"
+//                       }`}
 //                     >
 //                       {stepItem.title}
 //                     </span>
 //                   </div>
 //                   {index < steps.length - 1 && (
 //                     <div
-//                       className={`flex-1 h-1 mx-4 ${isCompleted ? "bg-primary-600" : "bg-gray-200"}`}
+//                       className={`flex-1 h-1 mx-4 ${
+//                         isCompleted ? "bg-primary-600" : "bg-gray-200"
+//                       }`}
 //                     />
 //                   )}
 //                 </div>
@@ -586,7 +587,7 @@
 //         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 //           <div className="lg:col-span-2 space-y-8">
 //             <AnimatePresence mode="wait">
-//               {/* STEP 1: Shipping Address */}
+//               {/* STEP 1: Shipping Address & Delivery Method */}
 //               {step === 1 && (
 //                 <motion.div
 //                   key="step-1"
@@ -595,6 +596,7 @@
 //                   exit={{ opacity: 0, x: 20 }}
 //                   className="space-y-6"
 //                 >
+//                   {/* --- Address Selection --- */}
 //                   {addressesLoading ? (
 //                     <div className="flex justify-center py-8">
 //                       <Loader size="md" />
@@ -609,7 +611,11 @@
 //                           <div
 //                             key={address._id}
 //                             onClick={() => handleAddressSelect(address)}
-//                             className={`p-4 border rounded-lg cursor-pointer transition-all hover:border-primary-500 hover:shadow-md ${selectedAddress?._id === address._id ? "border-primary-500 bg-primary-50" : "border-gray-200"}`}
+//                             className={`p-4 border rounded-lg cursor-pointer transition-all hover:border-primary-500 hover:shadow-md ${
+//                               selectedAddress?._id === address._id
+//                                 ? "border-primary-500 bg-primary-50"
+//                                 : "border-gray-200"
+//                             }`}
 //                           >
 //                             <div className="flex items-start justify-between">
 //                               <div className="flex items-start">
@@ -667,11 +673,91 @@
 //                       )}
 //                     </div>
 //                   )}
-//                   {/* ✅ FIXED: Continue to Payment is always visible now. It's disabled
-//                         until an address is selected/saved — filling the "Add Address" form
-//                         and clicking its own "Save Address" button will set selectedAddress
-//                         and auto-advance you, but this button stays here as a visible,
-//                         reliable way forward once an address exists either way. */}
+
+//                   {/* ✨ Delivery Method Selection Cards */}
+//                   {selectedAddress && (
+//                     <div className="card p-6">
+//                       <h2 className="text-xl font-bold text-gray-900 mb-4">
+//                         Delivery Method
+//                       </h2>
+//                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+//                         {/* Standard Delivery */}
+//                         <div
+//                           onClick={() => setDeliveryMethod("standard")}
+//                           className={`relative p-5 border-2 rounded-xl cursor-pointer transition-all ${
+//                             deliveryMethod === "standard"
+//                               ? "border-blue-500 bg-blue-50"
+//                               : "border-gray-200 hover:border-blue-300"
+//                           }`}
+//                         >
+//                           <div className="flex items-start justify-between mb-2">
+//                             <div className="flex items-center gap-2">
+//                               <Truck className="h-5 w-5 text-blue-500" />
+//                               <span className="font-semibold text-gray-800">
+//                                 Standard Delivery
+//                               </span>
+//                             </div>
+//                             {deliveryMethod === "standard" && (
+//                               <div className="h-5 w-5 rounded-full bg-blue-500 flex items-center justify-center">
+//                                 <Check className="h-3 w-3 text-white" />
+//                               </div>
+//                             )}
+//                           </div>
+//                           <div className="flex items-center text-sm text-gray-500 mb-2">
+//                             <Clock className="h-4 w-4 mr-1" />
+//                             {shippingEstimate.days} business days
+//                           </div>
+//                           <div className="text-lg font-bold text-gray-900">
+//                             PKR{" "}
+//                             {orderSummary.subtotal >= 5000 &&
+//                             deliveryMethod === "standard"
+//                               ? "0"
+//                               : shippingEstimate.price.toLocaleString()}
+//                           </div>
+//                           {orderSummary.subtotal >= 5000 && (
+//                             <span className="absolute top-2 right-12 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded font-medium">
+//                               FREE
+//                             </span>
+//                           )}
+//                         </div>
+
+//                         {/* Express Delivery */}
+//                         <div
+//                           onClick={() => setDeliveryMethod("express")}
+//                           className={`relative p-5 border-2 rounded-xl cursor-pointer transition-all ${
+//                             deliveryMethod === "express"
+//                               ? "border-yellow-500 bg-yellow-50"
+//                               : "border-gray-200 hover:border-yellow-300"
+//                           }`}
+//                         >
+//                           <div className="flex items-start justify-between mb-2">
+//                             <div className="flex items-center gap-2">
+//                               <Zap className="h-5 w-5 text-yellow-500" />
+//                               <span className="font-semibold text-gray-800">
+//                                 Express Delivery
+//                               </span>
+//                             </div>
+//                             {deliveryMethod === "express" && (
+//                               <div className="h-5 w-5 rounded-full bg-yellow-500 flex items-center justify-center">
+//                                 <Check className="h-3 w-3 text-white" />
+//                               </div>
+//                             )}
+//                           </div>
+//                           <div className="flex items-center text-sm text-yellow-600 mb-2">
+//                             <Zap className="h-4 w-4 mr-1" />
+//                             1-2 business days
+//                           </div>
+//                           <div className="text-lg font-bold text-gray-900">
+//                             PKR 350
+//                           </div>
+//                           <span className="absolute top-2 right-12 text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded font-medium">
+//                             RECOMMENDED
+//                           </span>
+//                         </div>
+//                       </div>
+//                     </div>
+//                   )}
+
 //                   <div className="flex justify-between">
 //                     <button
 //                       onClick={() => navigate("/cart")}
@@ -730,7 +816,11 @@
 //                     </h2>
 //                     <div
 //                       onClick={() => handlePaymentSelect("cod")}
-//                       className={`p-4 border rounded-lg cursor-pointer transition-all ${selectedPaymentMethod === "cod" ? "border-primary-500 bg-primary-50" : "border-gray-200 hover:border-primary-300"}`}
+//                       className={`p-4 border rounded-lg cursor-pointer transition-all ${
+//                         selectedPaymentMethod === "cod"
+//                           ? "border-primary-500 bg-primary-50"
+//                           : "border-gray-200 hover:border-primary-300"
+//                       }`}
 //                     >
 //                       <div className="flex items-center">
 //                         <Wallet className="h-6 w-6 text-gray-600 mr-3" />
@@ -809,7 +899,7 @@
 //             </AnimatePresence>
 //           </div>
 
-//           {/* Order Summary sidebar - FIXED with proper image display */}
+//           {/* Order Summary sidebar */}
 //           <div>
 //             <motion.div
 //               initial={{ opacity: 0, y: 20 }}
@@ -827,11 +917,6 @@
 //                   const itemPrice = item.productPrice;
 //                   const quantity = item.quantity;
 //                   const itemName = item.productName;
-
-//                   console.log(
-//                     `🖼️ Item ${index}: ${itemName} - Image URL:`,
-//                     imageUrl,
-//                   );
 
 //                   return (
 //                     <div
@@ -883,7 +968,11 @@
 //                   </span>
 //                 </div>
 //                 <div className="flex justify-between text-sm">
-//                   <span className="text-gray-600">Shipping</span>
+//                   <span className="text-gray-600">
+//                     {deliveryMethod === "standard"
+//                       ? "Standard Shipping"
+//                       : "Express Shipping"}
+//                   </span>
 //                   <span className="font-medium">
 //                     {orderSummary.shipping === 0 ? (
 //                       <span className="text-green-600">Free</span>
@@ -904,21 +993,25 @@
 //                 <div className="flex items-center mb-1">
 //                   <Truck className="h-4 w-4 text-primary-600 mr-2" />
 //                   <span className="text-sm font-medium">
-//                     Estimated Delivery
+//                     {deliveryMethod === "standard"
+//                       ? "Estimated Delivery"
+//                       : "Express Delivery"}
 //                   </span>
 //                 </div>
 //                 <p className="text-xs text-gray-600">
 //                   {shippingEstimate.days} business days
-//                   {shippingEstimate.price === 0 && (
-//                     <span className="block text-green-600 font-medium mt-0.5">
-//                       🎉 Free Shipping!
-//                     </span>
-//                   )}
+//                   {orderSummary.shipping === 0 &&
+//                     deliveryMethod === "standard" && (
+//                       <span className="block text-green-600 font-medium mt-0.5">
+//                         🎉 Free Shipping!
+//                       </span>
+//                     )}
 //                 </p>
 //               </div>
 
 //               {selectedPaymentMethod === "cod" &&
-//                 orderSummary.subtotal < 5000 && (
+//                 orderSummary.subtotal < 5000 &&
+//                 deliveryMethod === "standard" && (
 //                   <div className="mb-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
 //                     <div className="flex items-start">
 //                       <AlertCircle className="h-4 w-4 text-yellow-600 mr-2 shrink-0 mt-0.5" />
@@ -943,7 +1036,6 @@
 //         </div>
 //       </div>
 //     </div>
-//     // </PrivateRoute>
 //   );
 // };
 
@@ -1043,6 +1135,23 @@ const getItemImageUrl = (item: any): string => {
 
   const productObj = item.product || item;
 
+  // ✅ FIXED: Prefer the selected color/variant's own image first, so the
+  // checkout summary shows the same photo as the color the user picked.
+  const variantForImage =
+    typeof item.variant === "object" ? item.variant : null;
+  if (
+    variantForImage?.images &&
+    Array.isArray(variantForImage.images) &&
+    variantForImage.images.length > 0
+  ) {
+    const variantImg = variantForImage.images[0];
+    if (typeof variantImg === "string") return formatUrl(variantImg);
+    if (variantImg && typeof variantImg === "object") {
+      if (variantImg.url) return formatUrl(variantImg.url);
+      if (variantImg.path) return formatUrl(variantImg.path);
+    }
+  }
+
   if (item.image) {
     if (typeof item.image === "string") return formatUrl(item.image);
     if (typeof item.image === "object" && item.image.url)
@@ -1101,6 +1210,36 @@ const getItemId = (item: any): string => {
 const getItemSku = (item: any): string => {
   const productObj = item.product || item;
   return productObj?.sku || `SKU-${getItemId(item).slice(-6)}`;
+};
+
+// ✅ FIXED: Extract the selected color/variant id so it can be sent to the
+// backend when the order is created. Without this, orders for products that
+// require a color were rejected with "Please select a color for ...".
+const getItemVariantId = (item: any): string => {
+  if (item.variant) {
+    if (typeof item.variant === "string") return item.variant;
+    if (typeof item.variant === "object" && item.variant._id) {
+      return String(item.variant._id);
+    }
+  }
+  if (item.selectedColor && item.selectedColor._id) {
+    return String(item.selectedColor._id);
+  }
+  return "";
+};
+
+// ✅ FIXED: Extract color name/swatch so it can be displayed in the order
+// summary on the checkout page (it was only ever shown on the cart page).
+const getItemColorInfo = (
+  item: any,
+): { name: string; value: string } | null => {
+  if (item.selectedColor && item.selectedColor.name) {
+    return { name: item.selectedColor.name, value: item.selectedColor.value };
+  }
+  if (item.variant && typeof item.variant === "object" && item.variant.name) {
+    return { name: item.variant.name, value: item.variant.value };
+  }
+  return null;
 };
 
 // Helper: extract order ID from any response shape
@@ -1171,6 +1310,9 @@ const CheckoutPage: React.FC = () => {
         productImage: getItemImageUrl(item),
         productSku: getItemSku(item),
         quantity: item.quantity || 1,
+        // ✅ FIXED: carry the selected color through to checkout
+        variantId: getItemVariantId(item),
+        colorInfo: getItemColorInfo(item),
       }));
   }, [cartItems]);
 
@@ -1208,24 +1350,21 @@ const CheckoutPage: React.FC = () => {
     }
   }, [addresses]);
 
-  // Calculate shipping based on delivery method and city
   useEffect(() => {
     let standardCost = 0;
     let expressCost = 350;
     let standardDays = "3-5";
     let expressDays = "1-2";
 
+    standardCost = orderSummary.subtotal >= 5000 ? 0 : 200;
+
     if (selectedAddress?.city) {
       const cityData = pakistanCities.find(
         (c) => c.name === selectedAddress.city,
       );
       if (cityData) {
-        standardCost =
-          orderSummary.subtotal >= 5000 ? 0 : cityData.shippingCost;
         standardDays = `${cityData.minDeliveryDays}-${cityData.maxDeliveryDays}`;
       }
-    } else {
-      standardCost = orderSummary.subtotal >= 5000 ? 0 : 200;
     }
 
     if (deliveryMethod === "standard") {
@@ -1287,6 +1426,11 @@ const CheckoutPage: React.FC = () => {
       price: item.productPrice,
       quantity: item.quantity,
       sku: item.productSku,
+      // ✅ FIXED: send the selected color/variant to the backend. This was
+      // missing entirely before, which is why placing an order for a
+      // product with color options failed with "Please select a color...".
+      variant: item.variantId || undefined,
+      color: item.colorInfo?.name || undefined,
     }));
 
   const buildOrderData = () => ({
@@ -1898,6 +2042,18 @@ const CheckoutPage: React.FC = () => {
                         <p className="text-sm font-medium text-gray-900 truncate">
                           {itemName}
                         </p>
+                        {/* ✅ FIXED: show the selected color, same as the cart page */}
+                        {item.colorInfo && (
+                          <p className="flex items-center gap-1 text-xs text-gray-500 mt-0.5">
+                            <span
+                              className="h-3 w-3 rounded-full border border-gray-300 flex-shrink-0"
+                              style={{
+                                backgroundColor: item.colorInfo.value,
+                              }}
+                            />
+                            {item.colorInfo.name}
+                          </p>
+                        )}
                         <p className="text-xs text-gray-500">
                           PKR {itemPrice.toLocaleString()} × {quantity}
                         </p>

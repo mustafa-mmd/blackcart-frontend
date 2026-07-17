@@ -41,7 +41,9 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({
     if (!componentRef.current) return
     
     // Get the HTML content
-    const content = componentRef.current.innerHTML
+    const exportContent = componentRef.current.cloneNode(true) as HTMLElement
+    exportContent.querySelectorAll('[data-invoice-actions]').forEach(element => element.remove())
+    const content = exportContent.innerHTML
     const styles = Array.from(document.styleSheets)
       .map(sheet => {
         try {
@@ -141,7 +143,7 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-wrap gap-3">
+        <div data-invoice-actions className="flex flex-wrap gap-3 print:hidden">
           <button
             onClick={handlePrint}
             className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"

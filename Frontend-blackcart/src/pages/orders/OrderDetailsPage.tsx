@@ -466,6 +466,12 @@ const OrderDetailsPage: React.FC = () => {
                         {order.shippingPrice === 0 ? 'FREE' : `PKR ${order.shippingPrice?.toLocaleString()}`}
                       </span>
                     </div>
+                    {order.coupon && order.coupon.discount > 0 && (
+                      <div className="flex justify-between text-green-700">
+                        <span>Discount ({order.coupon.code})</span>
+                        <span>-PKR {order.coupon.discount.toLocaleString()}</span>
+                      </div>
+                    )}
                     {order.deliveryEstimate && <p className="text-xs text-gray-500">Estimated delivery: {order.deliveryEstimate}</p>}
                     {/* TAX SECTION COMPLETELY REMOVED */}
                     {order.codCharges > 0 && (

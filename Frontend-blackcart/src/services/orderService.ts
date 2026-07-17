@@ -20,9 +20,10 @@ type CreateOrderData = {
   shippingPrice: number;
   taxPrice: number;
   totalPrice: number;
-  coupon?: { code: string; discount: number; discountType?: 'percentage' | 'fixed' };
+  couponCode?: string;
   notes?: string;
-  shippingMethod: 'normal' | 'express';
+  shippingMethod?: 'normal' | 'express';
+  deliveryMethod?: 'standard' | 'normal' | 'express';
 };
 
 type PaymentProofData = {

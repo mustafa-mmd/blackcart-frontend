@@ -1060,11 +1060,17 @@ import {
   Wallet,
   Zap,
   Clock,
+  Tag,
+  X,
 } from "lucide-react";
 import { useCart } from "../../context/CartContext";
 import { useMutation } from "@tanstack/react-query";
 import { orderService } from "../../services/orderService";
 import { paymentService } from "../../services/paymentService";
+import {
+  couponService,
+  type CouponValidationResult,
+} from "../../services/couponService";
 import toast from "react-hot-toast";
 import AddressForm from "./AddressForm";
 import PaymentMethods from "./PaymentMethods";
@@ -1288,6 +1294,11 @@ const CheckoutPage: React.FC = () => {
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
   const [isSavingAddress, setIsSavingAddress] = useState(false);
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] =
+    useState<CouponValidationResult | null>(null);
+  const [couponError, setCouponError] = useState("");
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
 
   const addresses: Address[] = [];
   const addressesLoading = false;
@@ -1322,13 +1333,56 @@ const CheckoutPage: React.FC = () => {
       0,
     );
     const shipping = shippingEstimate.price || 0;
+    const discount = Math.min(
+      appliedCoupon?.discountAmount || 0,
+      itemsPrice,
+    );
     return {
       subtotal: itemsPrice,
       shipping,
-      discount: 0,
-      total: itemsPrice + shipping,
+      discount,
+      total: itemsPrice + shipping - discount,
     };
-  }, [processedCartItems, shippingEstimate]);
+  }, [appliedCoupon, processedCartItems, shippingEstimate]);
+
+  const handleApplyCoupon = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const normalizedCode = couponCode.trim().toUpperCase();
+    if (!normalizedCode) {
+      setCouponError("Enter a coupon code");
+      return;
+    }
+
+    setCouponError("");
+    setIsValidatingCoupon(true);
+    try {
+      const result = await couponService.validateCoupon(
+        normalizedCode,
+        orderSummary.subtotal,
+      );
+      setAppliedCoupon(result);
+      setCouponCode(result.coupon.code);
+      toast.success(`Coupon ${result.coupon.code} applied`);
+    } catch (error: unknown) {
+      const message = typeof error === "object" && error !== null
+        ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
+        : "";
+      setAppliedCoupon(null);
+      setCouponError(
+        message ||
+          "Coupon could not be applied. Please try again.",
+      );
+    } finally {
+      setIsValidatingCoupon(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode("");
+    setCouponError("");
+    toast.success("Coupon removed");
+  };
 
   useEffect(() => {
     if (orderSummary.total > 0 && selectedAddress?.city) loadPaymentMethods();
@@ -1448,6 +1502,7 @@ const CheckoutPage: React.FC = () => {
     shippingPrice: orderSummary.shipping,
     taxPrice: 0,
     totalPrice: orderSummary.total,
+    couponCode: appliedCoupon?.coupon.code,
     notes: orderNotes || "",
     deliveryMethod: deliveryMethod,
   });
@@ -2067,6 +2122,68 @@ const CheckoutPage: React.FC = () => {
               </div>
 
               <div className="border-t border-gray-100 mb-4" />
+              <div className="mb-5">
+                <div className="flex items-center gap-2 text-sm font-semibold text-gray-800 mb-2">
+                  <Tag className="h-4 w-4 text-primary-600" />
+                  Coupon code
+                </div>
+                {appliedCoupon ? (
+                  <div className="flex items-center justify-between gap-3 rounded-lg border border-green-200 bg-green-50 px-3 py-2.5">
+                    <div className="min-w-0">
+                      <p className="font-mono text-sm font-bold text-green-800 truncate">
+                        {appliedCoupon.coupon.code}
+                      </p>
+                      <p className="text-xs text-green-700">
+                        You save PKR {appliedCoupon.discountAmount.toLocaleString()}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRemoveCoupon}
+                      className="rounded-md p-1.5 text-green-800 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-green-500"
+                      aria-label={`Remove coupon ${appliedCoupon.coupon.code}`}
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleApplyCoupon} className="flex gap-2">
+                    <label htmlFor="checkout-coupon" className="sr-only">
+                      Coupon code
+                    </label>
+                    <input
+                      id="checkout-coupon"
+                      type="text"
+                      value={couponCode}
+                      onChange={(event) => {
+                        setCouponCode(
+                          event.target.value
+                            .toUpperCase()
+                            .replace(/[^A-Z0-9]/g, ""),
+                        );
+                        setCouponError("");
+                      }}
+                      placeholder="Enter code"
+                      maxLength={20}
+                      autoComplete="off"
+                      className="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono uppercase outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                    />
+                    <button
+                      type="submit"
+                      disabled={isValidatingCoupon || !couponCode.trim()}
+                      className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {isValidatingCoupon ? "Checking…" : "Apply"}
+                    </button>
+                  </form>
+                )}
+                {couponError && !appliedCoupon && (
+                  <p className="mt-2 text-xs text-red-600" role="alert">
+                    {couponError}
+                  </p>
+                )}
+              </div>
+
               <div className="space-y-3 mb-6">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">
@@ -2091,6 +2208,14 @@ const CheckoutPage: React.FC = () => {
                     )}
                   </span>
                 </div>
+                {orderSummary.discount > 0 && appliedCoupon && (
+                  <div className="flex justify-between text-sm text-green-700">
+                    <span>Discount ({appliedCoupon.coupon.code})</span>
+                    <span className="font-semibold">
+                      − PKR {orderSummary.discount.toLocaleString()}
+                    </span>
+                  </div>
+                )}
                 <div className="border-t pt-3">
                   <div className="flex justify-between text-base font-bold">
                     <span>Total</span>

@@ -271,6 +271,12 @@ export const generateDeliverySlipHTML = (slipData: any): string => {
               <span class="total-label">Tax:</span>
               <span class="total-value">PKR ${totals.tax.toLocaleString()}</span>
             </div>
+            ${totals.discount > 0 ? `
+            <div class="total-row" style="color: #047857;">
+              <span class="total-label">Discount${totals.couponCode ? ` (${totals.couponCode})` : ''}:</span>
+              <span class="total-value">-PKR ${totals.discount.toLocaleString()}</span>
+            </div>
+            ` : ''}
             ${totals.codCharges > 0 ? `
             <div class="total-row">
               <span class="total-label">COD Charges:</span>

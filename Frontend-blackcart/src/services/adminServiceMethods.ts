@@ -50,11 +50,11 @@ export interface Coupon {
   code: string
   discountType: 'percentage' | 'fixed'
   discountValue: number
-  minOrderAmount?: number
-  maxDiscountAmount?: number
+  minOrderAmount: number
+  maxDiscountAmount: number | null
   validFrom: string
   validUntil: string
-  usageLimit?: number
+  usageLimit: number | null
   usedCount: number
   isActive: boolean
   createdAt: string
@@ -699,6 +699,7 @@ removeLogo: async (): Promise<ApiResponse<{ message: string }>> => {
       total: number;
       active: number;
       expired: number;
+      totalUsage: number;
       usageRate: number;
     };
   }>> => {
@@ -716,10 +717,10 @@ removeLogo: async (): Promise<ApiResponse<{ message: string }>> => {
     discountType: 'percentage' | 'fixed';
     discountValue: number;
     minOrderAmount?: number;
-    maxDiscountAmount?: number;
+    maxDiscountAmount?: number | null;
     validFrom: string;
     validUntil: string;
-    usageLimit?: number;
+    usageLimit?: number | null;
     isActive?: boolean;
   }): Promise<ApiResponse<Coupon>> => {
     const response = await api.post('/admin/coupons', data)
@@ -741,15 +742,6 @@ removeLogo: async (): Promise<ApiResponse<{ message: string }>> => {
     return response.data
   },
 
-  validateCoupon: async (code: string, orderAmount?: number): Promise<ApiResponse<{
-    valid: boolean;
-    coupon: Coupon;
-    discountAmount: number;
-    message?: string;
-  }>> => {
-    const response = await api.post('/admin/coupons/validate', { code, orderAmount })
-    return response.data
-  },
 // ========== SETTINGS MANAGEMENT ==========
 
 getSettings: async <T = any>(): Promise<ApiResponse<T>> => {

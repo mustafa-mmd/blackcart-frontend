@@ -1,5 +1,5 @@
 // src/pages/admin/AdminCoupons.tsx
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { toast } from 'react-hot-toast'
 import { 
   Tag, 
@@ -22,38 +22,35 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react'
-import { adminService } from '../../services/adminServiceMethods'
+import { adminService, type Coupon } from '../../services/adminServiceMethods'
 import Loader from '../../components/common/Loader'
-
-interface Coupon {
-  _id: string
-  code: string
-  discountType: 'percentage' | 'fixed'
-  discountValue: number
-  minOrderAmount?: number
-  maxDiscountAmount?: number
-  validFrom: string
-  validUntil: string
-  usageLimit?: number
-  usedCount: number
-  isActive: boolean
-  createdAt: string
-  updatedAt: string
-}
 
 interface CouponStats {
   total: number
   active: number
   expired: number
   totalUsage: number
-  averageDiscount: number
+  usageRate: number
+}
+
+const toDateTimeLocal = (value: string) => {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
+  return localDate.toISOString().slice(0, 16)
+}
+
+const getApiErrorMessage = (error: unknown) => {
+  if (typeof error !== 'object' || error === null) return ''
+  const response = (error as { response?: { data?: { message?: string } } }).response
+  return response?.data?.message || ''
 }
 
 const AdminCoupons: React.FC = () => {
   const [coupons, setCoupons] = useState<Coupon[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
-  const [filter, setFilter] = useState('all') // all, active, expired, inactive
+  const [filter, setFilter] = useState<'all' | 'active' | 'expired' | 'inactive'>('all')
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
@@ -62,11 +59,12 @@ const AdminCoupons: React.FC = () => {
     active: 0,
     expired: 0,
     totalUsage: 0,
-    averageDiscount: 0
+    usageRate: 0
   })
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null)
+  const [isSavingCoupon, setIsSavingCoupon] = useState(false)
   const [newCoupon, setNewCoupon] = useState({
     code: '',
     discountType: 'percentage' as 'percentage' | 'fixed',
@@ -79,11 +77,7 @@ const AdminCoupons: React.FC = () => {
     isActive: true
   })
 
-  useEffect(() => {
-    fetchCoupons()
-  }, [page, filter, searchTerm])
-
-  const fetchCoupons = async () => {
+  const fetchCoupons = useCallback(async () => {
     try {
       setLoading(true)
       const response = await adminService.getCoupons({
@@ -93,6 +87,7 @@ const AdminCoupons: React.FC = () => {
         search: searchTerm || undefined
       })
       
+      if (!response.data) throw new Error('Coupon data was not returned by the server')
       setCoupons(response.data.coupons || [])
       setTotalPages(response.data.pagination?.pages || 1)
       setTotalCount(response.data.pagination?.total || 0)
@@ -101,15 +96,19 @@ const AdminCoupons: React.FC = () => {
         active: 0,
         expired: 0,
         totalUsage: 0,
-        averageDiscount: 0
+        usageRate: 0
       })
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching coupons:', error)
-      toast.error(error.response?.data?.message || 'Failed to load coupons')
+      toast.error(getApiErrorMessage(error) || 'Failed to load coupons')
     } finally {
       setLoading(false)
     }
-  }
+  }, [filter, page, searchTerm])
+
+  useEffect(() => {
+    void fetchCoupons()
+  }, [fetchCoupons])
 
   const handleSearch = (value: string) => {
     setSearchTerm(value)
@@ -132,6 +131,11 @@ const AdminCoupons: React.FC = () => {
       return
     }
 
+    if (newCoupon.discountType === 'percentage' && newCoupon.discountValue > 100) {
+      toast.error('Percentage discount cannot exceed 100%')
+      return
+    }
+
     if (!newCoupon.validFrom) {
       toast.error('Valid from date is required')
       return
@@ -148,15 +152,18 @@ const AdminCoupons: React.FC = () => {
     }
 
     try {
+      setIsSavingCoupon(true)
       const couponData = {
         code: newCoupon.code.toUpperCase(),
         discountType: newCoupon.discountType,
         discountValue: parseFloat(newCoupon.discountValue.toString()),
         minOrderAmount: newCoupon.minOrderAmount ? parseFloat(newCoupon.minOrderAmount) : undefined,
-        maxDiscountAmount: newCoupon.maxDiscountAmount ? parseFloat(newCoupon.maxDiscountAmount) : undefined,
+        maxDiscountAmount: newCoupon.discountType === 'percentage' && newCoupon.maxDiscountAmount
+          ? parseFloat(newCoupon.maxDiscountAmount)
+          : null,
         validFrom: new Date(newCoupon.validFrom).toISOString(),
         validUntil: new Date(newCoupon.validUntil).toISOString(),
-        usageLimit: newCoupon.usageLimit ? parseInt(newCoupon.usageLimit) : undefined,
+        usageLimit: newCoupon.usageLimit ? parseInt(newCoupon.usageLimit) : null,
         isActive: newCoupon.isActive
       }
 
@@ -170,17 +177,55 @@ const AdminCoupons: React.FC = () => {
       } else {
         toast.error(response.message || 'Failed to create coupon')
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating coupon:', error)
-      toast.error(error.response?.data?.message || 'Failed to create coupon')
+      if (!getApiErrorMessage(error)) toast.error('Failed to create coupon')
+    } finally {
+      setIsSavingCoupon(false)
     }
   }
 
   const handleUpdateCoupon = async () => {
     if (!selectedCoupon) return
 
+    if (!selectedCoupon.code.trim()) {
+      toast.error('Coupon code is required')
+      return
+    }
+    if (selectedCoupon.discountValue <= 0) {
+      toast.error('Discount value must be greater than 0')
+      return
+    }
+    if (selectedCoupon.discountType === 'percentage' && selectedCoupon.discountValue > 100) {
+      toast.error('Percentage discount cannot exceed 100%')
+      return
+    }
+    const validFrom = new Date(selectedCoupon.validFrom)
+    const validUntil = new Date(selectedCoupon.validUntil)
+    if (Number.isNaN(validFrom.getTime()) || Number.isNaN(validUntil.getTime())) {
+      toast.error('Valid from and valid until dates are required')
+      return
+    }
+    if (validFrom >= validUntil) {
+      toast.error('Valid until date must be after valid from date')
+      return
+    }
+
     try {
-      const response = await adminService.updateCoupon(selectedCoupon._id, selectedCoupon)
+      setIsSavingCoupon(true)
+      const response = await adminService.updateCoupon(selectedCoupon._id, {
+        code: selectedCoupon.code,
+        discountType: selectedCoupon.discountType,
+        discountValue: selectedCoupon.discountValue,
+        minOrderAmount: selectedCoupon.minOrderAmount || 0,
+        maxDiscountAmount: selectedCoupon.discountType === 'percentage'
+          ? selectedCoupon.maxDiscountAmount
+          : null,
+        validFrom: validFrom.toISOString(),
+        validUntil: validUntil.toISOString(),
+        usageLimit: selectedCoupon.usageLimit,
+        isActive: selectedCoupon.isActive,
+      })
       
       if (response.success) {
         toast.success('Coupon updated successfully!')
@@ -190,9 +235,11 @@ const AdminCoupons: React.FC = () => {
       } else {
         toast.error(response.message || 'Failed to update coupon')
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating coupon:', error)
-      toast.error(error.response?.data?.message || 'Failed to update coupon')
+      if (!getApiErrorMessage(error)) toast.error('Failed to update coupon')
+    } finally {
+      setIsSavingCoupon(false)
     }
   }
 
@@ -206,9 +253,9 @@ const AdminCoupons: React.FC = () => {
       } else {
         toast.error(response.message || 'Failed to update coupon status')
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating coupon status:', error)
-      toast.error(error.response?.data?.message || 'Failed to update coupon status')
+      if (!getApiErrorMessage(error)) toast.error('Failed to update coupon status')
     }
   }
 
@@ -226,9 +273,9 @@ const AdminCoupons: React.FC = () => {
       } else {
         toast.error(response.message || 'Failed to delete coupon')
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error deleting coupon:', error)
-      toast.error(error.response?.data?.message || 'Failed to delete coupon')
+      if (!getApiErrorMessage(error)) toast.error('Failed to delete coupon')
     }
   }
 
@@ -276,6 +323,10 @@ const AdminCoupons: React.FC = () => {
     if (isCouponExpired(coupon.validUntil)) {
       return { label: 'Expired', color: 'bg-red-100 text-red-800 border-red-200', icon: Clock }
     }
+
+    if (coupon.usageLimit !== null && coupon.usedCount >= coupon.usageLimit) {
+      return { label: 'Limit reached', color: 'bg-orange-100 text-orange-800 border-orange-200', icon: Users }
+    }
     
     if (!isCouponActive(coupon)) {
       return { label: 'Upcoming', color: 'bg-yellow-100 text-yellow-800 border-yellow-200', icon: Clock }
@@ -292,21 +343,45 @@ const AdminCoupons: React.FC = () => {
     })
   }
 
-  const formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  }
-
   const formatCurrency = (amount: number) => {
     return `PKR ${amount.toLocaleString()}`
   }
 
   const filteredCoupons = coupons
+
+  const handleExportCoupons = () => {
+    if (filteredCoupons.length === 0) {
+      toast.error('There are no coupons to export')
+      return
+    }
+
+    const escapeCsv = (value: unknown) => `"${String(value ?? '').replace(/"/g, '""')}"`
+    const rows = filteredCoupons.map((coupon) => [
+      coupon.code,
+      coupon.discountType,
+      coupon.discountValue,
+      coupon.minOrderAmount,
+      coupon.maxDiscountAmount ?? '',
+      coupon.validFrom,
+      coupon.validUntil,
+      coupon.usageLimit ?? 'Unlimited',
+      coupon.usedCount,
+      coupon.isActive ? 'Active' : 'Inactive',
+    ])
+    const csv = [
+      ['Code', 'Type', 'Value', 'Minimum Order', 'Maximum Discount', 'Valid From', 'Valid Until', 'Usage Limit', 'Used', 'Status'],
+      ...rows,
+    ].map((row) => row.map(escapeCsv).join(',')).join('\n')
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `blackcart-coupons-${new Date().toISOString().slice(0, 10)}.csv`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+    toast.success('Coupons exported successfully')
+  }
 
   if (loading && page === 1) {
     return (
@@ -366,7 +441,7 @@ const AdminCoupons: React.FC = () => {
                 <select
                   value={filter}
                   onChange={(e) => {
-                    setFilter(e.target.value)
+                    setFilter(e.target.value as 'all' | 'active' | 'expired' | 'inactive')
                     setPage(1)
                   }}
                   className="px-4 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
@@ -379,10 +454,7 @@ const AdminCoupons: React.FC = () => {
               </div>
               
               <button 
-                onClick={() => {
-                  // Export functionality
-                  toast.success('Export feature coming soon')
-                }}
+                onClick={handleExportCoupons}
                 className="px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition flex items-center"
               >
                 <Download className="h-4 w-4 mr-2" />
@@ -407,8 +479,8 @@ const AdminCoupons: React.FC = () => {
             <p className="text-2xl font-bold text-blue-600 mt-1">{stats.totalUsage.toLocaleString()}</p>
           </div>
           <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
-            <p className="text-sm text-gray-500 font-medium">Avg. Discount</p>
-            <p className="text-2xl font-bold text-purple-600 mt-1">{stats.averageDiscount}%</p>
+            <p className="text-sm text-gray-500 font-medium">Usage Rate</p>
+            <p className="text-2xl font-bold text-purple-600 mt-1">{stats.usageRate}%</p>
           </div>
         </div>
 
@@ -678,7 +750,7 @@ const AdminCoupons: React.FC = () => {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Max Discount (PKR)
+                        Max Discount (percentage only)
                       </label>
                       <input
                         type="number"
@@ -688,6 +760,7 @@ const AdminCoupons: React.FC = () => {
                         placeholder="Optional"
                         min="0"
                         step="100"
+                        disabled={newCoupon.discountType !== 'percentage'}
                       />
                     </div>
                   </div>
@@ -755,9 +828,10 @@ const AdminCoupons: React.FC = () => {
                   </button>
                   <button
                     onClick={handleCreateCoupon}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    disabled={isSavingCoupon}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    Create Coupon
+                    {isSavingCoupon ? 'Creating…' : 'Create Coupon'}
                   </button>
                 </div>
               </div>
@@ -826,7 +900,7 @@ const AdminCoupons: React.FC = () => {
                       <input
                         type="number"
                         value={selectedCoupon.minOrderAmount || ''}
-                        onChange={(e) => setSelectedCoupon({...selectedCoupon, minOrderAmount: parseFloat(e.target.value) || undefined})}
+                        onChange={(e) => setSelectedCoupon({...selectedCoupon, minOrderAmount: e.target.value ? parseFloat(e.target.value) : 0})}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                         min="0"
                         step="100"
@@ -835,15 +909,16 @@ const AdminCoupons: React.FC = () => {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Max Discount (PKR)
+                        Max Discount (percentage only)
                       </label>
                       <input
                         type="number"
                         value={selectedCoupon.maxDiscountAmount || ''}
-                        onChange={(e) => setSelectedCoupon({...selectedCoupon, maxDiscountAmount: parseFloat(e.target.value) || undefined})}
+                        onChange={(e) => setSelectedCoupon({...selectedCoupon, maxDiscountAmount: e.target.value ? parseFloat(e.target.value) : null})}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                         min="0"
                         step="100"
+                        disabled={selectedCoupon.discountType !== 'percentage'}
                       />
                     </div>
                   </div>
@@ -855,8 +930,8 @@ const AdminCoupons: React.FC = () => {
                       </label>
                       <input
                         type="datetime-local"
-                        value={selectedCoupon.validFrom ? selectedCoupon.validFrom.slice(0, 16) : ''}
-                        onChange={(e) => setSelectedCoupon({...selectedCoupon, validFrom: new Date(e.target.value).toISOString()})}
+                        value={selectedCoupon.validFrom ? toDateTimeLocal(selectedCoupon.validFrom) : ''}
+                        onChange={(e) => setSelectedCoupon({...selectedCoupon, validFrom: e.target.value})}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                       />
                     </div>
@@ -867,8 +942,8 @@ const AdminCoupons: React.FC = () => {
                       </label>
                       <input
                         type="datetime-local"
-                        value={selectedCoupon.validUntil ? selectedCoupon.validUntil.slice(0, 16) : ''}
-                        onChange={(e) => setSelectedCoupon({...selectedCoupon, validUntil: new Date(e.target.value).toISOString()})}
+                        value={selectedCoupon.validUntil ? toDateTimeLocal(selectedCoupon.validUntil) : ''}
+                        onChange={(e) => setSelectedCoupon({...selectedCoupon, validUntil: e.target.value})}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                       />
                     </div>
@@ -881,7 +956,7 @@ const AdminCoupons: React.FC = () => {
                     <input
                       type="number"
                       value={selectedCoupon.usageLimit || ''}
-                      onChange={(e) => setSelectedCoupon({...selectedCoupon, usageLimit: parseInt(e.target.value) || undefined})}
+                      onChange={(e) => setSelectedCoupon({...selectedCoupon, usageLimit: e.target.value ? parseInt(e.target.value) : null})}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                       min="1"
                     />
@@ -913,9 +988,10 @@ const AdminCoupons: React.FC = () => {
                   </button>
                   <button
                     onClick={handleUpdateCoupon}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    disabled={isSavingCoupon}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    Update Coupon
+                    {isSavingCoupon ? 'Updating…' : 'Update Coupon'}
                   </button>
                 </div>
               </div>

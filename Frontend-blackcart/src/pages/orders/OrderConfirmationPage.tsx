@@ -138,6 +138,7 @@ const OrderConfirmationPage: React.FC = () => {
           <p>Subtotal: PKR ${order?.itemsPrice?.toLocaleString()}</p>
           <p>Shipping: PKR ${order?.shippingPrice?.toLocaleString()}</p>
           <p>Tax (16% GST): PKR ${order?.taxPrice?.toLocaleString()}</p>
+          ${order?.coupon?.discount ? `<p>Discount (${order.coupon.code}): -PKR ${order.coupon.discount.toLocaleString()}</p>` : ''}
           ${order?.codCharges ? `<p>COD Charges: PKR ${order?.codCharges?.toLocaleString()}</p>` : ''}
           <p class="total-row">Total: PKR ${order?.totalPrice?.toLocaleString()}</p>
         </div>
@@ -459,6 +460,12 @@ const OrderConfirmationPage: React.FC = () => {
                   <span className="text-gray-600">Tax:</span>
                   <span>PKR {order.taxPrice?.toLocaleString()}</span>
                 </div>
+                {order.coupon && order.coupon.discount > 0 && (
+                  <div className="flex justify-between text-green-700">
+                    <span>Discount ({order.coupon.code}):</span>
+                    <span>-PKR {order.coupon.discount.toLocaleString()}</span>
+                  </div>
+                )}
                 {order.codCharges > 0 && (
                   <div className="flex justify-between">
                     <span className="text-gray-600">COD Charges:</span>

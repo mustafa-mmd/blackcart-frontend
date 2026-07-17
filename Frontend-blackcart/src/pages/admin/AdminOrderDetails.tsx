@@ -374,6 +374,12 @@ const AdminOrderDetails: React.FC = () => {
                   <span className="text-gray-600">Tax:</span>
                   <span className="font-medium">PKR {order.taxPrice?.toLocaleString()}</span>
                 </div>
+                {order.coupon && order.coupon.discount > 0 && (
+                  <div className="flex justify-between text-green-700">
+                    <span>Discount ({order.coupon.code}):</span>
+                    <span className="font-medium">-PKR {order.coupon.discount.toLocaleString()}</span>
+                  </div>
+                )}
                 {order.codCharges > 0 && (
                   <div className="flex justify-between">
                     <span className="text-gray-600">COD Charges:</span>

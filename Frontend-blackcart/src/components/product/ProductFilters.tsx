@@ -211,15 +211,6 @@ const ProductFilters: React.FC<ProductFiltersProps> = ({
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-bold text-gray-900">Filters</h3>
             <div className="flex items-center gap-2">
-              {activeFilterCount > 0 && (
-                <button
-                  onClick={clearFilters}
-                  className="text-sm text-blue-600 hover:text-blue-700 flex items-center"
-                >
-                  <X className="h-4 w-4 mr-1" />
-                  Clear ({activeFilterCount})
-                </button>
-              )}
 
               {/* ✅ FIXED: Close button — visible on all desktop sizes (lg and above) */}
               {onClose && (
@@ -495,6 +486,7 @@ const ProductFilters: React.FC<ProductFiltersProps> = ({
               </span>
             </label>
           </div>
+        <button type="button" onClick={clearFilters} className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-semibold text-orange-700 transition hover:bg-orange-100"><X className="h-4 w-4" /> Clear All Filters</button>
         </motion.div>
       </div>
     </>

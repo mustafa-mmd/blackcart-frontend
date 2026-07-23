@@ -1,6 +1,6 @@
-import React from 'react'
+﻿import React from 'react'
 import { Link } from 'react-router-dom'
-import { Mail, Phone, MapPin, Shield, FileText, Truck, RotateCcw } from 'lucide-react'
+import { Mail, Phone, MapPin, Shield, FileText, Truck, RotateCcw, HelpCircle } from 'lucide-react'
 import { BrandIcon } from './BrandIcon'
 import { STORE_SOCIAL_LINKS } from '../../config/storeContact'
 
@@ -62,11 +62,6 @@ const Footer: React.FC = () => {
                   Contact Us
                 </Link>
               </li>
-              <li>
-                <Link to="/faq" className="text-gray-400 hover:text-white transition-colors">
-                  FAQ
-                </Link>
-              </li>
             </ul>
           </div>
 
@@ -104,7 +99,12 @@ const Footer: React.FC = () => {
                   <span>Contact Support</span>
                 </Link>
               </li>
-            </ul>
+            <li className="mt-4 border-t border-gray-800 pt-4">
+              <Link to="/faq" className="flex items-center space-x-2 text-gray-300 hover:text-white transition-colors">
+                <HelpCircle className="h-4 w-4" />
+                <span>FAQ</span>
+              </Link>
+            </li>            </ul>
           </div>
 
           {/* Contact Info */}
@@ -193,3 +193,5 @@ const Footer: React.FC = () => {
 }
 
 export default Footer
+
+

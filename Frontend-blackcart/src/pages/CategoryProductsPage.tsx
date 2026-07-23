@@ -1,4 +1,4 @@
-
+﻿
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -61,6 +61,7 @@ const CategoryProductsPage: React.FC = () => {
   const [activeFilters, setActiveFilters] = useState<CategoryFilterKey[]>([]);
   const [showMobileFilters, setShowMobileFilters] = useState<boolean>(false);
   const [totalProducts, setTotalProducts] = useState<number>(0);
+  const [categoryBanner, setCategoryBanner] = useState<HeroBanner | null>(null);
   
   const prevFiltersRef = useRef(filters);
   const isInitialMount = useRef(true);
@@ -87,6 +88,11 @@ const CategoryProductsPage: React.FC = () => {
     }
   };
 
+
+  const getCategoryBannerUrl = (url?: string): string => {
+    if (!url) return '';
+    return url.startsWith('http') ? url : `${API_URL}${url}`;
+  };
   const getCategoryImage = (category: StoreCategory): string => {
     if (!category?.image) return '';
     if (typeof category.image === 'object' && category.image !== null) {
@@ -123,6 +129,11 @@ const CategoryProductsPage: React.FC = () => {
       
       const categoryData = categoryResponse.data as StoreCategory;
       setCategory(categoryData);
+
+      const categoryBanners = await bannerService
+        .getBanners({ type: 'category', category: categoryData._id })
+        .catch(() => [] as HeroBanner[]);
+      setCategoryBanner(categoryBanners[0] || null);
       
       const productParams = {
         page: 1,
@@ -269,10 +280,14 @@ const CategoryProductsPage: React.FC = () => {
     );
   }
 
+  const categoryBannerDesktop = getCategoryBannerUrl(categoryBanner?.url);
+  const categoryBannerMobile = getCategoryBannerUrl(categoryBanner?.mobileUrl || categoryBanner?.url);
+  const hasCategoryBanner = Boolean(categoryBannerDesktop);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Helmet>
-        <title>{category.name} Products in Pakistan — Buy Online | BlackCart</title>
+        <title>{category.name} Products in Pakistan â€” Buy Online | BlackCart</title>
         <meta
           name="description"
           content={`Shop ${category.name} products at BlackCart Pakistan. ${category.description ? category.description.slice(0, 100) + '.' : 'Browse our selection of ' + category.name + ' accessories with fast nationwide delivery.'} Best prices guaranteed.`}
@@ -282,50 +297,63 @@ const CategoryProductsPage: React.FC = () => {
         <meta property="og:url" content={`https://blackcart.store/categories/${slug}`} />
         <link rel="canonical" href={`https://blackcart.store/categories/${slug}`} />
       </Helmet>
-      {/* ✅ FIXED: Header — reduced py-8 md:py-12 → py-1 md:py-2 so filters + products are visible */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white">
-        <div className="container mx-auto px-4 py-6 md:py-8">
+      {/* âœ… FIXED: Header â€” reduced py-8 md:py-12 â†’ py-1 md:py-2 so filters + products are visible */}
+      <div className={`relative overflow-hidden border-b ${hasCategoryBanner ? 'border-transparent bg-slate-950 text-white' : 'border-slate-200 bg-white text-slate-950'}`}>
+        {hasCategoryBanner && (
+          <>
+            <picture>
+              <source media="(max-width: 640px)" srcSet={categoryBannerMobile || categoryBannerDesktop} />
+              <img
+                src={categoryBannerDesktop}
+                alt={categoryBanner?.altText || category.name}
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+            </picture>
+            <div className="absolute inset-0 bg-slate-950/55" />
+          </>
+        )}
+        <div className="container relative mx-auto px-4 py-4 md:py-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
             <div className="flex-1">
               {/* Breadcrumb */}
-              <nav className="flex items-center text-xs text-blue-200 mb-1.5">
-                <button onClick={() => navigate('/')} className="hover:text-white">Home</button>
+              <nav className="flex items-center text-xs text-slate-500 mb-1.5">
+                <button onClick={() => navigate('/')} className={hasCategoryBanner ? 'hover:text-white/90' : 'hover:text-blue-600'}>Home</button>
                 <ChevronLeft className="h-3 w-3 mx-1 rotate-180" />
-                <button onClick={() => navigate('/categories')} className="hover:text-white">Categories</button>
+                <button onClick={() => navigate('/categories')} className={hasCategoryBanner ? 'hover:text-white/90' : 'hover:text-blue-600'}>Categories</button>
                 <ChevronLeft className="h-3 w-3 mx-1 rotate-180" />
-                <span className="text-white font-semibold">{category.name}</span>
+                <span className={hasCategoryBanner ? 'font-semibold text-white' : 'font-semibold text-slate-900'}>{category.name}</span>
               </nav>
               
-              <h1 className="mb-1 text-2xl font-bold md:text-3xl">{category.name}</h1>
+              <h1 className={hasCategoryBanner ? 'mb-1 text-2xl font-bold text-white md:text-3xl' : 'mb-1 text-2xl font-bold text-slate-950 md:text-3xl'}>{categoryBanner?.headline || categoryBanner?.title || category.name}</h1>
               
-              {category.description && (
-                <p className="text-blue-100 text-xs md:text-sm mb-2 line-clamp-2">
-                  {category.description}
+              {(categoryBanner?.subheading || category.description) && (
+                <p className={hasCategoryBanner ? 'mb-2 line-clamp-2 text-xs text-white/85 md:text-sm' : 'mb-2 line-clamp-2 text-xs text-slate-600 md:text-sm'}>
+                  {categoryBanner?.subheading || category.description}
                 </p>
               )}
               
               <div className="flex flex-wrap items-center gap-2">
-                <div className="flex items-center bg-blue-500/20 px-2.5 py-1 rounded-full">
+                <div className="flex items-center bg-blue-50 px-2.5 py-1 rounded-full">
                   <Package className="h-3.5 w-3.5 mr-1.5" />
                   <span className="text-xs font-medium">
                     {totalProducts} Product{totalProducts !== 1 ? 's' : ''}
                   </span>
                 </div>
                 <div className={`px-2.5 py-1 rounded-full text-xs font-medium ${
-                  category.isActive ? 'bg-green-500/20 text-green-200' : 'bg-red-500/20 text-red-200'
+                  category.isActive ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
                 }`}>
                   {category.isActive ? 'Active' : 'Inactive'}
                 </div>
               </div>
             </div>
             
-            {/* ✅ Smaller category image: h-40 w-40 → h-20 w-20 */}
-            {getCategoryImage(category) && (
+            {/* âœ… Smaller category image: h-40 w-40 â†’ h-20 w-20 */}
+            {!hasCategoryBanner && getCategoryImage(category) && (
               <div className="hidden md:block flex-shrink-0">
                 <img
                   src={getCategoryImage(category)}
                   alt={category.name}
-                  className="h-24 w-24 rounded-xl object-cover shadow-lg"
+                  className="h-28 w-56 rounded-2xl object-contain bg-slate-50 shadow-sm"
                   onError={(e) => { e.currentTarget.style.display = 'none'; }}
                 />
               </div>
@@ -335,7 +363,7 @@ const CategoryProductsPage: React.FC = () => {
       </div>
 
       {/* Main Content */}
-      {/* ✅ FIXED: Reduced py-6 md:py-8 → py-3 md:py-4 */}
+      {/* âœ… FIXED: Reduced py-6 md:py-8 â†’ py-3 md:py-4 */}
       <div className="container mx-auto px-4 py-3 md:py-4">
         {/* Filters Bar */}
         <div className="bg-white rounded-xl border border-gray-200 p-3 mb-4 shadow-sm">
@@ -474,7 +502,7 @@ const CategoryProductsPage: React.FC = () => {
             </div>
             
             <div className={viewMode === 'grid'
-              ? 'grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
+              ? 'grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6'
               : 'space-y-3'
             }>
               {products.map((product, index) => (
@@ -487,23 +515,23 @@ const CategoryProductsPage: React.FC = () => {
                   {viewMode === 'grid' ? (
                     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow duration-300">
                       <div onClick={() => navigate(`/products/${product.slug || product._id}`)} className="cursor-pointer">
-                        {/* ✅ Reduced image height h-48 → h-36 */}
-                        <div className="relative h-32 overflow-hidden">
+                        {/* âœ… Reduced image height h-48 â†’ h-36 */}
+                        <div className="relative h-36 overflow-hidden bg-white sm:h-40">
                           <img
                             src={getProductImage(product)}
                             alt={product.name}
-                            className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                            className="h-full w-full object-contain p-2 transition-transform duration-300 hover:scale-105"
                             onError={(e) => { e.currentTarget.src = '/images/placeholder-product.jpg'; }}
                           />
                           {product.discountPrice && (
-                            <div className="absolute top-2 left-2 bg-red-500 text-white px-1.5 py-0.5 rounded text-xs font-bold">
-                              Save {getDiscountPercent(product.price, product.discountPrice)}%
+                            <div className="absolute top-2 left-2 bg-orange-500 text-white px-1.5 py-0.5 rounded text-xs font-bold">
+                              {getDiscountPercent(product.price, product.discountPrice)}% OFF
                             </div>
                           )}
                         </div>
                         <div className="p-3">
                           <h3 className="font-semibold text-gray-900 mb-1 line-clamp-1 text-sm">{product.name}</h3>
-                          <p className="text-xs text-gray-600 mb-2 line-clamp-1">{product.shortDescription || product.description}</p>
+                          <p className="hidden">{product.shortDescription || product.description}</p>
                           <div className="flex items-center justify-between">
                             <div>
                               <div className="flex items-center">
@@ -519,13 +547,13 @@ const CategoryProductsPage: React.FC = () => {
                               <div className="flex items-center mt-0.5">
                                 <Star className="h-3 w-3 text-yellow-400 fill-current" />
                                 <span className="ml-1 text-xs text-gray-600">
-                                  {product.rating?.toFixed(1) || 'N/A'}
+                                  {product.rating?.toFixed(1)}
                                 </span>
                               </div>
                             </div>
                             <button
                               onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleAddToCart(product); }}
-                              className="px-2 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs font-medium flex items-center"
+                              className="mt-2 w-full justify-center rounded-lg bg-blue-600 px-2 py-2 text-xs font-medium text-white hover:bg-blue-700 flex items-center"
                             >
                               <ShoppingCart className="h-3 w-3 mr-1" /> Add
                             </button>
@@ -571,7 +599,7 @@ const CategoryProductsPage: React.FC = () => {
                                 )}
                                 <div className="flex items-center">
                                   <Star className="h-3.5 w-3.5 text-yellow-400 fill-current" />
-                                  <span className="ml-1 text-xs text-gray-600">{product.rating?.toFixed(1) || 'N/A'}</span>
+                                  <span className="ml-1 text-xs text-gray-600">{product.rating?.toFixed(1)}</span>
                                 </div>
                               </div>
                             </div>
@@ -621,3 +649,7 @@ const CategoryProductsPage: React.FC = () => {
 };
 
 export default CategoryProductsPage;
+
+
+
+

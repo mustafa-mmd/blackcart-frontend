@@ -1,18 +1,20 @@
-// src/pages/admin/AdminCategories.tsx 
+﻿// src/pages/admin/AdminCategories.tsx 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { 
   Folder, Plus, Edit2, Trash2, Eye, EyeOff, Search, 
-  RefreshCw, Package, Upload, LayoutGrid, List
+  RefreshCw, Package, Upload, LayoutGrid, List, MoreHorizontal, Star, Check
 } from 'lucide-react';
 import { adminService } from '../../services/adminServiceMethods';
 import Loader from '../../components/common/Loader';
 import { Category } from '../../types';
 
-// ✅ ADD THIS HELPER FUNCTION AT THE TOP
+// âœ… ADD THIS HELPER FUNCTION AT THE TOP
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 const AdminCategories: React.FC = () => {
+  const navigate = useNavigate();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -20,7 +22,9 @@ const AdminCategories: React.FC = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>(() => localStorage.getItem('admin-categories-view') === 'grid' ? 'grid' : 'list');
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>(() => localStorage.getItem('admin-categories-view') === 'list' ? 'list' : 'grid');
+
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   const changeViewMode = (mode: 'list' | 'grid') => {
     setViewMode(mode);
@@ -42,7 +46,7 @@ const AdminCategories: React.FC = () => {
     fetchCategories();
   }, []);
 
-  // ✅ Image helper function
+  // âœ… Image helper function
   const getCategoryImage = (category: Category): string => {
     if (!category.image) {
       return '';
@@ -67,7 +71,7 @@ const AdminCategories: React.FC = () => {
     return category.image;
   };
 
-  // ✅ Image error handling
+  // âœ… Image error handling
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
     e.currentTarget.src = '/images/placeholder-category.jpg';
     e.currentTarget.onerror = null;
@@ -76,11 +80,11 @@ const AdminCategories: React.FC = () => {
   const fetchCategories = async () => {
     try {
       setLoading(true);
-      console.log('🔄 Fetching admin categories...');
+      console.log('ðŸ”„ Fetching admin categories...');
       
       const response = await adminService.getCategories();
       
-      console.log('📊 Admin categories response:', response);
+      console.log('ðŸ“Š Admin categories response:', response);
       
       if (response.success) {
         setCategories(response.data?.categories || []);
@@ -110,16 +114,16 @@ const AdminCategories: React.FC = () => {
     formData.append('featured', newCategory.featured.toString());
     
     if (imageFile) {
-      // ✅ FIXED: Use 'image' not 'images' for category upload
+      // âœ… FIXED: Use 'image' not 'images' for category upload
       formData.append('image', imageFile);
-      console.log('📤 Added image to FormData:', imageFile.name);
+      console.log('ðŸ“¤ Added image to FormData:', imageFile.name);
     }
 
-    console.log('🚀 Sending FormData:', Object.fromEntries(formData.entries()));
+    console.log('ðŸš€ Sending FormData:', Object.fromEntries(formData.entries()));
     
     const response = await adminService.createCategory(formData);
     
-    console.log('📦 Create category response:', response);
+    console.log('ðŸ“¦ Create category response:', response);
     
     if (response.success) {
       toast.success('Category created successfully!');
@@ -159,11 +163,11 @@ const AdminCategories: React.FC = () => {
         formData.append('image', imageFile);
       }
 
-      console.log('🚀 Sending update FormData:', Object.fromEntries(formData.entries()));
+      console.log('ðŸš€ Sending update FormData:', Object.fromEntries(formData.entries()));
       
       const response = await adminService.updateCategory(selectedCategory._id, formData);
       
-      console.log('📦 Update category response:', response);
+      console.log('ðŸ“¦ Update category response:', response);
       
       if (response.success) {
         if (response.data) {
@@ -196,16 +200,16 @@ const AdminCategories: React.FC = () => {
 
   const handleToggleStatus = async (id: string, currentStatus: boolean) => {
     try {
-      console.log(`🔄 Toggling category ${id} status to ${!currentStatus}`);
+      console.log(`ðŸ”„ Toggling category ${id} status to ${!currentStatus}`);
       
       const response = await adminService.updateCategoryStatus(id, !currentStatus);
       
-      console.log('📦 Toggle status response:', response);
+      console.log('ðŸ“¦ Toggle status response:', response);
       
       if (response.success) {
         toast.success(`Category ${!currentStatus ? 'activated' : 'deactivated'}`);
         
-        // ✅ ADD DELAY BEFORE REFRESHING
+        // âœ… ADD DELAY BEFORE REFRESHING
         await delay(500);
         fetchCategories();
       } else {
@@ -223,16 +227,16 @@ const AdminCategories: React.FC = () => {
     }
 
     try {
-      console.log(`🗑️ Deleting category ${id}: ${name}`);
+      console.log(`ðŸ—‘ï¸ Deleting category ${id}: ${name}`);
       
       const response = await adminService.deleteCategory(id);
       
-      console.log('📦 Delete category response:', response);
+      console.log('ðŸ“¦ Delete category response:', response);
       
       if (response.success) {
         toast.success('Category deleted successfully');
         
-        // ✅ ADD DELAY BEFORE REFRESHING
+        // âœ… ADD DELAY BEFORE REFRESHING
         await delay(500);
         fetchCategories();
       } else {
@@ -244,9 +248,51 @@ const AdminCategories: React.FC = () => {
     }
   };
 
+  const handleToggleFeatured = async (category: Category) => {
+    const formData = new FormData();
+    formData.append('name', category.name.trim());
+    formData.append('description', category.description?.trim() || '');
+    formData.append('isActive', String(category.isActive));
+    formData.append('featured', String(!category.featured));
+    setOpenMenuId(null);
+    try {
+      const response = await adminService.updateCategory(category._id, formData);
+      if (response.success) {
+        toast.success(!category.featured ? 'Category featured' : 'Category unfeatured');
+        fetchCategories();
+      } else {
+        toast.error(response.message || 'Failed to update featured status');
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update featured status');
+    }
+  };
+
+  const renderActionMenu = (category: Category) => (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpenMenuId(openMenuId === category._id ? null : category._id)}
+        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
+        aria-label={`More actions for ${category.name}`}
+        aria-expanded={openMenuId === category._id}
+      >
+        <MoreHorizontal className="h-4 w-4" />
+      </button>
+      {openMenuId === category._id && (
+        <div className="absolute right-0 z-30 mt-2 w-52 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+          <button type="button" onClick={() => { setOpenMenuId(null); navigate(`/categories/${category.slug}`); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"><Eye className="h-4 w-4 text-slate-500" /> View Category</button>
+          <button type="button" onClick={() => handleToggleFeatured(category)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"><Star className="h-4 w-4 text-amber-500" /> {category.featured ? 'Unfeature' : 'Feature'}</button>
+          <button type="button" onClick={() => { setOpenMenuId(null); handleToggleStatus(category._id, category.isActive); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"><Check className="h-4 w-4 text-emerald-500" /> {category.isActive ? 'Deactivate' : 'Activate'}</button>
+          <div className="my-1 border-t border-slate-100" />
+          <button type="button" onClick={() => { setOpenMenuId(null); handleDeleteCategory(category._id, category.name); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-50"><Trash2 className="h-4 w-4" /> Delete</button>
+        </div>
+      )}
+    </div>
+  );
   const openEditModal = (category: Category) => {
     setSelectedCategory({ ...category });
-    // ✅ FIX: Use the helper function to get correct image URL
+    // âœ… FIX: Use the helper function to get correct image URL
     const imageUrl = getCategoryImage(category);
     setImagePreview(imageUrl);
     setImageFile(null);
@@ -293,33 +339,38 @@ const AdminCategories: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Loader size="lg" />
+      <div className="min-h-screen bg-slate-50 p-4 sm:p-5 lg:p-6">
+        <div className="mx-auto w-full max-w-[1600px] animate-pulse">
+          <div className="mb-8 flex items-center justify-between"><div><div className="h-8 w-48 rounded-lg bg-slate-200" /><div className="mt-2 h-4 w-72 rounded bg-slate-200" /></div><div className="h-10 w-36 rounded-xl bg-slate-200" /></div>
+          <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">{Array.from({ length: 4 }).map((_, index) => <div key={index} className="h-24 rounded-2xl border border-slate-200 bg-white" />)}</div>
+          <div className="mb-6 h-12 rounded-xl border border-slate-200 bg-white" />
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">{Array.from({ length: 10 }).map((_, index) => <div key={index} className="overflow-hidden rounded-2xl border border-slate-200 bg-white"><div className="aspect-[4/3] bg-slate-200" /><div className="space-y-3 p-4"><div className="h-5 w-3/4 rounded bg-slate-200" /><div className="h-10 rounded bg-slate-100" /><div className="h-4 w-1/3 rounded bg-slate-200" /></div></div>)}</div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-slate-50 p-4 sm:p-5 lg:p-6">
+      <div className="mx-auto w-full max-w-[1600px]">
         {/* Header */}
         <div className="mb-6 md:mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Categories</h1>
-              <p className="text-gray-600 mt-2">Manage product categories</p>
+              <h1 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Categories</h1>
+              <p className="mt-1 text-sm text-slate-500">Organize and manage your product catalog</p>
             </div>
             <div className="flex gap-3">
               <button
                 onClick={fetchCategories}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition flex items-center"
+                className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Refresh
               </button>
               <button
-                onClick={() => setShowCreateModal(true)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center"
+                onClick={() => navigate('/admin/categories/new')}
+                className="inline-flex items-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Category
@@ -328,18 +379,18 @@ const AdminCategories: React.FC = () => {
           </div>
 
           {/* Search */}
-          <div className="mt-6 flex items-center justify-between gap-3">
-            <div className="relative max-w-md flex-1">
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="relative w-full flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
                 type="text"
                 placeholder="Search categories by name, description, or slug..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
               />
             </div>
-            <div className="flex rounded-lg border border-gray-300 bg-white p-1" aria-label="Category view">
+            <div className="flex shrink-0 rounded-xl border border-slate-200 bg-white p-1 shadow-sm" aria-label="Category view">
               <button type="button" onClick={() => changeViewMode('list')} aria-pressed={viewMode === 'list'} className={`rounded-md p-1.5 ${viewMode === 'list' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`} title="List view"><List className="h-4 w-4" /></button>
               <button type="button" onClick={() => changeViewMode('grid')} aria-pressed={viewMode === 'grid'} className={`rounded-md p-1.5 ${viewMode === 'grid' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`} title="Grid view"><LayoutGrid className="h-4 w-4" /></button>
             </div>
@@ -347,27 +398,31 @@ const AdminCategories: React.FC = () => {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white p-4 rounded-xl border border-gray-200">
+        <div className="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <Folder className="mb-2 h-5 w-5 text-blue-600" />
             <p className="text-sm text-gray-500">Total Categories</p>
             <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
           </div>
-          <div className="bg-white p-4 rounded-xl border border-gray-200">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <Check className="mb-2 h-5 w-5 text-emerald-600" />
             <p className="text-sm text-gray-500">Active Categories</p>
             <p className="text-2xl font-bold text-green-600">{stats.active}</p>
           </div>
-          <div className="bg-white p-4 rounded-xl border border-gray-200">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <Star className="mb-2 h-5 w-5 text-amber-500" />
             <p className="text-sm text-gray-500">Featured Categories</p>
             <p className="text-2xl font-bold text-purple-600">{stats.featured}</p>
           </div>
-          <div className="bg-white p-4 rounded-xl border border-gray-200">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <Package className="mb-2 h-5 w-5 text-blue-600" />
             <p className="text-sm text-gray-500">Total Products</p>
             <p className="text-2xl font-bold text-blue-600">{stats.totalProducts}</p>
           </div>
         </div>
 
         {/* Categories Table */}
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className={viewMode === 'list' ? 'overflow-x-auto' : 'hidden'}>
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -456,35 +511,11 @@ const AdminCategories: React.FC = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => openEditModal(category)}
-                            className="text-blue-600 hover:text-blue-900"
-                            title="Edit"
-                          >
+                        <div className="flex items-center gap-2">
+                          <button type="button" onClick={() => openEditModal(category)} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-blue-600 transition hover:border-blue-300 hover:bg-blue-50" title="Edit">
                             <Edit2 className="h-4 w-4" />
                           </button>
-                          <button
-                            onClick={() => handleToggleStatus(category._id, category.isActive)}
-                            className={category.isActive 
-                              ? "text-yellow-600 hover:text-yellow-900" 
-                              : "text-green-600 hover:text-green-900"
-                            }
-                            title={category.isActive ? "Deactivate" : "Activate"}
-                          >
-                            {category.isActive ? (
-                              <EyeOff className="h-4 w-4" />
-                            ) : (
-                              <Eye className="h-4 w-4" />
-                            )}
-                          </button>
-                          <button
-                            onClick={() => handleDeleteCategory(category._id, category.name)}
-                            className="text-red-600 hover:text-red-900"
-                            title="Delete"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                          {renderActionMenu(category)}
                         </div>
                       </td>
                     </tr>
@@ -495,21 +526,20 @@ const AdminCategories: React.FC = () => {
           </div>
 
           {viewMode === 'grid' && filteredCategories.length > 0 && (
-            <div className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid gap-5 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
               {filteredCategories.map((category) => {
                 const imageUrl = getCategoryImage(category)
                 return (
-                  <article key={category._id} className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-                    {imageUrl ? <img src={imageUrl} alt={category.name} onError={handleImageError} className="aspect-[4/3] w-full bg-gray-100 object-cover" loading="lazy" /> : <div className="flex aspect-[4/3] items-center justify-center bg-blue-50"><Folder className="h-12 w-12 text-blue-500" /></div>}
+                  <article key={category._id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md">
+                    {imageUrl ? <img src={imageUrl} alt={category.name} onError={handleImageError} className="aspect-[4/3] w-full bg-slate-100 object-cover transition duration-300 hover:scale-[1.02]" loading="lazy" /> : <div className="flex aspect-[4/3] items-center justify-center bg-blue-50"><Folder className="h-12 w-12 text-blue-500" /></div>}
                     <div className="p-4">
                       <div className="flex items-start justify-between gap-2"><h2 className="font-semibold text-gray-900">{category.name}</h2><span className={`rounded-full px-2 py-1 text-xs font-medium ${category.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{category.isActive ? 'Active' : 'Inactive'}</span></div>
-                      <p className="mt-1 line-clamp-2 min-h-10 text-sm text-gray-500">{category.description || 'No description'}</p>
-                      <p className="mt-3 text-sm font-medium text-gray-700">{category.productCount || 0} products</p>
+                      <p className="mt-1 line-clamp-2 min-h-10 text-sm leading-5 text-slate-500">{category.description || 'No description'}</p>
+                      <p className="mt-3 text-sm font-semibold text-blue-700">{category.productCount || 0} products</p>
                     </div>
-                    <div className="flex items-center justify-end gap-3 border-t px-4 py-3">
-                      <button onClick={() => openEditModal(category)} className="text-blue-600" title="Edit"><Edit2 className="h-4 w-4" /></button>
-                      <button onClick={() => handleToggleStatus(category._id, category.isActive)} className={category.isActive ? 'text-yellow-600' : 'text-green-600'} title={category.isActive ? 'Deactivate' : 'Activate'}>{category.isActive ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button>
-                      <button onClick={() => handleDeleteCategory(category._id, category.name)} className="text-red-600" title="Delete"><Trash2 className="h-4 w-4" /></button>
+                    <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-4 py-3">
+                      <button type="button" onClick={() => openEditModal(category)} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-blue-600 transition hover:border-blue-300 hover:bg-blue-50" title="Edit"><Edit2 className="h-4 w-4" /></button>
+                      {renderActionMenu(category)}
                     </div>
                   </article>
                 )
@@ -526,15 +556,15 @@ const AdminCategories: React.FC = () => {
               </h3>
               <p className="text-gray-600 mb-6">
                 {searchTerm 
-                  ? 'Try adjusting your search terms' 
-                  : 'Get started by creating your first category'}
+                  ? 'Try adjusting your search.' 
+                  : 'Create your first category to organize your product catalog.'}
               </p>
               {!searchTerm && (
                 <button
-                  onClick={() => setShowCreateModal(true)}
+                  onClick={() => navigate('/admin/categories/new')}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
                 >
-                  Create Category
+                  Add Category
                 </button>
               )}
             </div>
@@ -655,7 +685,7 @@ const AdminCategories: React.FC = () => {
                   onClick={handleCreateCategory}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                 >
-                  Create Category
+                  Add Category
                 </button>
               </div>
             </div>
@@ -808,5 +838,6 @@ const AdminCategories: React.FC = () => {
 };
 
 export default AdminCategories;
+
 
 

@@ -1,4 +1,4 @@
-// src/pages/cart/CartPage.tsx
+﻿// src/pages/cart/CartPage.tsx
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -12,7 +12,9 @@ import {
   Shield,
   Truck,
   AlertCircle,
-  Zap, // Added for Express icon
+  Zap,
+  Grid2X2,
+  List,
 } from "lucide-react";
 import { useCart } from "../../context/CartContext";
 import { CartItem, Product } from "../../types";
@@ -25,45 +27,16 @@ const CartPage: React.FC = () => {
     useCart();
   const navigate = useNavigate();
   const [isClearing, setIsClearing] = useState(false);
+  const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
   const [productDetails, setProductDetails] = useState<Record<string, Product>>(
     {},
   );
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [, setFailedProductIds] = useState<string[]>([]);
-
-  // ✨ NEW: Delivery Method State
   const [deliveryMethod, setDeliveryMethod] = useState<"standard" | "express">(
     "standard",
   );
-
-  // ✅ FIXED: Debug function with better error handling
-  const debugBackend = async () => {
-    console.log("🔧 Debugging backend connection...");
-
-    try {
-      // Test 1: Check if base API works
-      const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
-      console.log("🌐 Using base URL:", baseUrl);
-
-      // Test 1: Check if /api/products works (bulk endpoint)
-      const test1 = await fetch(`${baseUrl}/api/products?limit=5`);
-      console.log("✅ /api/products?limit=5 status:", test1.status);
-
-      if (test1.ok) {
-        const data = await test1.json();
-        console.log(
-          "📦 Sample products:",
-          data.data?.products?.length || 0,
-          "products",
-        );
-      }
-    } catch (error) {
-      console.error("❌ Backend debug failed:", error);
-    }
-  };
-
-  // ✅ FIXED: Optimized fetchProductDetails method
   const fetchProductDetails = async () => {
     if (cartItems.length === 0) {
       setLoadingProducts(false);
@@ -80,10 +53,7 @@ const CartPage: React.FC = () => {
       })
       .filter((id) => id && id.trim() !== "");
 
-    console.log("🛒 Cart product IDs to fetch:", productIds);
-
     try {
-      // ✅ METHOD 1: First check for locally available product data
       const locallyAvailable: Record<string, Product> = {};
 
       cartItems.forEach((item) => {
@@ -98,10 +68,6 @@ const CartPage: React.FC = () => {
       });
 
       if (Object.keys(locallyAvailable).length > 0) {
-        console.log(
-          "📱 Using locally available product data:",
-          Object.keys(locallyAvailable),
-        );
         setProductDetails((prev) => ({ ...prev, ...locallyAvailable }));
       }
 
@@ -112,13 +78,9 @@ const CartPage: React.FC = () => {
       );
 
       if (remainingIds.length === 0) {
-        console.log("✅ All products available locally");
         setLoadingProducts(false);
         return;
       }
-
-      // ✅ METHOD 2: Use bulk fetch (this endpoint works)
-      console.log("🔄 Getting all products to find cart items...");
       const response = await productService.getProducts({ limit: 100 });
 
       if (response.success && response.data?.products) {
@@ -140,36 +102,25 @@ const CartPage: React.FC = () => {
         const foundIds = Object.keys(newProductDetails);
         const missingIds = productIds.filter((id) => !foundIds.includes(id));
 
-        console.log("📊 Product lookup results:", {
-          totalCartItems: cartItems.length,
-          productIdsToFind: productIds.length,
-          productsFound: foundIds.length,
-          productsMissing: missingIds.length,
-          missingIds: missingIds,
-        });
-
         if (missingIds.length > 0) {
-          console.log("⚠️ Missing products:", missingIds);
 
           // Try individual fetches for missing products
           const successfullyFetched: string[] = [];
 
           for (const missingId of missingIds) {
             try {
-              console.log(`🔄 Trying to fetch product: ${missingId}`);
               const singleResponse = await productService.getProduct(missingId);
 
               if (singleResponse.success && singleResponse.data?.product) {
                 newProductDetails[missingId] = singleResponse.data.product;
                 successfullyFetched.push(missingId);
-                console.log(`✅ Found missing product: ${missingId}`);
               } else {
-                console.warn(`❌ Product not found: ${missingId}`);
+                console.warn(`Ã¢ÂÅ’ Product not found: ${missingId}`);
                 setFailedProductIds((prev) => [...prev, missingId]);
               }
             } catch (singleError) {
               console.error(
-                `❌ Error fetching product ${missingId}:`,
+                `Ã¢ÂÅ’ Error fetching product ${missingId}:`,
                 singleError,
               );
               setFailedProductIds((prev) => [...prev, missingId]);
@@ -190,11 +141,11 @@ const CartPage: React.FC = () => {
           }
         }
       } else {
-        console.error("❌ Failed to fetch products:", response.message);
+        console.error("Ã¢ÂÅ’ Failed to fetch products:", response.message);
         toast.error("Unable to load product details. Please try again.");
       }
     } catch (error) {
-      console.error("❌ Error fetching product details:", error);
+      console.error("Ã¢ÂÅ’ Error fetching product details:", error);
       toast.error("Failed to load product information");
     } finally {
       setLoadingProducts(false);
@@ -207,13 +158,6 @@ const CartPage: React.FC = () => {
     // Product fetching is intentionally keyed to the cart contents.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cartItems]);
-
-  // Call debug when component mounts
-  useEffect(() => {
-    debugBackend();
-  }, []);
-
-  // ✅ FIXED: Get product object with fallback
   const getProductObject = (item: CartItem): Product | null => {
     // If product is already a full object
     if (
@@ -231,8 +175,6 @@ const CartPage: React.FC = () => {
 
     return null;
   };
-
-  // ✅ FIXED: Filter with better handling
   const validCartItems = cartItems
     .map((item) => {
       const product = getProductObject(item);
@@ -243,8 +185,6 @@ const CartPage: React.FC = () => {
       };
     })
     .filter((item) => item.hasProductDetails);
-
-  // ✅ FIXED: Function to get product image URL
   const getProductImageUrl = (product: Product | null): string => {
     if (!product) return "/images/placeholder.png";
 
@@ -378,12 +318,8 @@ const CartPage: React.FC = () => {
       toast.error("Some items in your cart are out of stock");
       return;
     }
-
-    // ✅ PASS SELECTED DELIVERY METHOD TO CHECKOUT PAGE
     navigate("/checkout", { state: { deliveryMethod } });
   };
-
-  // ✅ FIXED: Calculate totals with null checks - TAX REMOVED
   const calculateSubtotal = () => {
     return validCartItems.reduce((total, item) => {
       const product = item.product as Product;
@@ -401,8 +337,6 @@ const CartPage: React.FC = () => {
       return total + discount;
     }, 0);
   };
-
-  // ✅ Calculate shipping based on subtotal and selected delivery method
   const subtotal = calculateSubtotal();
   let shippingCost = 0;
 
@@ -427,8 +361,8 @@ const CartPage: React.FC = () => {
   // Show loading state
   if (loadingProducts && validCartItems.length === 0 && cartItems.length > 0) {
     return (
-      <div className="min-h-screen bg-gray-50 py-8">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-slate-50 py-5 sm:py-8">
+        <div className="mx-auto w-full max-w-[1600px] px-3 sm:px-5 lg:px-8">
           <div className="text-center py-12">
             <Loader size="lg" />
             <p className="mt-4 text-gray-600">Loading product details...</p>
@@ -443,8 +377,8 @@ const CartPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 py-8">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-slate-50 py-5 sm:py-8">
+        <div className="mx-auto w-full max-w-[1600px] px-3 sm:px-5 lg:px-8">
           <div className="text-center py-12">
             <Loader size="lg" />
             <p className="mt-4 text-gray-600">Loading cart...</p>
@@ -455,16 +389,16 @@ const CartPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-slate-50 py-5 sm:py-8">
+      <div className="mx-auto w-full max-w-[1600px] px-3 sm:px-5 lg:px-8">
         {/* Page Header */}
-        <div className="mb-8">
+        <div className="mb-5 sm:mb-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-950 mb-1">
                 Shopping Cart
               </h1>
-              <p className="text-gray-600">
+              <p className="text-sm sm:text-base text-slate-600">
                 Review your items and proceed to checkout
               </p>
             </div>
@@ -531,11 +465,11 @@ const CartPage: React.FC = () => {
             </div>
           </motion.div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1.65fr)_minmax(320px,0.9fr)] lg:gap-6">
             {/* Cart Items */}
-            <div className="lg:col-span-2">
+            <div className="min-w-0">
               {/* Cart Header */}
-              <div className="bg-white p-4 rounded-lg shadow mb-6">
+              <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm mb-4">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div className="flex items-center">
                     <ShoppingCart className="h-5 w-5 text-blue-600 mr-2" />
@@ -544,7 +478,11 @@ const CartPage: React.FC = () => {
                       cart
                     </span>
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="flex flex-wrap items-center justify-end gap-3">
+                    <div className="flex items-center rounded-lg border border-slate-200 bg-slate-50 p-0.5" aria-label="Cart item view">
+                      <button type="button" onClick={() => setViewMode("list")} aria-label="List view" aria-pressed={viewMode === "list"} className={`rounded-md p-1.5 transition ${viewMode === "list" ? "bg-white text-primary-600 shadow-sm" : "text-slate-500 hover:text-slate-900"}`}><List className="h-4 w-4" /></button>
+                      <button type="button" onClick={() => setViewMode("grid")} aria-label="Grid view" aria-pressed={viewMode === "grid"} className={`rounded-md p-1.5 transition ${viewMode === "grid" ? "bg-white text-primary-600 shadow-sm" : "text-slate-500 hover:text-slate-900"}`}><Grid2X2 className="h-4 w-4" /></button>
+                    </div>
                     <span className="text-sm text-gray-600">
                       Total:{" "}
                       <span className="font-bold text-lg">
@@ -564,7 +502,7 @@ const CartPage: React.FC = () => {
               </div>
 
               {/* Cart Items List */}
-              <div className="space-y-4">
+              <div className={viewMode === "grid" ? "grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3 2xl:grid-cols-4" : "space-y-3"}>
                 {validCartItems.map((item, index) => {
                   const product = item.product as Product;
                   if (!product) return null;
@@ -597,13 +535,13 @@ const CartPage: React.FC = () => {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.05 }}
-                      className="bg-white p-4 rounded-lg shadow"
+                      className={viewMode === "grid" ? "rounded-xl border border-slate-200 bg-white p-2 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md" : "rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"}
                     >
-                      <div className="flex flex-col sm:flex-row">
+                      <div className={viewMode === "grid" ? "flex flex-col" : "flex flex-col sm:flex-row"}>
                         {/* Product Image */}
                         <Link
                           to={`/products/${productIdentifier}`}
-                          className="w-full sm:w-24 h-24 mb-4 sm:mb-0 sm:mr-4 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden"
+                          className={viewMode === "grid" ? "mb-2 h-36 w-full flex-shrink-0 overflow-hidden rounded-lg bg-slate-100 sm:h-40 lg:h-36" : "h-24 w-24 sm:h-32 sm:w-32 mb-3 sm:mb-0 sm:mr-5 flex-shrink-0 bg-slate-100 rounded-lg overflow-hidden"}
                         >
                           <img
                             src={
@@ -612,7 +550,7 @@ const CartPage: React.FC = () => {
                                 : imageUrl
                             }
                             alt={product.name}
-                            className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                            className="h-full w-full object-contain transition-transform duration-300 hover:scale-105"
                             loading="lazy"
                             onError={() => handleImageError(product._id)}
                           />
@@ -620,28 +558,28 @@ const CartPage: React.FC = () => {
 
                         {/* Product Info */}
                         <div className="flex-1">
-                          <div className="flex flex-col sm:flex-row sm:items-start justify-between">
+                          <div className={viewMode === "grid" ? "flex flex-col" : "flex flex-col sm:flex-row sm:items-start justify-between"}>
                             <div className="flex-1">
                               <Link
                                 to={`/products/${productIdentifier}`}
-                                className="font-medium text-gray-900 hover:text-blue-600 mb-1 block transition-colors line-clamp-2"
+                                className={viewMode === "grid" ? "text-xs sm:text-sm font-semibold text-slate-900 hover:text-blue-600 mb-1 block transition-colors line-clamp-2" : "text-base sm:text-lg font-semibold text-slate-900 hover:text-blue-600 mb-1 block transition-colors line-clamp-2"}
                               >
                                 {product.name}
                               </Link>
-                              <div className="flex items-center gap-2 mb-2">
+                              <div className="flex flex-wrap items-center gap-1.5 mb-2">
                                 {product.brand && (
-                                  <p className="text-sm text-gray-500">
+                                  <p className="text-xs sm:text-sm text-gray-500">
                                     {product.brand}
                                   </p>
                                 )}
                                 {product.category && (
-                                  <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded">
+                                  <span className="text-[11px] px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded">
                                     {product.category}
                                   </span>
                                 )}
                               </div>
                               {item.selectedColor && (
-                                <p className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700">
+                                <p className="mb-2 flex items-center gap-2 text-xs sm:text-sm font-medium text-gray-700">
                                   <span
                                     className="h-4 w-4 rounded-full border"
                                     style={{
@@ -653,8 +591,8 @@ const CartPage: React.FC = () => {
                               )}
 
                               {/* Price */}
-                              <div className="flex items-center flex-wrap gap-2 mb-3">
-                                <span className="text-lg font-bold text-gray-900">
+                              <div className="flex items-center flex-wrap gap-1.5 mb-2.5">
+                                <span className={viewMode === "grid" ? "text-sm sm:text-base font-bold text-slate-900" : "text-lg sm:text-xl font-bold text-slate-900"}>
                                   PKR{" "}
                                   {product.discountPrice
                                     ? product.discountPrice.toLocaleString()
@@ -662,10 +600,10 @@ const CartPage: React.FC = () => {
                                 </span>
                                 {product.discountPrice && product.price && (
                                   <>
-                                    <span className="text-sm text-gray-500 line-through">
+                                    <span className="text-xs sm:text-sm text-gray-500 line-through">
                                       PKR {product.price.toLocaleString()}
                                     </span>
-                                    <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded">
+                                    <span className="text-[11px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded">
                                       Save{" "}
                                       {Math.round(
                                         (discount / product.price) * 100,
@@ -678,8 +616,8 @@ const CartPage: React.FC = () => {
                             </div>
 
                             {/* Quantity Controls */}
-                            <div className="flex items-center space-x-4 mt-3 sm:mt-0">
-                              <div className="flex items-center border border-gray-300 rounded-lg">
+                            <div className={viewMode === "grid" ? "flex items-center justify-between gap-1.5 mt-1.5" : "flex items-center space-x-4 mt-3 sm:mt-0"}>
+                              <div className="flex items-center border border-slate-300 rounded-lg">
                                 <button
                                   onClick={() =>
                                     handleQuantityChange(
@@ -689,12 +627,12 @@ const CartPage: React.FC = () => {
                                       variantId,
                                     )
                                   }
-                                  className="flex items-center justify-center w-10 h-10 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                  className="flex h-7 w-7 items-center justify-center hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                   disabled={item.quantity <= 1}
                                 >
                                   <Minus className="h-4 w-4" />
                                 </button>
-                                <span className="w-12 text-center font-medium">
+                                <span className="w-7 text-center text-xs font-semibold">
                                   {item.quantity}
                                 </span>
                                 <button
@@ -706,7 +644,7 @@ const CartPage: React.FC = () => {
                                       variantId,
                                     )
                                   }
-                                  className="flex items-center justify-center w-10 h-10 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                  className="flex h-7 w-7 items-center justify-center hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                   disabled={item.quantity >= availableStock}
                                 >
                                   <Plus className="h-4 w-4" />
@@ -722,10 +660,10 @@ const CartPage: React.FC = () => {
                                     variantId,
                                   )
                                 }
-                                className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                                className="p-1.5 text-slate-400 hover:text-red-600 transition-colors"
                                 title="Remove item"
                               >
-                                <Trash2 className="h-5 w-5" />
+                                <Trash2 className="h-4 w-4" />
                               </button>
                             </div>
                           </div>
@@ -738,17 +676,17 @@ const CartPage: React.FC = () => {
                           )}
 
                           {/* Item Total */}
-                          <div className="mt-3 pt-3 border-t border-gray-100 flex justify-between items-center">
+                          <div className="mt-2 pt-2 border-t border-slate-100 flex justify-between items-center">
                             <div>
-                              <span className="text-sm text-gray-500">
+                              <span className="text-xs sm:text-sm text-gray-500">
                                 Quantity: {item.quantity}
                               </span>
                             </div>
                             <div className="text-right">
-                              <div className="text-sm text-gray-500">
+                              <div className="text-xs sm:text-sm text-gray-500">
                                 Item Total
                               </div>
-                              <div className="text-lg font-bold">
+                              <div className={viewMode === "grid" ? "text-sm sm:text-base font-bold" : "text-lg sm:text-xl font-bold"}>
                                 PKR{" "}
                                 {(
                                   (product.discountPrice ||
@@ -766,8 +704,8 @@ const CartPage: React.FC = () => {
               </div>
 
               {/* Cart Features */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
-                <div className="bg-white p-4 rounded-lg shadow">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mt-5">
+                <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
                   <div className="flex items-center mb-2">
                     <Truck className="h-5 w-5 text-green-600 mr-2" />
                     <span className="font-medium">Reliable Delivery</span>
@@ -777,7 +715,7 @@ const CartPage: React.FC = () => {
                     Express PKR 350
                   </p>
                 </div>
-                <div className="bg-white p-4 rounded-lg shadow">
+                <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
                   <div className="flex items-center mb-2">
                     <Shield className="h-5 w-5 text-blue-600 mr-2" />
                     <span className="font-medium">Secure Checkout</span>
@@ -786,7 +724,7 @@ const CartPage: React.FC = () => {
                     Your payment information is encrypted
                   </p>
                 </div>
-                <div className="bg-white p-4 rounded-lg shadow">
+                <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
                   <div className="flex items-center mb-2">
                     <Package className="h-5 w-5 text-purple-600 mr-2" />
                     <span className="font-medium">Easy Returns</span>
@@ -800,13 +738,13 @@ const CartPage: React.FC = () => {
 
             {/* Order Summary - TAX REMOVED */}
             <div>
-              <div className="bg-white p-6 rounded-lg shadow sticky top-24">
-                <h2 className="text-xl font-bold text-gray-900 mb-6">
+              <div className="bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-sm lg:sticky lg:top-24">
+                <h2 className="text-xl font-bold text-slate-950 mb-4">
                   Order Summary
                 </h2>
 
-                {/* ✨ NEW: Delivery Selection UI */}
-                <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                {/* Ã¢Å“Â¨ NEW: Delivery Selection UI */}
+                <div className="mb-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
                   <h3 className="font-medium text-gray-900 mb-3 text-sm">
                     Choose Delivery Method
                   </h3>
@@ -830,6 +768,7 @@ const CartPage: React.FC = () => {
                       <span className="text-xs text-gray-500">
                         {subtotal >= 5000 ? "Free" : "PKR 200"}
                       </span>
+                      <span className="mt-1 text-center text-[11px] leading-4 text-slate-500">4-7 working days<br />after dispatch</span>
                     </button>
 
                     <button
@@ -851,14 +790,16 @@ const CartPage: React.FC = () => {
                       <span className="text-xs text-yellow-600 font-medium">
                         PKR 350
                       </span>
+                      <span className="mt-1 text-center text-[11px] leading-4 text-slate-500">2-3 days<br />after dispatch</span>
                     </button>
                   </div>
+                  <p className="mt-3 text-center text-[11px] leading-4 text-slate-500">Delivery estimates begin after your order is dispatched and handed to the courier company.</p>
                 </div>
 
                 {/* Price Breakdown - TAX REMOVED */}
                 <div className="space-y-3 mb-6">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">
+                    <span className="text-sm sm:text-base text-slate-600">
                       Subtotal ({totalItems} items)
                     </span>
                     <span className="font-medium">
@@ -867,7 +808,7 @@ const CartPage: React.FC = () => {
                   </div>
 
                   <div className="flex justify-between">
-                    <span className="text-gray-600">
+                    <span className="text-sm sm:text-base text-slate-600">
                       {deliveryMethod === "standard"
                         ? "Standard Shipping"
                         : "Express Shipping"}
@@ -911,7 +852,7 @@ const CartPage: React.FC = () => {
                 </button>
 
                 {/* Payment Methods */}
-                <div className="mb-6">
+                <div className="mb-4">
                   <h3 className="font-medium text-gray-900 mb-3">We Accept</h3>
                   <div className="flex flex-wrap gap-2">
                     <div className="w-12 h-8 bg-gray-100 rounded flex items-center justify-center border border-gray-200">
@@ -970,3 +911,9 @@ const CartPage: React.FC = () => {
   );
 };
 export default CartPage;
+
+
+
+
+
+

@@ -1,18 +1,18 @@
-// src/pages/orders/OrderDetailsPage.tsx
+﻿// src/pages/orders/OrderDetailsPage.tsx
 import React, { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   Package, Truck, CheckCircle, Clock, MapPin, CreditCard,
   Printer, Download, Share2, AlertCircle, ArrowLeft,
-  DollarSign, XCircle, FileText, ShoppingBag
+  DollarSign, XCircle, FileText, ShoppingBag, Headphones
 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { orderService } from '../../services/orderService'
 import Loader from '../../components/common/Loader'
 import toast from 'react-hot-toast'
 
-// ✅ FIXED: Data URI fallback (no external dependency)
+// âœ… FIXED: Data URI fallback (no external dependency)
 const FALLBACK_IMAGE = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'80\' height=\'80\' viewBox=\'0 0 80 80\'%3E%3Crect width=\'80\' height=\'80\' fill=\'%23f0f0f0\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' font-family=\'Arial\' font-size=\'14\' fill=\'%23999\'%3ENo Image%3C/text%3E%3C/svg%3E'
 
 // Helper function to download invoice
@@ -251,7 +251,7 @@ const OrderDetailsPage: React.FC = () => {
 
   if (error || !order) {
     return (
-      <div className="min-h-screen bg-gray-50 py-8">
+      <div className="min-h-screen bg-slate-50 py-5 sm:py-8">
         <div className="container-lg section-padding text-center">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-red-100 rounded-full mb-4">
             <AlertCircle className="h-10 w-10 text-red-600" />
@@ -270,10 +270,10 @@ const OrderDetailsPage: React.FC = () => {
   }
 
   return (
-      <div className="min-h-screen bg-gray-50 py-8">
-        <div className="container-lg section-padding">
+      <div className="min-h-screen bg-slate-50 py-5 sm:py-8">
+        <div className="mx-auto w-full max-w-7xl px-3 sm:px-5 lg:px-8">
           {/* Header */}
-          <div className="mb-8">
+          <div className="mb-5 sm:mb-6">
             <button
               onClick={() => navigate('/')}
               className="flex items-center text-gray-600 hover:text-primary-600 mb-4"
@@ -283,7 +283,7 @@ const OrderDetailsPage: React.FC = () => {
             </button>
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <h1 className="text-3xl font-bold text-gray-900 mb-1">
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-950 mb-1">
                   Order #{order.invoiceNumber || order._id.slice(-8).toUpperCase()}
                 </h1>
                 <p className="text-gray-600">Placed on {new Date(order.createdAt).toLocaleDateString()}</p>
@@ -317,20 +317,20 @@ const OrderDetailsPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1.65fr)_minmax(320px,0.9fr)] lg:gap-6">
             {/* Main Content */}
-            <div className="lg:col-span-2 space-y-8">
+            <div className="min-w-0 space-y-5 order-1">
               {/* Order Status & Tracking */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="card p-6"
+                className="card p-4 sm:p-5"
               >
-                <h2 className="text-xl font-bold text-gray-900 mb-6">Order Status & Tracking</h2>
+                <h2 className="text-lg sm:text-xl font-bold text-slate-950 mb-4">Order Status & Tracking</h2>
                 
                 {/* Progress Bar */}
                 <div className="relative mb-8">
-                  <div className="absolute top-6 left-0 right-0 h-2 bg-gray-200">
+                  <div className="absolute top-5 sm:top-6 left-0 right-0 h-1.5 bg-slate-200">
                     <div 
                       className="h-full bg-primary-600 transition-all duration-500"
                       style={{ width: `${(currentStepIndex + 1) * 25}%` }}
@@ -370,12 +370,12 @@ const OrderDetailsPage: React.FC = () => {
 
                 {/* Tracking Info */}
                 {order.trackingNumber && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="bg-blue-50 border border-blue-100 rounded-lg p-3.5">
                     <div className="flex items-center mb-2">
                       <Truck className="h-5 w-5 text-blue-600 mr-2" />
                       <h3 className="font-medium text-blue-800">Tracking Information</h3>
                     </div>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                       <div>
                         <p className="text-gray-600">Tracking Number</p>
                         <p className="font-medium">{order.trackingNumber}</p>
@@ -394,14 +394,14 @@ const OrderDetailsPage: React.FC = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="card p-6"
+                className="card p-4 sm:p-5"
               >
-                <h2 className="text-xl font-bold text-gray-900 mb-6">Order Items</h2>
-                <div className="space-y-6">
+                <h2 className="text-lg sm:text-xl font-bold text-slate-950 mb-4">Order Items</h2>
+                <div className="space-y-3">
                   {order.orderItems?.map((item: any) => (
-                    <div key={item._id} className="border-b border-gray-200 pb-6 last:border-0">
+                    <div key={item._id} className="border-b border-slate-200 pb-3 last:border-0">
                       <div className="flex items-start">
-                        <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden mr-4 flex-shrink-0">
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-100 rounded-lg overflow-hidden mr-3 sm:mr-4 flex-shrink-0">
                           <img
                             src={item.image || FALLBACK_IMAGE}
                             alt={item.name || 'Product'}
@@ -432,16 +432,35 @@ const OrderDetailsPage: React.FC = () => {
               </motion.div>
             </div>
 
-            {/* Sidebar */}
-            <div className="space-y-8">
+
+              {/* Order Support */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15 }}
+                className="rounded-xl border border-blue-100 bg-blue-50 p-4 sm:p-5"
+              >
+                <div className="flex items-start gap-3">
+                  <Headphones className="mt-0.5 h-5 w-5 shrink-0 text-primary-600" />
+                  <div className="min-w-0">
+                    <h2 className="font-semibold text-slate-900">Need help with your order?</h2>
+                    <p className="mt-1 text-sm text-slate-600">Our support team is here to help with any questions or concerns.</p>
+                  </div>
+                </div>
+                <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <button onClick={() => navigate('/contact')} className="rounded-lg border border-primary-600 bg-white px-3 py-2 text-sm font-semibold text-primary-600 hover:bg-blue-100">Contact Support</button>
+                  <a href="https://wa.me/923146965599" className="rounded-lg border border-emerald-500 bg-white px-3 py-2 text-center text-sm font-semibold text-emerald-700 hover:bg-emerald-50">WhatsApp</a>
+                </div>
+              </motion.div>            {/* Sidebar */}
+            <div className="space-y-5 order-2 lg:sticky lg:top-24">
               {/* Order Summary - TAX REMOVED */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="card p-6"
+                className="card p-4 sm:p-5"
               >
-                <h2 className="text-xl font-bold text-gray-900 mb-6">Order Summary</h2>
+                <h2 className="text-lg sm:text-xl font-bold text-slate-950 mb-4">Order Summary</h2>
                 
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
@@ -495,9 +514,9 @@ const OrderDetailsPage: React.FC = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="card p-6"
+                className="card p-4 sm:p-5"
               >
-                <h2 className="text-xl font-bold text-gray-900 mb-6">Shipping & Payment</h2>
+                <h2 className="text-lg sm:text-xl font-bold text-slate-950 mb-4">Shipping & Payment</h2>
                 
                 {/* Shipping Address */}
                 <div className="mb-6">
@@ -511,7 +530,7 @@ const OrderDetailsPage: React.FC = () => {
                     <p className="text-gray-600">
                       {order.shippingAddress?.city}, {order.shippingAddress?.country}
                     </p>
-                    <p className="text-gray-600">📞 {order.shippingAddress?.phone}</p>
+                    <p className="text-gray-600">ðŸ“ž {order.shippingAddress?.phone}</p>
                   </div>
                 </div>
 
@@ -549,9 +568,9 @@ const OrderDetailsPage: React.FC = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
-                className="card p-6"
+                className="card p-4 sm:p-5"
               >
-                <h2 className="text-xl font-bold text-gray-900 mb-6">Actions</h2>
+                <h2 className="text-lg sm:text-xl font-bold text-slate-950 mb-4">Actions</h2>
                 <div className="space-y-3">
                   {order.isRefundable && (
                     <button
@@ -634,3 +653,6 @@ const OrderDetailsPage: React.FC = () => {
 }
 
 export default OrderDetailsPage
+
+
+

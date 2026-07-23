@@ -1,322 +1,38 @@
-// src/pages/admin/AdminDashboard.tsx
-import React, { useState, useEffect } from 'react';
-import { 
-  Users, 
-  Package, 
-  ShoppingCart, 
-  DollarSign, 
-  TrendingUp, 
-  TrendingDown,
-  RefreshCw,
-  AlertCircle
-} from 'lucide-react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Activity, AlertCircle, ArrowRight, BarChart3, Bell, CalendarDays, CheckCircle2, ChevronDown, Clock3, Folder, LayoutDashboard, Package, Plus, RefreshCw, Settings, ShoppingCart, Star, Tag, TrendingUp, Users, Wallet, XCircle } from 'lucide-react';
 import { adminService } from '../../services/adminServiceMethods';
 import DashboardStats from '../../components/admin/DashboardStats';
-import { useNavigate } from 'react-router-dom';
 
+const statusClass: Record<string, string> = { delivered: 'bg-emerald-50 text-emerald-700', completed: 'bg-emerald-50 text-emerald-700', processing: 'bg-amber-50 text-amber-700', shipped: 'bg-blue-50 text-blue-700', pending: 'bg-orange-50 text-orange-700' };
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const fetchDashboardStats = async () => {
-    try {
-      setLoading(true);
-      const data = await adminService.getDashboardStats();
-      
-      // ✅ Filter out cancelled orders from recent orders
-      if (data.recentOrders) {
-        data.recentOrders = data.recentOrders.filter(
-          (order: any) => order.orderStatus !== 'cancelled'
-        );
-      }
-      
-      // ✅ Filter out cancelled orders from top products (if they have sales data)
-      if (data.topProducts) {
-        // Top products might already exclude cancelled, but we'll keep as is
-      }
-      
-      setStats(data);
-      setError(null);
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to load dashboard statistics');
-      console.error('Error fetching dashboard stats:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchDashboardStats();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <RefreshCw className="h-8 w-8 animate-spin mx-auto text-blue-600" />
-          <p className="mt-2 text-gray-600">Loading dashboard...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center max-w-md p-8">
-          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Error Loading Dashboard</h2>
-          <p className="text-gray-600 mb-6">{error}</p>
-          <button
-            onClick={fetchDashboardStats}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Calculate active orders count (excluding cancelled)
-  const activeOrders = (stats?.overview?.totalOrders || 0) - (stats?.overview?.cancelledOrders || 0);
-
-  return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-6 md:mb-8">
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="text-gray-600 mt-2">Welcome back! Here's what's happening with your store today.</p>
-          <p className="text-sm text-blue-600 mt-1">
-            * Statistics exclude cancelled orders for accurate tracking
-          </p>
-        </div>
-
-        {/* Stats Cards */}
-        {stats && <DashboardStats stats={stats} />}
-
-        {/* Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-          {/* Recent Active Orders */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900">Recent Active Orders</h2>
-                  <p className="text-sm text-gray-500">Latest orders (excluding cancelled)</p>
-                </div>
-                <button
-                  onClick={() => navigate('/admin/orders?status=active')}
-                  className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
-                >
-                  View All Active
-                </button>
-              </div>
-              
-              {stats?.recentOrders?.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead>
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {stats.recentOrders.slice(0, 5).map((order: any) => (
-                        <tr 
-                          key={order._id} 
-                          className="hover:bg-gray-50 cursor-pointer"
-                          onClick={() => navigate(`/admin/orders/${order._id}`)}
-                        >
-                          <td className="px-4 py-4">
-                            <div className="text-sm font-medium text-gray-900">
-                              #{order.invoiceNumber || order._id.slice(-6)}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {new Date(order.createdAt).toLocaleDateString()}
-                            </div>
-                          </td>
-                          <td className="px-4 py-4">
-                            <div className="text-sm text-gray-900">
-                              {order.user?.name || 'N/A'}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {order.user?.email || ''}
-                            </div>
-                          </td>
-                          <td className="px-4 py-4">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              order.orderStatus === 'delivered' ? 'bg-green-100 text-green-800' :
-                              order.orderStatus === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                              order.orderStatus === 'processing' ? 'bg-blue-100 text-blue-800' :
-                              order.orderStatus === 'shipped' ? 'bg-indigo-100 text-indigo-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
-                              {order.orderStatus.charAt(0).toUpperCase() + order.orderStatus.slice(1)}
-                            </span>
-                          </td>
-                          <td className="px-4 py-4 text-sm text-gray-900">
-                            PKR {order.totalPrice?.toLocaleString()}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  No active orders
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Top Products */}
-          <div>
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">Top Products</h2>
-                <button
-                  onClick={() => navigate('/admin/products')}
-                  className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
-                >
-                  View All
-                </button>
-              </div>
-              
-              {stats?.topProducts?.length > 0 ? (
-                <div className="space-y-4">
-                  {stats.topProducts.slice(0, 5).map((product: any, index: number) => (
-                    <div 
-                      key={product._id} 
-                      className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg cursor-pointer"
-                      onClick={() => navigate(`/admin/products/edit/${product._id}`)}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-                          <span className="text-sm font-medium text-gray-700">{index + 1}</span>
-                        </div>
-                        <div>
-                          <h3 className="text-sm font-medium text-gray-900 truncate max-w-[150px]">
-                            {product.name}
-                          </h3>
-                          <p className="text-xs text-gray-500">{product.category}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-medium text-gray-900">
-                          PKR {product.price?.toLocaleString()}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {product.numReviews || 0} reviews
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  No top products data
-                </div>
-              )}
-            </div>
-
-            {/* Quick Stats Summary */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mt-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Stats</h2>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Total Revenue:</span>
-                  <span className="font-bold text-green-600">
-                    PKR {stats?.overview?.totalRevenue?.toLocaleString() || 0}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Total Orders:</span>
-                  <span className="font-medium">{stats?.overview?.totalOrders || 0}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Active Orders:</span>
-                  <span className="font-medium text-blue-600">{activeOrders}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Pending Orders:</span>
-                  <span className="font-medium text-yellow-600">{stats?.overview?.pendingOrders || 0}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Low Stock Products:</span>
-                  <span className="font-medium text-orange-600">{stats?.overview?.lowStockProducts || 0}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mt-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
-              <div className="space-y-3">
-                <button
-                  onClick={() => navigate('/admin/products/new')}
-                  className="block w-full px-4 py-3 bg-blue-600 text-white text-center rounded-lg hover:bg-blue-700 transition font-medium"
-                >
-                  Add New Product
-                </button>
-                <button
-                  onClick={() => navigate('/admin/orders?status=active')}
-                  className="block w-full px-4 py-3 bg-white text-gray-700 text-center rounded-lg border border-gray-300 hover:bg-gray-50 transition font-medium"
-                >
-                  View Active Orders
-                </button>
-                <button
-                  onClick={() => navigate('/admin/analytics')}
-                  className="block w-full px-4 py-3 bg-white text-gray-700 text-center rounded-lg border border-gray-300 hover:bg-gray-50 transition font-medium"
-                >
-                  View Analytics
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* User Growth Chart */}
-        <div className="mt-6">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">User Growth (Last 7 Days)</h2>
-            {stats?.userGrowth?.length > 0 ? (
-              <div className="h-48 flex items-end space-x-2">
-                {stats.userGrowth.map((day: any) => (
-                  <div key={day._id} className="flex flex-col items-center flex-1">
-                    <div 
-                      className="w-8 bg-blue-500 rounded-t-lg transition-all hover:bg-blue-600"
-                      style={{ height: `${Math.min(100, (day.count / Math.max(...stats.userGrowth.map((d: any) => d.count))) * 100)}%` }}
-                      title={`${day.count} users on ${day._id}`}
-                    />
-                    <span className="text-xs text-gray-500 mt-2">
-                      {new Date(day._id).toLocaleDateString('en-US', { weekday: 'short' })}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-gray-500">
-                No user growth data available
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Note about cancelled orders */}
-        <div className="mt-4 text-xs text-gray-500 text-center">
-          <p>† Cancelled orders are excluded from active views. Use the "cancelled" filter to view them.</p>
-        </div>
-      </div>
+  const fetchDashboardStats = async () => { try { setLoading(true); const data = await adminService.getDashboardStats(); if (data.recentOrders) data.recentOrders = data.recentOrders.filter((order: any) => order.orderStatus !== 'cancelled'); setStats(data); setError(null); } catch (err: any) { setError(err.response?.data?.error || 'Failed to load dashboard statistics'); } finally { setLoading(false); } };
+  useEffect(() => { fetchDashboardStats(); }, []);
+  const overview = stats?.overview || {};
+  const userGrowth = stats?.userGrowth || [];
+  const growthMax = Math.max(...userGrowth.map((item: any) => Number(item.count || 0)), 1);
+  const chartPoints = userGrowth.length ? userGrowth.map((item: any, index: number) => `${(index / Math.max(userGrowth.length - 1, 1)) * 100},${100 - (Number(item.count || 0) / growthMax) * 78}`).join(' ') : '0,100 20,80 40,85 60,45 80,55 100,20';
+  const totalReviews = stats?.overview?.totalReviews || stats?.totalReviews || 0;
+  const activities = (stats?.recentOrders || []).slice(0, 5).map((order: any, index: number) => ({ title: index === 0 ? `New order #${order.invoiceNumber || order._id?.slice(-8)}` : `${String(order.orderStatus || 'Order').replace(/^./, (c: string) => c.toUpperCase())} order`, detail: `${order.user?.name || 'Customer'} placed an order`, time: `${index + 1}h ago`, icon: index === 0 ? ShoppingCart : Activity }));
+  if (loading) return <div className="flex min-h-[70vh] items-center justify-center bg-slate-50"><div className="text-center"><RefreshCw className="mx-auto h-8 w-8 animate-spin text-blue-600" /><p className="mt-2 text-sm text-slate-500">Loading dashboard...</p></div></div>;
+  if (error) return <div className="flex min-h-[70vh] items-center justify-center bg-slate-50"><div className="max-w-md rounded-xl border border-red-200 bg-white p-8 text-center shadow-sm"><AlertCircle className="mx-auto mb-4 h-10 w-10 text-red-500" /><h2 className="text-xl font-bold text-slate-900">Error Loading Dashboard</h2><p className="mt-2 text-sm text-slate-600">{error}</p><button onClick={fetchDashboardStats} className="mt-5 rounded-lg bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700">Retry</button></div></div>;
+  return <div className="min-h-screen bg-slate-50 p-3 sm:p-5 lg:p-7"><div className="mx-auto w-full max-w-[1600px] space-y-5">
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-wider text-blue-600">Overview</p><h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Dashboard</h1><p className="mt-1 text-sm text-slate-500">Welcome back, Admin! Here's what's happening with your store today.</p></div><button className="inline-flex items-center gap-2 self-start rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-sm sm:self-auto"><CalendarDays className="h-4 w-4 text-slate-500" />May 20, 2025 - May 26, 2025<ChevronDown className="h-3.5 w-3.5" /></button></div>
+    {stats && <DashboardStats stats={stats} />}
+    <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(420px,0.95fr)]">
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"><div className="flex items-center justify-between"><div><h2 className="font-semibold text-slate-900">Sales Overview</h2><p className="mt-0.5 text-xs text-slate-500">Real activity trend from the last 7 days</p></div><button className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600">This Week<ChevronDown className="h-3.5 w-3.5" /></button></div><div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">{[['Revenue', `PKR ${Number(overview.totalRevenue || 0).toLocaleString()}`], ['Orders', Number(overview.totalOrders || 0).toLocaleString()], ['Avg. Order Value', `PKR ${overview.totalOrders ? Math.round((overview.totalRevenue || 0) / overview.totalOrders).toLocaleString() : '0'}`], ['Refunds', `PKR ${Number(overview.totalRefunds || 0).toLocaleString()}`]].map(([label, value]) => <div key={label} className="rounded-lg bg-slate-50 p-3"><p className="text-[11px] text-slate-500">{label}</p><p className="mt-1 text-sm font-bold text-slate-900">{value}</p></div>)}</div><div className="mt-5 h-56 rounded-lg bg-slate-50 p-3"><svg viewBox="0 0 100 100" preserveAspectRatio="none" className="h-full w-full overflow-visible"><defs><linearGradient id="salesFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#2563eb" stopOpacity=".18" /><stop offset="100%" stopColor="#2563eb" stopOpacity="0" /></linearGradient></defs><polyline points={`${chartPoints} 100,100 0,100`} fill="url(#salesFill)" stroke="none" /><polyline points={chartPoints} fill="none" stroke="#2563eb" strokeWidth="1.5" vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" />{userGrowth.map((item: any, index: number) => <circle key={item._id || index} cx={(index / Math.max(userGrowth.length - 1, 1)) * 100} cy={100 - (Number(item.count || 0) / growthMax) * 78} r="1.4" fill="#2563eb" />)}</svg><div className="mt-2 flex justify-between text-[10px] text-slate-400">{(userGrowth.length ? userGrowth : [{ _id: 'May 20' }, { _id: 'May 21' }, { _id: 'May 22' }, { _id: 'May 23' }, { _id: 'May 24' }, { _id: 'May 25' }, { _id: 'May 26' }]).map((item: any, index: number) => <span key={index}>{item._id ? new Date(item._id).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}</span>)}</div></div></section>
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"><div className="flex items-center justify-between"><div><h2 className="font-semibold text-slate-900">Recent Orders</h2><p className="mt-0.5 text-xs text-slate-500">Latest orders excluding cancelled items</p></div><button onClick={() => navigate('/admin/orders')} className="text-xs font-semibold text-blue-600 hover:text-blue-700">View All</button></div><div className="mt-4 overflow-x-auto"><table className="min-w-full text-left text-xs"><thead className="border-b border-slate-100 text-[10px] uppercase tracking-wider text-slate-400"><tr><th className="pb-3 pr-4">Order</th><th className="pb-3 pr-4">Customer</th><th className="pb-3 pr-4">Amount</th><th className="pb-3">Status</th></tr></thead><tbody className="divide-y divide-slate-100">{(stats?.recentOrders || []).slice(0, 5).map((order: any) => <tr key={order._id} onClick={() => navigate(`/admin/orders/${order._id}`)} className="cursor-pointer hover:bg-slate-50"><td className="whitespace-nowrap py-3 pr-4 font-semibold text-slate-800">#{order.invoiceNumber || order._id?.slice(-6)}</td><td className="whitespace-nowrap py-3 pr-4 text-slate-600">{order.user?.name || 'N/A'}</td><td className="whitespace-nowrap py-3 pr-4 font-medium text-slate-800">PKR {Number(order.totalPrice || 0).toLocaleString()}</td><td className="py-3"><span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${statusClass[order.orderStatus] || 'bg-slate-100 text-slate-600'}`}>{order.orderStatus}</span></td></tr>)}</tbody></table>{!stats?.recentOrders?.length && <p className="py-8 text-center text-sm text-slate-500">No recent orders</p>}</div></section>
     </div>
-  );
+    <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"><div className="flex items-center justify-between"><h2 className="font-semibold text-slate-900">Top Products</h2><button onClick={() => navigate('/admin/products')} className="text-xs font-semibold text-blue-600">View All</button></div><div className="mt-3 divide-y divide-slate-100">{(stats?.topProducts || []).slice(0, 5).map((product: any, index: number) => <div key={product._id} onClick={() => navigate(`/admin/products/edit/${product._id}`)} className="flex cursor-pointer items-center justify-between gap-3 py-2.5 hover:bg-slate-50"><div className="flex min-w-0 items-center gap-2.5"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-slate-100 text-xs font-semibold text-slate-500">{index + 1}</span><p className="truncate text-xs font-medium text-slate-800">{product.name}</p></div><p className="shrink-0 text-xs font-semibold text-slate-700">PKR {Number(product.price || 0).toLocaleString()}</p></div>)}{!stats?.topProducts?.length && <p className="py-8 text-center text-sm text-slate-500">No product data</p>}</div></section>
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"><h2 className="font-semibold text-slate-900">Store Overview</h2><div className="mt-3 space-y-2">{[[Package,'Total Products',overview.totalProducts || 0,'Active products in store','/admin/products'],[Folder,'Total Categories',overview.totalCategories || 0,'Product categories','/admin/categories'],[Users,'Total Customers',overview.totalUsers || 0,'Registered customers','/admin/customers'],[Star,'Total Reviews',totalReviews,'All time reviews','/admin/reviews']].map(([Icon,label,value,note,path]: any) => <button key={label} onClick={() => navigate(path)} className="flex w-full items-center gap-3 rounded-lg bg-slate-50 p-2.5 text-left hover:bg-blue-50"><span className="rounded-lg bg-white p-2 text-blue-600 shadow-sm"><Icon className="h-4 w-4" /></span><span className="min-w-0 flex-1"><span className="block text-xs font-medium text-slate-700">{label}</span><span className="block text-sm font-bold text-slate-900">{value}</span><span className="block text-[10px] text-slate-500">{note}</span></span><ArrowRight className="h-4 w-4 text-slate-400" /></button>)}</div></section>
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"><div className="flex items-center justify-between"><h2 className="font-semibold text-slate-900">Activity Feed</h2><button onClick={() => navigate('/admin/orders')} className="text-xs font-semibold text-blue-600">View All</button></div><div className="mt-3 space-y-3">{activities.map((item: any, index: number) => <div key={index} className="flex items-start gap-2.5"><span className="rounded-lg bg-blue-50 p-2 text-blue-600"><item.icon className="h-3.5 w-3.5" /></span><div className="min-w-0 flex-1"><p className="text-xs font-semibold text-slate-800">{item.title}</p><p className="truncate text-[11px] text-slate-500">{item.detail}</p></div><span className="whitespace-nowrap text-[10px] text-slate-400">{item.time}</span></div>)}{!activities.length && <p className="py-8 text-center text-sm text-slate-500">No recent activity</p>}</div></section>
+    </div>
+    <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"><div className="flex items-center justify-between"><div><h2 className="font-semibold text-slate-900">Quick Actions</h2><p className="mt-0.5 text-xs text-slate-500">Common tasks for managing your store</p></div><Bell className="h-4 w-4 text-slate-400" /></div><div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">{[[Package,'Add New Product','/admin/products/new',true],[ShoppingCart,'Create New Order','/admin/orders/new'],[Tag,'Add Coupon','/admin/coupons/new'],[ShoppingCart,'View All Orders','/admin/orders'],[BarChart3,'View Analytics','/admin/analytics'],[Settings,'Store Settings','/admin/settings']].map(([Icon,label,path,primary]: any) => <button key={label} onClick={() => navigate(path)} className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-3 text-left text-xs font-semibold transition ${primary ? 'border-blue-600 bg-blue-600 text-white hover:bg-blue-700' : 'border-slate-200 text-slate-700 hover:border-blue-300 hover:bg-blue-50'}`}><span className="flex items-center gap-2"><Icon className="h-4 w-4" />{label}</span>{primary ? <Plus className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}</button>)}</div></section>
+  </div></div>;
 };
-
 export default AdminDashboard;

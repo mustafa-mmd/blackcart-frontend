@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import PrivateRoute from '../components/common/PrivateRoute'
 import AdminLayout from '../components/admin/AdminLayout'
@@ -7,7 +7,6 @@ import Loader from '../components/common/Loader'
 
 const AdminDashboard = lazy(() => import('../pages/admin/AdminDashboard'))
 const AdminUsers = lazy(() => import('../pages/admin/AdminUsers'))
-// ✅ NEW: User detail page handles both view and edit (via ?tab=edit)
 const AdminUserDetail = lazy(() => import('../pages/admin/AdminUserDetail'))
 const AdminProducts = lazy(() => import('../pages/admin/AdminProducts'))
 const AdminOrders = lazy(() => import('../pages/admin/AdminOrders'))
@@ -15,6 +14,7 @@ const AdminAnalytics = lazy(() => import('../pages/admin/AdminAnalytics'))
 const AdminSettings = lazy(() => import('../pages/admin/AdminSettings'))
 const AdminPaymentProofsPage = lazy(() => import('../pages/admin/AdminPaymentProofs'))
 const AdminCategories = lazy(() => import('../pages/admin/AdminCategories'))
+const AdminCreateCategory = lazy(() => import('../pages/admin/AdminCreateCategory'))
 const AdminReviews = lazy(() => import('../pages/admin/AdminReviews'))
 const AdminCoupons = lazy(() => import('../pages/admin/AdminCoupons'))
 const AdminCreateProduct = lazy(() => import('../pages/admin/AdminCreateProduct'))
@@ -28,8 +28,6 @@ const AdminPageLoader = () => (
     <Loader size="lg" color="primary" />
   </div>
 )
-
-// ✅ FIXED: Extracted to its own component so useNavigate works correctly
 const AdminNotFound: React.FC = () => {
   const navigate = useNavigate()
   return (
@@ -66,11 +64,7 @@ const AdminRoutes: React.FC = () => {
             </Suspense>
           } />
 
-          {/* ✅ FIXED: Added missing user detail route
-              Handles both:
-              - /admin/users/:id          → view details
-              - /admin/users/:id?tab=edit → edit mode  */}
-          <Route path="users/:id" element={
+                    <Route path="users/:id" element={
             <Suspense fallback={<AdminPageLoader />}>
               <AdminUserDetail />
             </Suspense>
@@ -107,6 +101,12 @@ const AdminRoutes: React.FC = () => {
           } />
 
           {/* ===================== CATEGORY MANAGEMENT ===================== */}
+          <Route path="categories/new" element={
+            <Suspense fallback={<AdminPageLoader />}>
+              <AdminCreateCategory />
+            </Suspense>
+          } />
+
           <Route path="categories" element={
             <Suspense fallback={<AdminPageLoader />}>
               <AdminCategories />
@@ -156,14 +156,19 @@ const AdminRoutes: React.FC = () => {
               <AdminPaymentProofsPage />
             </Suspense>
           } />
-          <Route path="banners" element={
+          <Route path="banners" element={<Navigate to="../marketing/homepage-banners" replace />} />
+          <Route path="marketing/homepage-banners" element={
+            <Suspense fallback={<AdminPageLoader />}>
+              <AdminBanners />
+            </Suspense>
+          } />
+          <Route path="marketing/category-banners" element={
             <Suspense fallback={<AdminPageLoader />}>
               <AdminBanners />
             </Suspense>
           } />
 
-          {/* ✅ FIXED: 404 uses its own component with useNavigate properly initialized */}
-          <Route path="*" element={<AdminNotFound />} />
+                    <Route path="*" element={<AdminNotFound />} />
         </Route>
       </Routes>
     </PrivateRoute>
@@ -171,3 +176,6 @@ const AdminRoutes: React.FC = () => {
 }
 
 export default AdminRoutes
+
+
+

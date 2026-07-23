@@ -1,4 +1,4 @@
-// src/pages/admin/AdminCoupons.tsx
+﻿// src/pages/admin/AdminCoupons.tsx
 import React, { useState, useEffect, useCallback } from 'react'
 import { toast } from 'react-hot-toast'
 import { 
@@ -561,7 +561,7 @@ const AdminCoupons: React.FC = () => {
                       <div className="flex items-center justify-between text-sm text-gray-600">
                         <div className="flex items-center">
                           <Users className="h-4 w-4 mr-1" />
-                          {coupon.usedCount} / {coupon.usageLimit || '∞'} used
+                          {coupon.usedCount} / {coupon.usageLimit || 'âˆž'} used
                         </div>
                         {coupon.minOrderAmount && coupon.minOrderAmount > 0 && (
                           <div className="flex items-center">
@@ -582,7 +582,7 @@ const AdminCoupons: React.FC = () => {
                             <Calendar className="h-4 w-4 mr-1 text-gray-400" />
                             {formatDate(coupon.validFrom)}
                           </div>
-                          <span className="text-gray-400">→</span>
+                          <span className="text-gray-400">â†’</span>
                           <div className="flex items-center">
                             <Calendar className="h-4 w-4 mr-1 text-gray-400" />
                             {formatDate(coupon.validUntil)}
@@ -831,7 +831,7 @@ const AdminCoupons: React.FC = () => {
                     disabled={isSavingCoupon}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {isSavingCoupon ? 'Creating…' : 'Create Coupon'}
+                    {isSavingCoupon ? 'Creating...' : 'Create Coupon'}
                   </button>
                 </div>
               </div>
@@ -991,7 +991,7 @@ const AdminCoupons: React.FC = () => {
                     disabled={isSavingCoupon}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {isSavingCoupon ? 'Updating…' : 'Update Coupon'}
+                    {isSavingCoupon ? 'Updating...' : 'Update Coupon'}
                   </button>
                 </div>
               </div>
@@ -1004,3 +1004,4 @@ const AdminCoupons: React.FC = () => {
 }
 
 export default AdminCoupons
+

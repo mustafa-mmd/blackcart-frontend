@@ -1,4 +1,4 @@
-
+﻿
 
 // src/components/product/ProductCard.tsx
 import React, { useEffect } from 'react'
@@ -15,7 +15,7 @@ interface ProductCardProps {
   product: StorefrontProduct
   compact?: boolean
   index?: number
-  viewMode?: 'grid' | 'list'  // ✅ ADDED: viewMode prop
+  viewMode?: 'grid' | 'list'  // âœ… ADDED: viewMode prop
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode = 'grid', compact = false }) => {
@@ -86,6 +86,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
   const discountPercentage = hasValidDiscount && product?.discountPrice && product?.price
     ? Math.round(((product.price - product.discountPrice) / product.price) * 100)
     : 0
+  const savings = hasValidDiscount && product?.discountPrice && product?.price
+    ? product.price - product.discountPrice
+    : 0
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -127,7 +130,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
     try {
       navigate(`/products/${productIdentifier}`)
     } catch (error) {
-      console.error('❌ Navigation failed:', error)
+      console.error('âŒ Navigation failed:', error)
       window.location.href = `/products/${productIdentifier}`
     }
   }
@@ -140,7 +143,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
     try {
       navigate(`/products/${productIdentifier}`)
     } catch (error) {
-      console.error('❌ Navigation failed:', error)
+      console.error('âŒ Navigation failed:', error)
       window.location.href = `/products/${productIdentifier}`
     }
   }
@@ -179,14 +182,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
     )
   }
 
-  // ✅ LIST VIEW - Smaller image that fits without scrolling
+  // âœ… LIST VIEW - Smaller image that fits without scrolling
   if (viewMode === 'list') {
     return (
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: index * 0.05 }}
-        className="card overflow-hidden group cursor-pointer bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300"
+        className="card overflow-hidden group cursor-pointer bg-white rounded-lg shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:ring-1 hover:ring-blue-100"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         onClick={handleCardClick}
@@ -207,7 +210,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
               <img
                 src={imageError ? '/placeholder.png' : imageUrl}
                 alt={safeRender(product.name, 'Product image')}
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
                 onError={() => {
                   console.log('Image failed to load:', imageUrl);
                   setImageError(true);
@@ -221,7 +224,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
             <div className="absolute top-0 left-0 flex flex-col gap-1">
               {discountPercentage > 0 && (
                 <span className="bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded">
-                  -{discountPercentage}%
+                  PKR {savings.toLocaleString()} OFF
                 </span>
               )}
               {product.stock === 0 && (
@@ -307,13 +310,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
     )
   }
 
-  // ✅ GRID VIEW - Original design (no changes)
+  // âœ… GRID VIEW - Original design (no changes)
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: compact ? Math.min(index, 3) * 0.03 : index * 0.05 }}
-      className={`card overflow-hidden group cursor-pointer bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300 ${compact ? 'flex h-full flex-col' : ''}`}
+      className={`card overflow-hidden group cursor-pointer bg-white rounded-lg shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:ring-1 hover:ring-blue-100 ${compact ? 'flex h-full flex-col' : ''}`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={handleCardClick}
@@ -327,11 +330,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
       }}
       aria-label={`View ${product.name} details`}
     >
-      <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
+      <div className={`relative overflow-hidden bg-gray-100 ${compact ? "aspect-[4/3]" : "aspect-square"}`}>
         <img
           src={imageError ? '/placeholder.png' : imageUrl}
           alt={safeRender(product.name, 'Product image')}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
           onError={() => {
             console.log('Image failed to load:', imageUrl);
             setImageError(true);
@@ -343,8 +346,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
         {/* Badges */}
         <div className="absolute top-3 left-3 flex flex-col gap-2">
           {discountPercentage > 0 && (
-            <span className="bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">
-              -{discountPercentage}%
+            <span className="bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded">
+              PKR {savings.toLocaleString()} OFF
             </span>
           )}
           {product.isFeatured && (
@@ -399,7 +402,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
       </div>
 
       {/* Product info */}
-      <div className="flex flex-1 flex-col p-3">
+      <div className={`flex flex-1 flex-col ${compact ? "p-2" : "p-3"}`}>
         <div className={`flex items-center justify-between ${compact ? 'mb-1' : 'mb-2'}`}>
           <span className="text-xs text-gray-500 uppercase tracking-wider">
             {getCategoryName()}
@@ -414,12 +417,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
           )}
         </div>
 
-        <h3 className="mb-1 min-h-10 cursor-pointer line-clamp-2 text-sm font-medium leading-5 text-gray-900 transition-colors hover:text-blue-600"
+        <h3 className={`mb-1 cursor-pointer line-clamp-2 font-medium text-gray-900 transition-colors hover:text-blue-600 ${compact ? "min-h-8 text-xs leading-4" : "min-h-10 text-sm leading-5"}`}
             onClick={handleCardClick}>
           {safeRender(product.name, 'Unnamed Product')}
         </h3>
 
-        <p className="mb-2 min-h-5 line-clamp-1 text-xs leading-5 text-gray-500">
+        <p className={`mb-1 line-clamp-1 text-xs text-gray-500 ${compact ? "min-h-4 leading-4" : "min-h-5 leading-5"}`}>
           {safeRender(compact ? product.shortDescription || product.brand : product.brand, 'Quality product')}
         </p>
 
@@ -444,7 +447,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
         </div>
 
         {compact && (
-          <div className="mt-auto pt-3">
+          <div className="mt-auto pt-2">
             <button
               type="button"
               onClick={handleAddToCart}
@@ -454,7 +457,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
                   ? 'cursor-not-allowed bg-gray-300'
                   : isInCart(product._id)
                     ? 'bg-green-700 hover:bg-green-800'
-                    : 'bg-blue-700 hover:bg-blue-800'
+                    : hasValidDiscount
+                      ? 'bg-orange-500 hover:bg-orange-600'
+                      : 'bg-blue-700 hover:bg-blue-800'
               }`}
             >
               <ShoppingCart className="mr-2 h-4 w-4" aria-hidden="true" />
@@ -468,3 +473,5 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
 }
 
 export default ProductCard
+
+

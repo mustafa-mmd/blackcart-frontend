@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+﻿import { useCallback, useEffect, useRef, useState } from 'react'
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import type { StorefrontProduct } from '../../types'
@@ -25,7 +25,7 @@ interface ProductRailProps {
   emptyState?: string
 }
 
-const railItemClass = 'w-full shrink-0 basis-[62%] snap-start sm:basis-[44%] md:basis-[31%] xl:basis-[calc((100%-4.5rem)/4)]'
+const railItemClass = 'w-full shrink-0 basis-[78%] snap-start sm:basis-[48%] md:basis-[31%] lg:basis-[calc((100%-4.5rem)/4)]'
 
 const ProductRail = ({
   id,
@@ -106,12 +106,12 @@ const ProductRail = ({
     <section
       id={id}
       aria-labelledby={`${id}-heading`}
-      className={`overflow-x-clip py-10 md:py-14 ${backgroundClassName}`}
+      className={`overflow-x-clip py-6 md:py-8 ${backgroundClassName}`}
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="mb-5 flex items-end justify-between gap-4 md:mb-7">
+        <div className="mb-4 flex items-end justify-between gap-3 md:mb-5">
           <div className="min-w-0">
-            <h2 id={`${id}-heading`} className="text-2xl font-bold tracking-tight text-gray-950 md:text-3xl">
+            <h2 id={`${id}-heading`} className="text-xl font-bold tracking-tight text-gray-950 md:text-2xl">
               {title}
             </h2>
             {subtitle && <p className="mt-1 text-sm text-gray-600 md:text-base">{subtitle}</p>}
@@ -190,7 +190,7 @@ const ProductRail = ({
 
             <div
               ref={railRef}
-              className="flex min-w-0 snap-x snap-proximity gap-4 overflow-x-auto overflow-y-visible scroll-smooth pb-4 pr-4 [overscroll-behavior-inline:contain] [scrollbar-width:none] md:gap-6 md:pr-0 motion-reduce:scroll-auto [&::-webkit-scrollbar]:hidden"
+              className="flex min-w-0 snap-x snap-proximity gap-3 overflow-x-auto overflow-y-visible scroll-smooth pb-4 pr-4 [overscroll-behavior-inline:contain] [scrollbar-width:none] md:gap-4 md:pr-0 motion-reduce:scroll-auto [&::-webkit-scrollbar]:hidden"
               aria-label={`${title} products`}
             >
               {isLoading
@@ -237,3 +237,4 @@ const ProductRail = ({
 }
 
 export default ProductRail
+

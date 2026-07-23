@@ -1,4 +1,4 @@
-
+﻿
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Helmet } from 'react-helmet-async'
@@ -29,9 +29,9 @@ const ProductsPage: React.FC = () => {
   const isInitialMount = useRef(true)
   
   // Filter sidebar state
-  const [showFilters, setShowFilters] = useState(true)
+  const [showFilters, setShowFilters] = useState(() => typeof window === 'undefined' ? true : window.innerWidth >= 1024)
   
-  // Parse filters from URL — category/brand are now arrays
+  // Parse filters from URL â€” category/brand are now arrays
   const getInitialFilters = useCallback((): ProductFiltersState => {
     const params = Object.fromEntries(searchParams.entries())
     
@@ -197,7 +197,7 @@ const ProductsPage: React.FC = () => {
   // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 py-8">
+      <div className="min-h-screen bg-gray-50 py-3 sm:py-4">
         <div className="container-lg section-padding">
           <div className="flex items-center justify-center py-20">
             <div className="text-center">
@@ -213,7 +213,7 @@ const ProductsPage: React.FC = () => {
   // Error state
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 py-8">
+      <div className="min-h-screen bg-gray-50 py-3 sm:py-4">
         <div className="container-lg section-padding">
           <div className="max-w-md mx-auto text-center">
             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -235,7 +235,7 @@ const ProductsPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-gray-50 py-3 sm:py-4">
       <Helmet>
         <title>
           {filters.search
@@ -265,7 +265,7 @@ const ProductsPage: React.FC = () => {
       </Helmet>
       <div className="container-lg section-padding">
         {/* Page Header */}
-        <div className="mb-8">
+        <div className="mb-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
@@ -289,19 +289,18 @@ const ProductsPage: React.FC = () => {
               </p>
             </div>
             
-            {activeFilterCount > 0 && (
-              <button
-                onClick={clearAllFilters}
-                className="flex items-center px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-              >
-                <X className="h-4 w-4 mr-2" />
-                Clear All ({activeFilterCount})
+                        <div className="flex items-center gap-3">
+              <button type="button" onClick={clearAllFilters} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+                <X className="h-4 w-4" /> Clear All
               </button>
-            )}
+              <button type="button" onClick={() => setShowFilters(!showFilters)} className="flex items-center gap-2 rounded-lg border border-blue-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-blue-50">
+                <Filter className="h-4 w-4 text-blue-600" /> {showFilters ? 'Hide Filters' : 'Show Filters'}
+              </button>
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-4">
           {/* Filters sidebar - with toggle functionality */}
           <div className={`lg:col-span-1 transition-all duration-300 ${showFilters ? 'block' : 'hidden lg:block'}`}>
             {showFilters && (
@@ -317,7 +316,7 @@ const ProductsPage: React.FC = () => {
           {/* Products Content - adjusts width when filters are hidden */}
           <div className={`transition-all duration-300 ${showFilters ? 'lg:col-span-3' : 'lg:col-span-4'}`}>
             {/* Toggle Filters Button for Desktop */}
-            <div className="hidden lg:flex justify-end mb-4">
+            <div className="hidden">
               <button
                 onClick={() => setShowFilters(!showFilters)}
                 className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors text-sm"
@@ -345,10 +344,10 @@ const ProductsPage: React.FC = () => {
                 animate={{ opacity: 1 }}
                 className={
                   viewMode === 'grid'
-                    // ✅ FIXED: 4 columns when filters hidden, 3 when shown, responsive on mobile
+                    // âœ… FIXED: 4 columns when filters hidden, 3 when shown, responsive on mobile
                     ? showFilters
-                      ? 'grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
-                      : 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4'
+                      ? 'grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4'
+                      : 'grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4'
                     : 'space-y-4'
                 }
               >
@@ -362,6 +361,7 @@ const ProductsPage: React.FC = () => {
                     <ProductCard
                       product={product}
                       viewMode={viewMode}
+                    compact={viewMode === 'grid'}
                     />
                   </motion.div>
                 ))}
@@ -399,3 +399,5 @@ const ProductsPage: React.FC = () => {
 }
 
 export default ProductsPage
+
+

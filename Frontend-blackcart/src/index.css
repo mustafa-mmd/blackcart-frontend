@@ -1,4 +1,4 @@
-/* src/index.css - PROFESSIONAL DARK MODE */
+﻿/* src/index.css - PROFESSIONAL DARK MODE */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 
@@ -468,5 +468,86 @@
 
   .slide-up {
     animation: slideUp 0.3s ease-out;
+  }
+}
+/* Premium cart celebration micro-interaction */
+@keyframes cartSparkle {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.2) rotate(0deg); }
+  16% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(30deg); }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--sparkle-x)), calc(-50% + var(--sparkle-y))) scale(0.15) rotate(140deg); }
+}
+
+.cart-sparkle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: block;
+  border-radius: 9999px;
+  opacity: 0;
+  animation: cartSparkle 760ms cubic-bezier(0.2, 0.75, 0.25, 1) forwards;
+  animation-delay: var(--sparkle-delay);
+}
+
+.cart-sparkle::after {
+  content: "";
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: 2px;
+  height: 10px;
+  border-radius: 9999px;
+  background: currentColor;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.cart-sparkle-gold {
+  color: #c79025;
+  background: radial-gradient(circle at 35% 35%, #fff8d7 0 18%, #e6b84a 45%, #9a6b16 100%);
+  box-shadow: 0 0 8px rgba(214, 164, 50, 0.7);
+}
+
+.cart-sparkle-ink {
+  color: #111827;
+  background: #111827;
+  box-shadow: 0 0 6px rgba(17, 24, 39, 0.25);
+}
+
+@keyframes cartFlyToCart {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.62) rotate(-8deg); }
+  12% { opacity: 1; transform: translate(-50%, -50%) scale(0.9) rotate(0deg); }
+  68% { opacity: 1; transform: translate(-50%, -50%) scale(0.72) rotate(8deg); }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--cart-fly-x)), calc(-50% + var(--cart-fly-y))) scale(0.2) rotate(16deg); }
+}
+
+.cart-fly-to-cart {
+  animation: cartFlyToCart 850ms cubic-bezier(0.22, 0.72, 0.2, 1) forwards;
+}
+
+@keyframes cartIconCelebrate {
+  0%, 100% { transform: scale(1) translateY(0); }
+  28% { transform: scale(1.16) translateY(-2px); }
+  58% { transform: scale(0.94) translateY(1px); }
+}
+
+.cart-icon-celebrate {
+  animation: cartIconCelebrate 700ms cubic-bezier(0.2, 0.8, 0.25, 1);
+}
+
+@keyframes cartBadgeCelebrate {
+  0%, 100% { transform: scale(1); }
+  35% { transform: scale(1.28); }
+  65% { transform: scale(0.94); }
+}
+
+.cart-badge-celebrate {
+  animation: cartBadgeCelebrate 700ms cubic-bezier(0.2, 0.8, 0.25, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cart-sparkle,
+  .cart-fly-to-cart,
+  .cart-icon-celebrate,
+  .cart-badge-celebrate {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
   }
 }

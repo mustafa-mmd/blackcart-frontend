@@ -1,4 +1,4 @@
-
+﻿
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { ChevronDown, Grid, List, ArrowUp, ArrowDown } from 'lucide-react'
@@ -63,14 +63,14 @@ const ProductSorting: React.FC<ProductSortingProps> = ({
   const getCurrentSortLabel = useCallback(() => {
     const option = sortOptions.find(opt => opt.value === sortBy)
     if (!option) return 'Sort by'
-    return `${option.label} ${sortOrder === 'asc' ? '↑' : '↓'}`
+    return option.label
   }, [sortBy, sortOrder, sortOptions])
 
   return (
     <motion.div
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white rounded-lg shadow-sm border p-4 mb-6"
+      className="bg-white rounded-lg shadow-sm border p-3 mb-4 sm:p-4"
     >
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         {/* Results Info */}
@@ -158,3 +158,5 @@ const ProductSorting: React.FC<ProductSortingProps> = ({
 }
 
 export default ProductSorting
+
+

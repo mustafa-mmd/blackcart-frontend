@@ -1,4 +1,4 @@
-import api from './api'
+﻿import api from './api'
 
 export interface ValidatedCoupon {
   _id: string
@@ -17,8 +17,16 @@ export interface CouponValidationResult {
 }
 
 export const couponService = {
+  getAvailability: async (): Promise<{ enabled: boolean; availableCount: number }> => {
+    const response = await api.get('/coupons/availability')
+    return response.data.data
+  },
+
   validateCoupon: async (code: string, orderAmount: number): Promise<CouponValidationResult> => {
     const response = await api.post('/coupons/validate', { code, orderAmount })
     return response.data.data
   },
 }
+
+
+

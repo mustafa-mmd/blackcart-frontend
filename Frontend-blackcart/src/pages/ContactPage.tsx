@@ -1,4 +1,4 @@
-
+﻿
 import React, { useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -11,7 +11,10 @@ import {
   HeadphonesIcon as Headset,
   ChevronDown,
   HelpCircle,
-  MessageSquare
+  MessageSquare,
+  Truck,
+  Shield,
+  RefreshCw,
 } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -113,9 +116,9 @@ const ContactPage: React.FC = () => {
   ]
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50">
       <Helmet>
-        <title>Contact BlackCart — Customer Support Pakistan</title>
+        <title>Contact BlackCart â€” Customer Support Pakistan</title>
         <meta name="description" content="Get in touch with BlackCart's customer support team. We're here to help with your orders, returns, and product questions across Pakistan. Contact us today." />
         <meta property="og:title" content="Contact BlackCart | Customer Support" />
         <meta property="og:description" content="Contact BlackCart for order support, returns, and product enquiries. Fast response for customers across Pakistan." />
@@ -123,28 +126,16 @@ const ContactPage: React.FC = () => {
         <link rel="canonical" href="https://blackcart.store/contact" />
       </Helmet>
 
-      {/* Hero Section */}
-      <section className="bg-gradient-to-r from-blue-700 to-blue-900 text-white py-16 md:py-20 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-600/30 via-transparent to-transparent pointer-events-none" />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <span className="bg-blue-600/30 text-blue-200 text-xs font-semibold tracking-wider uppercase px-3 py-1 rounded-full mb-3 inline-block border border-blue-500/20">
-              Get In Touch
-            </span>
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">Need Help? Contact Us</h1>
-            <p className="text-lg md:text-xl text-blue-100 max-w-2xl mx-auto font-light">
-              We are dedicated to providing the best computer accessories support in Pakistan. Reach out to us anytime!
-            </p>
-          </motion.div>
+      {/* Page introduction */}
+      <section className="border-b border-slate-200 bg-white">
+        <div className="mx-auto max-w-7xl px-3 py-8 sm:px-5 sm:py-10 lg:px-8">
+          <div className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-500"><span>Home</span><span>›</span><span className="text-slate-800">Contact</span></div>
+          <div className="flex items-end justify-between gap-6"><div><h1 className="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">Contact BlackCart</h1><p className="mt-2 max-w-xl text-sm leading-6 text-slate-600 sm:text-base">We're here to help! Reach out to us for any questions about orders, products or support.</p></div><MessageSquare className="hidden h-12 w-12 text-primary-600/20 sm:block" /></div>
         </div>
       </section>
-
       {/* Quick Contact Cards */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-10 relative z-20">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <section className="mx-auto max-w-7xl px-3 pt-5 sm:px-5 sm:pt-6 lg:px-8">
+        <div className="grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-4">
           {contactCards.map((card, index) => (
             <motion.a
               key={index}
@@ -152,9 +143,9 @@ const ContactPage: React.FC = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
-              className="bg-white rounded-xl p-5 border border-gray-200/80 shadow-md hover:shadow-lg hover:-translate-y-1 transition duration-300 flex flex-col items-center text-center cursor-pointer group"
+              className="bg-white rounded-xl p-3 sm:p-4 border border-slate-200 shadow-sm hover:shadow-lg hover:-translate-y-1 transition duration-300 flex flex-col items-center text-center cursor-pointer group"
             >
-              <div className="p-3 bg-gray-50 rounded-full group-hover:scale-110 transition-transform mb-3">
+              <div className="p-2.5 bg-slate-50 rounded-full group-hover:scale-110 transition-transform mb-3">
                 {card.icon}
               </div>
               <h3 className="font-semibold text-gray-800 text-sm md:text-base mb-1">{card.title}</h3>
@@ -166,12 +157,12 @@ const ContactPage: React.FC = () => {
       </section>
 
       {/* Contact Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 items-start">
+      <div className="mx-auto max-w-7xl px-3 py-6 sm:px-5 sm:py-8 lg:px-8">
+        <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(260px,0.75fr)_minmax(0,1.65fr)] lg:gap-6">
           
           {/* Left Column - Contact Info & Socials */}
           <div className="lg:col-span-1 space-y-6">
-            <div className="bg-white rounded-xl p-6 border border-gray-200/80 shadow-sm">
+            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
               <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
                 <Headset className="h-5 w-5 text-blue-600" />
                 Store Information
@@ -204,7 +195,7 @@ const ContactPage: React.FC = () => {
             </div>
 
             {/* Social Media Connections */}
-            <div className="bg-white rounded-xl p-6 border border-gray-200/80 shadow-sm">
+            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
               <h2 className="text-xl font-bold text-gray-900 mb-2">Connect With Us</h2>
               <p className="text-sm text-gray-500 mb-5">Follow us on social networks for updates and special coupons</p>
               
@@ -231,8 +222,8 @@ const ContactPage: React.FC = () => {
           </div>
 
           {/* Right Column - Contact Form */}
-          <div className="lg:col-span-2 space-y-10">
-            <div className="bg-white rounded-xl p-8 border border-gray-200/80 shadow-sm">
+          <div className="min-w-0 space-y-5">
+            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-2">
                 <MessageSquare className="h-6 w-6 text-blue-600" />
                 Send us a Message
@@ -342,12 +333,12 @@ const ContactPage: React.FC = () => {
             </div>
 
             {/* Google Map Section */}
-            <div id="showroom-map" className="bg-white rounded-xl overflow-hidden border border-gray-200/80 shadow-sm p-4">
+            <div id="showroom-map" className="overflow-hidden rounded-xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
               <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2 text-base">
                 <MapPin className="h-5 w-5 text-red-600" />
                 Find Us On Google Maps
               </h3>
-              <div className="w-full h-72 rounded-lg overflow-hidden">
+              <div className="h-56 w-full overflow-hidden rounded-lg sm:h-64">
                 <iframe 
                   title="BlackCart Peshawar Showroom Map"
                   src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3307.7288636730315!2d71.49216347596547!3d34.00018597317585!2m3!1f0!2f0!3f0!3m2!1i1020!2i768!4f13.1!3m3!1m2!1s0x38d9172bf4b9cb95%3A0x633f81e35fa8ff95!2sIslamia%20Town%2C%20Peshawar%2C%20Khyber%20Pakhtunkhwa%2C%20Pakistan!5e0!3m2!1sen!2s!4v1700000000000!5m2!1sen!2s" 
@@ -360,10 +351,10 @@ const ContactPage: React.FC = () => {
             </div>
 
             {/* FAQ Accordion Section */}
-            <div className="bg-white rounded-xl p-8 border border-gray-200/80 shadow-sm">
+            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
                 <HelpCircle className="h-6 w-6 text-blue-600" />
-                FAQ Quick Answers
+                Quick Answers Before You Contact Us
               </h2>
               <div className="divide-y divide-gray-200/80">
                 {faqs.map((faq, index) => {
@@ -402,8 +393,20 @@ const ContactPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <section className="mx-auto max-w-7xl px-3 pb-6 sm:px-5 lg:px-8">
+        <div className="grid grid-cols-2 divide-x divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white sm:grid-cols-4 sm:divide-y-0">
+          <div className="p-3 text-center sm:p-4"><Truck className="mx-auto h-5 w-5 text-slate-900" /><p className="mt-1 text-xs font-semibold text-slate-900">Fast Delivery</p><p className="text-[11px] text-slate-500">Quick delivery across Pakistan</p></div>
+          <div className="p-3 text-center sm:p-4"><Shield className="mx-auto h-5 w-5 text-slate-900" /><p className="mt-1 text-xs font-semibold text-slate-900">Secure Payments</p><p className="text-[11px] text-slate-500">Protected payment options</p></div>
+          <div className="p-3 text-center sm:p-4"><RefreshCw className="mx-auto h-5 w-5 text-slate-900" /><p className="mt-1 text-xs font-semibold text-slate-900">Easy Returns</p><p className="text-[11px] text-slate-500">7-day returns and refunds</p></div>
+          <div className="p-3 text-center sm:p-4"><Shield className="mx-auto h-5 w-5 text-slate-900" /><p className="mt-1 text-xs font-semibold text-slate-900">Quality Products</p><p className="text-[11px] text-slate-500">Genuine products</p></div>
+        </div>
+      </section>
     </div>
   )
 }
 
 export default ContactPage
+
+
+

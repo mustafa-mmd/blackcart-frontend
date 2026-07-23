@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { Menu, Search, X } from 'lucide-react';
 import { useSettings } from '../../context/SettingsContext';
@@ -25,7 +25,6 @@ const Header: React.FC = () => {
     { to: '/products', label: 'Products' },
     { to: '/categories', label: 'Categories' },
     { to: '/contact', label: 'Contact' },
-    { to: '/faq', label: 'FAQ' },
   ];
 
   return (
@@ -121,3 +120,4 @@ const Header: React.FC = () => {
 };
 
 export default Header;
+

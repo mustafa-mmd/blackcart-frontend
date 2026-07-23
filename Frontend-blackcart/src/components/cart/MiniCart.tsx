@@ -1,4 +1,4 @@
-
+﻿
 import React, { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Minus, Plus, ShoppingCart, Trash2, X, Shield, Sparkles } from 'lucide-react'
@@ -19,6 +19,15 @@ const MiniCart: React.FC = () => {
   const triggerRef = useRef<HTMLButtonElement>(null)
   const closeRef = useRef<HTMLButtonElement>(null)
   const navigate = useNavigate()
+  const [cartPulse, setCartPulse] = useState(0)
+  const [flyingProduct, setFlyingProduct] = useState<{
+    id: number
+    imageUrl: string
+    fromX: number
+    fromY: number
+    toX: number
+    toY: number
+  } | null>(null)
 
   useEffect(() => {
     const closeOnOutsideClick = (event: MouseEvent) => {
@@ -40,6 +49,32 @@ const MiniCart: React.FC = () => {
     return () => document.removeEventListener('keydown', closeOnEscape)
   }, [isOpen])
 
+  useEffect(() => {
+    const handleCartCelebration = (event: Event) => {
+      const detail = (event as CustomEvent<{ imageUrl?: string; fromX?: number; fromY?: number }>).detail
+      const target = triggerRef.current?.getBoundingClientRect()
+      if (!target || !detail?.imageUrl) return
+
+      const id = Date.now()
+      const fromX = detail.fromX ?? window.innerWidth * 0.7
+      const fromY = detail.fromY ?? window.innerHeight * 0.72
+      setFlyingProduct({
+        id,
+        imageUrl: detail.imageUrl,
+        fromX,
+        fromY,
+        toX: target.left + target.width / 2,
+        toY: target.top + target.height / 2,
+      })
+      setCartPulse(id)
+      window.setTimeout(() => setFlyingProduct((current) => current?.id === id ? null : current), 850)
+      window.setTimeout(() => setCartPulse((current) => current === id ? 0 : current), 700)
+    }
+
+    window.addEventListener('blackcart:cart-celebration', handleCartCelebration)
+    return () => window.removeEventListener('blackcart:cart-celebration', handleCartCelebration)
+  }, [])
+
   // Free shipping limit is PKR 5000
   const freeShippingThreshold = 5000
   const isFreeShipping = cartTotal >= freeShippingThreshold
@@ -52,18 +87,34 @@ const MiniCart: React.FC = () => {
         ref={triggerRef}
         type="button"
         onClick={() => setIsOpen((open) => !open)}
-        className="relative rounded-lg p-2 text-gray-600 transition-all duration-300 hover:bg-blue-50 hover:text-blue-600 focus:outline-none"
+        className={`relative rounded-lg p-2 text-gray-600 transition-all duration-300 hover:bg-blue-50 hover:text-blue-600 focus:outline-none ${cartPulse ? 'cart-icon-celebrate' : ''}`}
         aria-label={`Open cart with ${itemCount} items`}
         aria-expanded={isOpen}
         aria-controls="mini-cart"
       >
         <ShoppingCart className="h-6 w-6" />
         {itemCount > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1 text-xs font-bold text-white shadow-md">
+          <span className={`absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1 text-xs font-bold text-white shadow-md ${cartPulse ? 'cart-badge-celebrate' : ''}`}>
             {itemCount}
           </span>
         )}
       </button>
+
+      {flyingProduct && (
+        <img
+          key={flyingProduct.id}
+          src={flyingProduct.imageUrl}
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none fixed z-[100] h-14 w-14 rounded-xl border-2 border-white bg-white object-contain shadow-xl cart-fly-to-cart"
+          style={{
+            left: flyingProduct.fromX,
+            top: flyingProduct.fromY,
+            '--cart-fly-x': `${flyingProduct.toX - flyingProduct.fromX}px`,
+            '--cart-fly-y': `${flyingProduct.toY - flyingProduct.fromY}px`,
+          } as React.CSSProperties}
+        />
+      )}
 
       {isOpen && (
         <div 
@@ -255,3 +306,4 @@ const MiniCart: React.FC = () => {
 }
 
 export default MiniCart
+

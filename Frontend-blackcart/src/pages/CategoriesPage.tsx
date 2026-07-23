@@ -1,4 +1,4 @@
-
+﻿
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
@@ -94,8 +94,8 @@ const CategoriesPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <Helmet>
-        <title>Shop by Category — Computer Accessories | BlackCart Pakistan</title>
-        <meta name="description" content="Browse gaming peripherals, keyboards, mice, monitors, headphones and more by category at BlackCart — Pakistan's trusted computer accessories store." />
+        <title>Shop by Category - Computer Accessories | BlackCart Pakistan</title>
+        <meta name="description" content="Browse gaming peripherals, keyboards, mice, monitors, headphones and more by category at BlackCart - Pakistan's trusted computer accessories store." />
         <meta property="og:title" content="Product Categories | BlackCart Pakistan" />
         <meta property="og:description" content="Browse all computer and gaming accessory categories at BlackCart." />
         <meta property="og:url" content="https://blackcart.store/categories" />
@@ -103,10 +103,10 @@ const CategoriesPage: React.FC = () => {
       </Helmet>
 
       {/* Hero Section */}
-      <div className="bg-gradient-to-r from-blue-700 to-blue-900 text-white py-10 md:py-14">
+      <div className="bg-white py-10 text-slate-950 md:py-14">
         <div className="container mx-auto px-4 text-center">
-          <h1 className="text-3xl md:text-4xl font-bold mb-2">Product Categories</h1>
-          <p className="text-blue-100 text-base md:text-lg">Browse and explore our wide range of product categories</p>
+          <h1 className="text-3xl md:text-4xl font-bold mb-2">Explore Categories</h1>
+          <p className="text-slate-600 text-base md:text-lg">Find the right tech essentials for your setup.</p>
         </div>
       </div>
 
@@ -123,7 +123,7 @@ const CategoriesPage: React.FC = () => {
           <div className="flex items-center gap-2 text-gray-700">
             <Package className="h-5 w-5 text-blue-600" />
             <span className="font-semibold">{categories.length} Categories Available</span>
-            <span className="text-sm text-gray-500">— Find the perfect products in your favorite category</span>
+            <span className="text-sm text-gray-500">- Find the perfect products in your favorite category</span>
           </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1 text-sm text-gray-600">
@@ -199,17 +199,17 @@ const CategoriesPage: React.FC = () => {
         {/* All Categories */}
         {allCategories.length > 0 ? (
           viewMode === 'grid' ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {allCategories.map((category) => {
                 const imageUrl = getCategoryImage(category);
                 return (
                   <div
                     key={category._id}
                     onClick={() => navigate(`/categories/${category.slug}`)}
-                    className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-lg transition-shadow cursor-pointer group flex flex-col items-center text-center"
+                    className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-shadow cursor-pointer group flex flex-col items-center text-center"
                   >
                     {/* Circular image */}
-                    <div className="w-20 h-20 rounded-full bg-gray-100 overflow-hidden flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+                    <div className="w-24 h-24 rounded-full bg-gray-100 overflow-hidden flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
                       {imageUrl ? (
                         <img
                           src={imageUrl}
@@ -308,3 +308,4 @@ const CategoriesPage: React.FC = () => {
 };
 
 export default CategoriesPage;
+

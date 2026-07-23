@@ -9,7 +9,6 @@ import {
   Plus, 
   Trash2,
   Package,
-  DollarSign,
   Tag,
   BookOpen,
   BarChart,
@@ -18,7 +17,20 @@ import {
   GripVertical,
   ChevronLeft,
   ChevronRight,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Palette,
+  Images,
+  Boxes,
+  Sparkles,
+  MoreVertical,
+  ImagePlus,
+  UploadCloud,
+  Download,
+  Copy,
+  MoveUp,
+  MoveDown,
+  AlertTriangle,
+  CheckCircle2
 } from 'lucide-react'
 import { adminService } from '../../services/adminServiceMethods'
 import Loader from '../../components/common/Loader'
@@ -68,7 +80,89 @@ interface ColorVariantDraft {
   sku: string
   stock: string
   imageIds: string[]
+  active: boolean
 }
+type BulkMode = 'specifications' | 'features'
+type DuplicateAction = 'skip' | 'replace' | 'duplicate'
+
+interface SpecificationPreviewRow extends Specification {
+  source: string
+  duplicate: boolean
+  action: DuplicateAction
+}
+
+interface FeaturePreviewRow {
+  value: string
+  source: string
+  duplicate: boolean
+  action: DuplicateAction
+}
+
+interface BulkPreviewState {
+  mode: BulkMode
+  specifications: SpecificationPreviewRow[]
+  features: FeaturePreviewRow[]
+  rejected: string[]
+}
+
+const SPECIFICATION_TEMPLATES = {
+  'Gaming Mouse': {
+    specifications: [
+      { key: 'Brand', value: 'Generic' },
+      { key: 'Connectivity', value: 'Bluetooth + 2.4GHz' },
+      { key: 'DPI', value: '1600' },
+      { key: 'Battery', value: 'Rechargeable' },
+      { key: 'Charging Port', value: 'USB-C' }
+    ],
+    features: ['Silent Click', 'Ergonomic Design', 'USB-C Charging', 'Plug & Play', 'Multi-Device Support']
+  },
+  'Mechanical Keyboard': {
+    specifications: [
+      { key: 'Switch Type', value: 'Mechanical' },
+      { key: 'Connectivity', value: 'USB / Wireless' },
+      { key: 'Backlight', value: 'RGB' },
+      { key: 'Layout', value: 'Compact' },
+      { key: 'Warranty', value: '1 Year' }
+    ],
+    features: ['RGB Backlight', 'Tactile Typing', 'Durable Keycaps', 'Anti-Ghosting', 'Compact Layout']
+  },
+  'Laptop Stand': {
+    specifications: [
+      { key: 'Material', value: 'Aluminum / ABS' },
+      { key: 'Adjustable Height', value: 'Yes' },
+      { key: 'Compatibility', value: 'Laptop & Tablet' },
+      { key: 'Foldable', value: 'Yes' },
+      { key: 'Weight', value: 'Portable' }
+    ],
+    features: ['Foldable', 'Ergonomic Design', 'Anti-slip Base', 'Portable', 'Adjustable Angles']
+  },
+  'Power Bank': {
+    specifications: [
+      { key: 'Capacity', value: '10000mAh' },
+      { key: 'Input', value: 'USB-C' },
+      { key: 'Output', value: 'Fast Charging' },
+      { key: 'Ports', value: 'Multiple' },
+      { key: 'Warranty', value: '1 Year' }
+    ],
+    features: ['Fast Charging', 'Portable Design', 'Multiple Ports', 'LED Indicator', 'Safe Charging']
+  },
+  'Earbuds': {
+    specifications: [
+      { key: 'Connectivity', value: 'Bluetooth' },
+      { key: 'Battery Life', value: 'Up to 20 Hours' },
+      { key: 'Charging Case', value: 'Included' },
+      { key: 'Microphone', value: 'Built-in' },
+      { key: 'Warranty', value: '1 Year' }
+    ],
+    features: ['Clear Sound', 'Touch Controls', 'Comfort Fit', 'Noise Reduction', 'Long Battery Life']
+  }
+} as const
+
+const SPECIFICATION_SUGGESTIONS = [
+  'Brand', 'Warranty', 'Weight', 'Material', 'Battery', 'Battery Capacity', 'Battery Life',
+  'Battery Type', 'Charging Port', 'Bluetooth Version', 'Connectivity', 'DPI', 'Wireless Range',
+  'Compatibility', 'Dimensions'
+]
 
 const getErrorMessage = (error: unknown, fallback: string) =>
   error instanceof Error ? error.message : fallback
@@ -87,6 +181,8 @@ const AdminCreateProduct: React.FC = () => {
   const [remoteImageUrl, setRemoteImageUrl] = useState('')
   const [isImportingImage, setIsImportingImage] = useState(false)
   const [colorVariants, setColorVariants] = useState<ColorVariantDraft[]>([])
+  const [draggedColorId, setDraggedColorId] = useState<string | null>(null)
+  const [openImagePicker, setOpenImagePicker] = useState<string | null>(null)
 
   // Fetch categories on component mount
   useEffect(() => {
@@ -211,19 +307,131 @@ const AdminCreateProduct: React.FC = () => {
     }
   }
 
+  const suggestColorSku = (name: string) => {
+    const base = String(watch('sku') || 'COLOR').trim().toUpperCase().replace(/[^A-Z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
+    const suffix = name.trim().toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
+    return suffix ? (base || 'COLOR') + '-' + suffix : ''
+  }
+
   const addColorVariant = () => setColorVariants((previous) => [...previous, {
-    id: `color-${Date.now()}`,
+    id: 'color-' + Date.now(),
     name: '',
     value: '#000000',
     sku: '',
     stock: '',
     imageIds: [],
+    active: true,
   }])
 
   const updateColorVariant = (id: string, updates: Partial<ColorVariantDraft>) => {
     setColorVariants((previous) => previous.map((variant) => variant.id === id ? { ...variant, ...updates } : variant))
   }
 
+  const handleColorNameChange = (id: string, name: string) => {
+    setColorVariants((previous) => previous.map((variant) => {
+      const previousSuggestedSku = suggestColorSku(variant.name)
+      const shouldSuggestSku = !variant.sku || variant.sku === previousSuggestedSku
+      return variant.id === id ? { ...variant, name, sku: shouldSuggestSku ? suggestColorSku(name) : variant.sku } : variant
+    }))
+  }
+
+  const moveColorVariant = (id: string, direction: -1 | 1) => {
+    setColorVariants((previous) => {
+      const index = previous.findIndex((variant) => variant.id === id)
+      const target = index + direction
+      if (index < 0 || target < 0 || target >= previous.length) return previous
+      const next = [...previous]
+      const [moved] = next.splice(index, 1)
+      next.splice(target, 0, moved)
+      return next
+    })
+  }
+
+  const duplicateColorVariant = (id: string) => {
+    setColorVariants((previous) => {
+      const source = previous.find((variant) => variant.id === id)
+      if (!source) return previous
+      const copy = { ...source, id: 'color-' + Date.now(), name: source.name ? source.name + ' Copy' : '', sku: source.sku ? (source.sku + '-COPY').slice(0, 80) : '' }
+      const index = previous.findIndex((variant) => variant.id === id)
+      const next = [...previous]
+      next.splice(index + 1, 0, copy)
+      return next
+    })
+  }
+
+  const removeColorVariant = (id: string) => {
+    setColorVariants((previous) => previous.filter((variant) => variant.id !== id))
+    setOpenImagePicker((current) => current === id ? null : current)
+  }
+
+  const handleColorDrop = (event: React.DragEvent<HTMLDivElement>, targetId: string) => {
+    event.preventDefault()
+    const sourceId = event.dataTransfer.getData('text/plain') || draggedColorId
+    if (!sourceId || sourceId === targetId) return
+    setColorVariants((previous) => {
+      const from = previous.findIndex((variant) => variant.id === sourceId)
+      const to = previous.findIndex((variant) => variant.id === targetId)
+      if (from < 0 || to < 0) return previous
+      const next = [...previous]
+      const [moved] = next.splice(from, 1)
+      next.splice(to, 0, moved)
+      return next
+    })
+    setDraggedColorId(null)
+  }
+
+  const assignImagesToUnassigned = () => {
+    if (!images.length) {
+      toast.error('Upload product images before assigning them to colors.')
+      return
+    }
+    setColorVariants((previous) => previous.map((variant) => variant.imageIds.length ? variant : { ...variant, imageIds: [images[0].id] }))
+    toast.success('Assigned the first uploaded image to colors without an image.')
+  }
+
+  const handleColorImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files?.length) addLocalImages(Array.from(event.target.files))
+    event.target.value = ''
+  }
+
+  const exportColors = () => {
+    const payload = colorVariants.map((variant) => {
+      const payloadVariant = { ...variant }
+      delete payloadVariant.id
+      return payloadVariant
+    })
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = 'blackcart-color-variants.json'
+    anchor.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const handleImportColors = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    try {
+      const parsed = JSON.parse(await file.text())
+      const imported = Array.isArray(parsed) ? parsed : parsed.colors
+      if (!Array.isArray(imported)) throw new Error('Expected a JSON array of colors.')
+      const next = imported.map((variant, index) => ({
+        id: 'color-import-' + Date.now() + '-' + index,
+        name: String(variant.name || ''),
+        value: /^#[0-9a-f]{6}$/i.test(String(variant.value || '')) ? String(variant.value).toUpperCase() : '#000000',
+        sku: String(variant.sku || ''),
+        stock: variant.stock === null || variant.stock === undefined ? '' : String(variant.stock),
+        imageIds: [],
+        active: variant.active !== false,
+      }))
+      setColorVariants((previous) => [...previous, ...next])
+      toast.success(next.length + ' color variant' + (next.length === 1 ? '' : 's') + ' imported.')
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Import a valid color JSON file.'))
+    }
+  }
   const handleRemoveImage = (index: number) => {
     const image = images[index]
     if (image?.file) {
@@ -315,6 +523,16 @@ const AdminCreateProduct: React.FC = () => {
     setValue('specifications', newSpecs, { shouldValidate: true })
   }
 
+  const moveSpecification = (index: number, direction: -1 | 1) => {
+    const targetIndex = index + direction
+    if (targetIndex < 0 || targetIndex >= specifications.length) return
+    const newSpecs = [...specifications]
+    const [moved] = newSpecs.splice(index, 1)
+    newSpecs.splice(targetIndex, 0, moved)
+    setSpecifications(newSpecs)
+    setValue('specifications', newSpecs, { shouldValidate: true })
+  }
+
   const addFeature = () => {
     setFeatures([...features, ''])
     console.log('➕ Added new feature field')
@@ -332,6 +550,16 @@ const AdminCreateProduct: React.FC = () => {
   const updateFeature = (index: number, value: string) => {
     const newFeatures = [...features]
     newFeatures[index] = value
+    setFeatures(newFeatures)
+    setValue('features', newFeatures, { shouldValidate: true })
+  }
+
+  const moveFeature = (index: number, direction: -1 | 1) => {
+    const targetIndex = index + direction
+    if (targetIndex < 0 || targetIndex >= features.length) return
+    const newFeatures = [...features]
+    const [moved] = newFeatures.splice(index, 1)
+    newFeatures.splice(targetIndex, 0, moved)
     setFeatures(newFeatures)
     setValue('features', newFeatures, { shouldValidate: true })
   }
@@ -357,6 +585,15 @@ const AdminCreateProduct: React.FC = () => {
 
   const onSubmit = async (data: ProductFormData) => {
     console.log('🚀 Starting form submission');
+    const normalizedColorNames = colorVariants.map((variant) => variant.name.trim().toLocaleLowerCase('en')).filter(Boolean)
+    if (normalizedColorNames.length !== new Set(normalizedColorNames).size) {
+      toast.error('Color names must be unique.')
+      return
+    }
+    if (colorVariants.some((variant) => !variant.name.trim())) {
+      toast.error('Each color variant needs a name.')
+      return
+    }
     
     try {
       setIsSubmitting(true);
@@ -470,35 +707,42 @@ const AdminCreateProduct: React.FC = () => {
   }
 
   const price = watch('price')
+  const shortDescription = watch('shortDescription') || ''
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-6">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-slate-50 p-4 sm:p-5 lg:p-6">
+      <div className="mx-auto w-full max-w-[1600px]">
+        <div className="mb-3 flex items-center gap-2 text-xs text-slate-500" aria-label="Breadcrumb">
+          <span>Products</span>
+          <ChevronRight className="h-3.5 w-3.5" />
+          <span className="font-medium text-slate-700">Create New Product</span>
+        </div>
+
         {/* Header */}
-        <div className="mb-6 md:mb-8">
+        <div className="mb-5 lg:mb-7">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <button
                 onClick={() => navigate('/admin/products')}
-                className="mr-4 p-2 hover:bg-gray-100 rounded-lg transition"
+                className="mr-3 flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
               >
                 <ArrowLeft className="h-5 w-5" />
               </button>
               <div>
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Create New Product</h1>
-                <p className="text-gray-600 mt-2">Add a new product to your store</p>
+                <h1 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Create New Product</h1>
+                <p className="mt-1 text-sm text-slate-500">Add a new product to your store</p>
               </div>
             </div>
           </div>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)}>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-3 xl:gap-6">
             {/* Left Column - Basic Info */}
             <div className="lg:col-span-2 space-y-6">
               {/* Basic Information */}
-              <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+                <h2 className="mb-4 flex items-center gap-2 text-base font-semibold text-slate-900">
                   <Package className="h-5 w-5 mr-2" />
                   Basic Information
                 </h2>
@@ -515,7 +759,7 @@ const AdminCreateProduct: React.FC = () => {
                         minLength: { value: 3, message: 'Name must be at least 3 characters' },
                         maxLength: { value: 200, message: 'Name must be less than 200 characters' }
                       })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                       placeholder="Enter product name"
                     />
                     {errors.name && (
@@ -537,7 +781,7 @@ const AdminCreateProduct: React.FC = () => {
                             message: 'SKU must contain only uppercase letters, numbers, and hyphens'
                           }
                         })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                         placeholder="e.g., PROD-001"
                       />
                       {errors.sku && (
@@ -555,7 +799,7 @@ const AdminCreateProduct: React.FC = () => {
                           required: 'Brand is required',
                           maxLength: { value: 100, message: 'Brand must be less than 100 characters' }
                         })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                         placeholder="Enter brand name"
                       />
                       {errors.brand && (
@@ -580,7 +824,7 @@ const AdminCreateProduct: React.FC = () => {
                             {...register('categoryId', { 
                               required: 'Category is required'
                             })}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition appearance-none"
+                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 appearance-none"
                           >
                             <option value="">Select a category</option>
                             {categories
@@ -614,7 +858,7 @@ const AdminCreateProduct: React.FC = () => {
                           min: { value: 0, message: 'Stock cannot be negative' },
                           valueAsNumber: true
                         })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                       />
                       {errors.stock && (
                         <p className="mt-1 text-sm text-red-600">{errors.stock.message}</p>
@@ -629,7 +873,7 @@ const AdminCreateProduct: React.FC = () => {
                       </label>
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <DollarSign className="h-5 w-5 text-gray-400" />
+                          <span className="text-xs font-semibold text-slate-500">PKR</span>
                         </div>
                         <input
                           type="number"
@@ -640,7 +884,7 @@ const AdminCreateProduct: React.FC = () => {
                             min: { value: 0.01, message: 'Price must be greater than 0' },
                             valueAsNumber: true
                           })}
-                          className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                          className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-12 pr-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                         />
                       </div>
                       {errors.price && (
@@ -654,7 +898,7 @@ const AdminCreateProduct: React.FC = () => {
                       </label>
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <DollarSign className="h-5 w-5 text-gray-400" />
+                          <span className="text-xs font-semibold text-slate-500">PKR</span>
                         </div>
                         <input
                           type="number"
@@ -671,7 +915,7 @@ const AdminCreateProduct: React.FC = () => {
                             }
                           })}
                           placeholder="Leave blank for no discount"
-                          className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                          className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-12 pr-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                         />
                       </div>
                       {errors.discountPrice && (
@@ -683,8 +927,8 @@ const AdminCreateProduct: React.FC = () => {
               </div>
 
               {/* Description */}
-              <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+                <h2 className="mb-4 flex items-center gap-2 text-base font-semibold text-slate-900">
                   <BookOpen className="h-5 w-5 mr-2" />
                   Description
                 </h2>
@@ -697,12 +941,13 @@ const AdminCreateProduct: React.FC = () => {
                     <textarea
                       {...register('shortDescription', { 
                         required: 'Short description is required',
-                        maxLength: { value: 500, message: 'Short description must be less than 500 characters' }
+                        maxLength: { value: 160, message: 'Short description must be less than 160 characters' }
                       })}
                       rows={3}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                       placeholder="Brief product description (shown in listings)"
                     />
+                    <div className="mt-1 text-right text-xs text-slate-400">{shortDescription.length} / 160</div>
                     {errors.shortDescription && (
                       <p className="mt-1 text-sm text-red-600">{errors.shortDescription.message}</p>
                     )}
@@ -717,7 +962,7 @@ const AdminCreateProduct: React.FC = () => {
                         maxLength: { value: 5000, message: 'Description must be less than 5000 characters' }
                       })}
                       rows={6}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                       placeholder="Detailed product description..."
                     />
                     {errors.description && (
@@ -728,24 +973,40 @@ const AdminCreateProduct: React.FC = () => {
               </div>
 
               {/* Specifications */}
-              <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900 flex items-center">
-                    <BarChart className="h-5 w-5 mr-2" />
-                    Specifications
-                  </h2>
-                  <button
-                    type="button"
-                    onClick={addSpecification}
-                    className="flex items-center text-sm text-blue-600 hover:text-blue-800 font-medium"
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Add Specification
-                  </button>
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+                <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900 flex items-center">
+                      <BarChart className="h-5 w-5 mr-2" />
+                      Specifications
+                    </h2>
+                    <p className="mt-1 text-xs text-slate-500">Manual mode stays available. Smart Paste creates many rows fast.</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" onClick={addSpecification} className="inline-flex items-center rounded-lg border border-blue-200 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50"><Plus className="h-4 w-4 mr-1" />Add Specification</button>
+                    <button type="button" onClick={() => openSmartPaste('specifications')} className="inline-flex items-center rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700"><Sparkles className="h-4 w-4 mr-1" />Smart Paste</button>
+                    <button type="button" onClick={() => openSmartPaste('specifications')} className="inline-flex items-center rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"><Download className="h-4 w-4 mr-1" />Import</button>
+                    <button type="button" onClick={exportSpecifications} className="inline-flex items-center rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"><Download className="h-4 w-4 mr-1" />Export</button>
+                  </div>
+                </div>
+                <div className="mb-4 grid gap-3 lg:grid-cols-[1fr_auto]">
+                  <input value={specSearch} onChange={(event) => setSpecSearch(event.target.value)} className="rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" placeholder="Search specifications or suggestions..." />
+                  <button type="button" onClick={generateFromDescription} className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 hover:bg-amber-100">Generate from Description</button>
+                </div>
+                <div className="mb-4 rounded-xl border border-blue-100 bg-blue-50/60 p-3">
+                  <p className="mb-2 text-xs font-semibold text-blue-900">Templates & recently used</p>
+                  <div className="flex flex-wrap gap-2">
+                    {(Object.keys(SPECIFICATION_TEMPLATES) as Array<keyof typeof SPECIFICATION_TEMPLATES>).map(template => <button key={template} type="button" onClick={() => loadTemplate(template)} className="rounded-full border border-blue-200 bg-white px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50">{template}</button>)}
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {[...recentSpecKeys, ...SPECIFICATION_SUGGESTIONS].filter((item, index, array) => array.indexOf(item) === index).filter(item => !specSearch || item.toLowerCase().includes(specSearch.toLowerCase())).slice(0, 12).map(item => <button key={item} type="button" onClick={() => addSuggestedSpecification(item)} className="rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-slate-600 ring-1 ring-slate-200 hover:text-blue-700 hover:ring-blue-300">+ {item}</button>)}
+                  </div>
                 </div>
                 
                 <div className="space-y-3">
-                  {specifications.map((spec, index) => (
+                  {specifications.map((spec, index) => {
+                    if (specSearch && !`${spec.key} ${spec.value}`.toLowerCase().includes(specSearch.toLowerCase())) return null
+                    return (
                     <div key={index} className="flex items-center gap-3">
                       <input
                         type="text"
@@ -761,6 +1022,28 @@ const AdminCreateProduct: React.FC = () => {
                         className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
                         placeholder="Value (e.g., Black, 1.5kg)"
                       />
+                      <div className="flex shrink-0 flex-col gap-0.5">
+                        <button
+                          type="button"
+                          onClick={() => moveSpecification(index, -1)}
+                          disabled={index === 0}
+                          className="rounded p-1 text-slate-400 hover:bg-blue-50 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-30"
+                          title="Move specification up"
+                          aria-label="Move specification up"
+                        >
+                          <MoveUp className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => moveSpecification(index, 1)}
+                          disabled={index === specifications.length - 1}
+                          className="rounded p-1 text-slate-400 hover:bg-blue-50 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-30"
+                          title="Move specification down"
+                          aria-label="Move specification down"
+                        >
+                          <MoveDown className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                       <button
                         type="button"
                         onClick={() => removeSpecification(index)}
@@ -771,29 +1054,33 @@ const AdminCreateProduct: React.FC = () => {
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
-                  ))}
+                  )})}
                 </div>
               </div>
 
               {/* Features */}
-              <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900 flex items-center">
-                    <Award className="h-5 w-5 mr-2" />
-                    Features
-                  </h2>
-                  <button
-                    type="button"
-                    onClick={addFeature}
-                    className="flex items-center text-sm text-blue-600 hover:text-blue-800 font-medium"
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Add Feature
-                  </button>
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+                <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900 flex items-center">
+                      <Award className="h-5 w-5 mr-2" />
+                      Features
+                    </h2>
+                    <p className="mt-1 text-xs text-slate-500">Paste bullet lists and import them as clean editable feature rows.</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" onClick={addFeature} className="inline-flex items-center rounded-lg border border-blue-200 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50"><Plus className="h-4 w-4 mr-1" />Add Feature</button>
+                    <button type="button" onClick={() => openSmartPaste('features')} className="inline-flex items-center rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700"><Sparkles className="h-4 w-4 mr-1" />Smart Paste Features</button>
+                    <button type="button" onClick={() => openSmartPaste('features')} className="inline-flex items-center rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"><Download className="h-4 w-4 mr-1" />Import</button>
+                    <button type="button" onClick={exportFeatures} className="inline-flex items-center rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"><Download className="h-4 w-4 mr-1" />Export</button>
+                  </div>
                 </div>
+                <input value={featureSearch} onChange={(event) => setFeatureSearch(event.target.value)} className="mb-4 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" placeholder="Search features..." />
                 
                 <div className="space-y-3">
-                  {features.map((feature, index) => (
+                  {features.map((feature, index) => {
+                    if (featureSearch && !feature.toLowerCase().includes(featureSearch.toLowerCase())) return null
+                    return (
                     <div key={index} className="flex items-center gap-3">
                       <input
                         type="text"
@@ -802,6 +1089,28 @@ const AdminCreateProduct: React.FC = () => {
                         className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
                         placeholder="Product feature (e.g., Water resistant, Wireless)"
                       />
+                      <div className="flex shrink-0 flex-col gap-0.5">
+                        <button
+                          type="button"
+                          onClick={() => moveFeature(index, -1)}
+                          disabled={index === 0}
+                          className="rounded p-1 text-slate-400 hover:bg-blue-50 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-30"
+                          title="Move feature up"
+                          aria-label="Move feature up"
+                        >
+                          <MoveUp className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => moveFeature(index, 1)}
+                          disabled={index === features.length - 1}
+                          className="rounded p-1 text-slate-400 hover:bg-blue-50 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-30"
+                          title="Move feature down"
+                          aria-label="Move feature down"
+                        >
+                          <MoveDown className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                       <button
                         type="button"
                         onClick={() => removeFeature(index)}
@@ -812,7 +1121,7 @@ const AdminCreateProduct: React.FC = () => {
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
-                  ))}
+                  )})}
                 </div>
               </div>
             </div>
@@ -820,7 +1129,7 @@ const AdminCreateProduct: React.FC = () => {
             {/* Right Column - Images & Settings */}
             <div className="space-y-6">
               {/* Images */}
-              <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Product Images</h2>
                 
                 <div className="space-y-4">
@@ -956,63 +1265,95 @@ const AdminCreateProduct: React.FC = () => {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-gray-200 bg-white p-6">
-                <div className="mb-4 flex items-center justify-between gap-3">
-                  <div>
-                    <h2 className="text-lg font-semibold text-gray-900">Product colors</h2>
-                    <p className="text-sm text-gray-500">Optional. Customers must select a color when one or more colors are added.</p>
+              <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600"><Palette className="h-5 w-5" /></div>
+                    <div>
+                      <h2 className="text-xl font-bold tracking-tight text-slate-950">Product Colors</h2>
+                      <p className="mt-1 text-sm text-slate-500">Add and manage all available color options for this product.</p>
+                    </div>
                   </div>
-                  <button type="button" onClick={addColorVariant} className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700">
-                    <Plus className="h-4 w-4" /> Add color
-                  </button>
+                  <button type="button" onClick={addColorVariant} className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-200 bg-white px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-50"><Plus className="h-4 w-4" /> Add New Color</button>
                 </div>
-                <div className="space-y-4">
-                  {colorVariants.map((variant) => (
-                    <div key={variant.id} className="rounded-xl border border-gray-200 p-4">
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <label className="text-sm font-medium text-gray-700">Color name
-                          <input value={variant.name} onChange={(event) => updateColorVariant(variant.id, { name: event.target.value })} required className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" placeholder="Midnight Black" />
-                        </label>
-                        <label className="text-sm font-medium text-gray-700">Color
-                          <input type="color" value={variant.value} onChange={(event) => updateColorVariant(variant.id, { value: event.target.value })} className="mt-1 h-10 w-full rounded-lg border border-gray-300 p-1" />
-                        </label>
-                        <label className="text-sm font-medium text-gray-700">Variant SKU (optional)
-                          <input value={variant.sku} onChange={(event) => updateColorVariant(variant.id, { sku: event.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
-                        </label>
-                        <label className="text-sm font-medium text-gray-700">Variant stock (optional)
-                          <input type="number" min="0" value={variant.stock} onChange={(event) => updateColorVariant(variant.id, { stock: event.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
-                        </label>
-                      </div>
-                      {images.length > 0 && (
-                        <div className="mt-3">
-                          <p className="mb-2 text-sm font-medium text-gray-700">Images for this color</p>
-                          <div className="flex flex-wrap gap-2">
-                            {images.map((image, imageIndex) => (
-                              <label key={image.id} className={`cursor-pointer rounded-lg border p-1 ${variant.imageIds.includes(image.id) ? 'border-blue-600 ring-2 ring-blue-100' : 'border-gray-200'}`}>
-                                <input
-                                  type="checkbox"
-                                  className="sr-only"
-                                  checked={variant.imageIds.includes(image.id)}
-                                  onChange={() => updateColorVariant(variant.id, { imageIds: variant.imageIds.includes(image.id) ? variant.imageIds.filter((id) => id !== image.id) : [...variant.imageIds, image.id] })}
-                                />
-                                <img src={image.previewUrl} alt={`Image ${imageIndex + 1}`} className="h-12 w-12 rounded object-cover" />
-                              </label>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      <button type="button" onClick={() => setColorVariants((previous) => previous.filter((item) => item.id !== variant.id))} className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-red-600">
-                        <Trash2 className="h-4 w-4" /> Remove color
-                      </button>
+
+                <div className="mt-5 grid gap-px overflow-hidden rounded-xl border border-slate-200 bg-slate-200 sm:grid-cols-2 xl:grid-cols-4">
+                  {[
+                    { icon: Sparkles, title: 'Flexible Options', text: 'Add unlimited color variants', tone: 'bg-blue-50 text-blue-600' },
+                    { icon: Images, title: 'Image Support', text: 'Assign images to each color', tone: 'bg-violet-50 text-violet-600' },
+                    { icon: Boxes, title: 'Stock Tracking', text: 'Manage stock per variant', tone: 'bg-emerald-50 text-emerald-600' },
+                    { icon: CheckCircle2, title: 'Better Experience', text: 'Help customers choose easily', tone: 'bg-orange-50 text-orange-600' },
+                  ].map((item) => (
+                    <div key={item.title} className="flex items-center gap-3 bg-white p-3">
+                      <span className={'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ' + item.tone}><item.icon className="h-4 w-4" /></span>
+                      <div><p className="text-xs font-semibold text-slate-800">{item.title}</p><p className="mt-0.5 text-[11px] text-slate-500">{item.text}</p></div>
                     </div>
                   ))}
-                  {colorVariants.length === 0 && <p className="rounded-lg bg-gray-50 p-3 text-sm text-gray-500">No color variants. This product will use its regular image gallery and stock.</p>}
                 </div>
-              </div>
 
+                <div className="mt-5 space-y-3">
+                  {colorVariants.map((variant, index) => {
+                    const assignedImage = images.find((image) => variant.imageIds.includes(image.id))
+                    const pickerOpen = openImagePicker === variant.id
+                    return (
+                      <div key={variant.id} draggable onDragStart={(event) => { setDraggedColorId(variant.id); event.dataTransfer.setData('text/plain', variant.id); event.dataTransfer.effectAllowed = 'move' }} onDragOver={(event) => event.preventDefault()} onDrop={(event) => handleColorDrop(event, variant.id)} className={'rounded-xl border bg-white p-3 transition ' + (draggedColorId === variant.id ? 'border-blue-400 opacity-70 shadow-lg' : 'border-slate-200 hover:border-blue-200 hover:shadow-sm')}>
+                        <div className="grid items-start gap-3 lg:grid-cols-[34px_70px_minmax(150px,1.1fr)_minmax(130px,.8fr)_minmax(190px,1.35fr)_minmax(160px,1fr)_104px]">
+                          <div className="flex items-center gap-2 pt-2">
+                            <button type="button" className="cursor-grab touch-none text-slate-400 hover:text-blue-600" title="Drag to reorder" aria-label={'Reorder color ' + (index + 1)}><GripVertical className="h-5 w-5" /></button>
+                            <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-xs font-semibold text-slate-600">{index + 1}</span>
+                          </div>
+                          <div>
+                            <p className="mb-1 text-[11px] font-semibold text-slate-500">Color Preview</p>
+                            <span className="block h-12 w-12 rounded-lg border border-slate-200 shadow-inner" style={{ backgroundColor: variant.value }} title={variant.value} />
+                          </div>
+                          <label className="block text-xs font-semibold text-slate-600">Color Name <span className="text-red-500">*</span>
+                            <div className="relative mt-1"><input value={variant.name} onChange={(event) => handleColorNameChange(variant.id, event.target.value.slice(0, 40))} placeholder="Midnight Black" className="h-10 w-full rounded-lg border border-slate-300 px-3 pr-12 text-sm font-medium text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" /><span className="pointer-events-none absolute right-2 top-3 text-[10px] font-normal text-slate-400">{variant.name.length}/40</span></div>
+                          </label>
+                          <label className="block text-xs font-semibold text-slate-600">Color Code
+                            <div className="mt-1 flex h-10 items-center gap-2 rounded-lg border border-slate-300 bg-white px-2"><input value={variant.value} onChange={(event) => updateColorVariant(variant.id, { value: event.target.value.toUpperCase().slice(0, 7) })} className="min-w-0 flex-1 border-0 px-1 text-sm font-medium uppercase text-slate-700 outline-none" maxLength={7} /><input type="color" value={/^#[0-9A-Fa-f]{6}$/.test(variant.value) ? variant.value : '#000000'} onChange={(event) => updateColorVariant(variant.id, { value: event.target.value.toUpperCase() })} className="h-6 w-6 cursor-pointer rounded border-0 p-0" aria-label="Choose color" /></div>
+                          </label>
+                          <div className="relative">
+                            <p className="text-xs font-semibold text-slate-600">Color image <span className="font-normal text-slate-400">(Optional)</span></p>
+                            <div className="mt-1 flex items-center gap-2">
+                              {assignedImage ? <img src={assignedImage.previewUrl} alt={variant.name || 'Assigned color'} className="h-12 w-16 rounded-lg border border-slate-200 object-cover" /> : <div className="flex h-12 w-16 items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 text-slate-400"><ImagePlus className="h-5 w-5" /></div>}
+                              <div className="flex min-w-0 flex-1 flex-col gap-1"><button type="button" onClick={() => setOpenImagePicker(pickerOpen ? null : variant.id)} className="inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-blue-200 px-2 text-[11px] font-semibold text-blue-700 hover:bg-blue-50"><Images className="h-3.5 w-3.5" /> Choose from uploaded images</button><label className="inline-flex h-8 cursor-pointer items-center justify-center gap-1 rounded-lg border border-slate-200 px-2 text-[11px] font-semibold text-slate-600 hover:bg-slate-50"><Upload className="h-3.5 w-3.5" /> Upload new image<input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleColorImageUpload} /></label></div>
+                            </div>
+                            {pickerOpen && <div className="absolute left-0 top-full z-30 mt-2 w-64 rounded-xl border border-slate-200 bg-white p-3 shadow-xl"><div className="mb-2 flex items-center justify-between"><p className="text-xs font-semibold text-slate-700">Choose a color image</p><button type="button" onClick={() => setOpenImagePicker(null)} className="text-slate-400 hover:text-slate-700">�</button></div>{images.length ? <div className="grid max-h-44 grid-cols-4 gap-2 overflow-y-auto">{images.map((image) => <button type="button" key={image.id} onClick={() => { updateColorVariant(variant.id, { imageIds: [image.id] }); setOpenImagePicker(null) }} className={'rounded-lg border p-1 ' + (variant.imageIds.includes(image.id) ? 'border-blue-600 ring-2 ring-blue-100' : 'border-slate-200 hover:border-blue-300')}><img src={image.previewUrl} alt="Uploaded product" className="h-11 w-full rounded object-cover" /></button>)}</div> : <p className="py-4 text-center text-xs text-slate-500">Upload product images first.</p>}</div>}
+                            {!assignedImage && images.length > 0 && <p className="mt-1 flex items-center gap-1 text-[10px] font-medium text-amber-600"><AlertTriangle className="h-3 w-3" /> Assign a color image for this variant.</p>}
+                          </div>
+                          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
+                            <label className="block text-xs font-semibold text-slate-600">SKU <input value={variant.sku} onChange={(event) => updateColorVariant(variant.id, { sku: event.target.value.slice(0, 80).toUpperCase() })} placeholder="Auto-generated" className="mt-1 h-9 w-full rounded-lg border border-slate-300 px-2 text-xs font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" /></label>
+                            <label className="block text-xs font-semibold text-slate-600">Stock <input type="number" min="0" value={variant.stock} onChange={(event) => updateColorVariant(variant.id, { stock: event.target.value })} placeholder="0" className="mt-1 h-9 w-full rounded-lg border border-slate-300 px-2 text-xs font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" /></label>
+                          </div>
+                          <div className="flex items-start justify-between gap-2 pt-1 lg:flex-col lg:items-center">
+                            <button type="button" role="switch" aria-checked={variant.active} onClick={() => updateColorVariant(variant.id, { active: !variant.active })} className={'flex h-6 w-11 items-center rounded-full p-1 transition ' + (variant.active ? 'bg-blue-600' : 'bg-slate-300')}><span className={'h-4 w-4 rounded-full bg-white shadow transition ' + (variant.active ? 'translate-x-5' : '')} /></button>
+                            <span className="text-[10px] font-medium text-slate-500">{variant.active ? 'Active' : 'Inactive'}</span>
+                            <details className="relative"><summary className="flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-blue-600"><MoreVertical className="h-4 w-4" /></summary><div className="absolute right-0 top-9 z-20 w-40 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl"><button type="button" onClick={() => duplicateColorVariant(variant.id)} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs text-slate-700 hover:bg-blue-50"><Copy className="h-3.5 w-3.5" /> Duplicate</button><button type="button" onClick={() => moveColorVariant(variant.id, -1)} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs text-slate-700 hover:bg-blue-50"><MoveUp className="h-3.5 w-3.5" /> Move up</button><button type="button" onClick={() => moveColorVariant(variant.id, 1)} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs text-slate-700 hover:bg-blue-50"><MoveDown className="h-3.5 w-3.5" /> Move down</button><button type="button" onClick={() => removeColorVariant(variant.id)} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs text-red-600 hover:bg-red-50"><Trash2 className="h-3.5 w-3.5" /> Remove</button></div></details>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                  {colorVariants.length === 0 && <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-10 text-center"><Palette className="mx-auto h-8 w-8 text-slate-400" /><p className="mt-2 text-sm font-semibold text-slate-700">No colors added yet</p><p className="mt-1 text-xs text-slate-500">Add a color variant to let customers choose it on the product page.</p></div>}
+                </div>
+
+                <label onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); addLocalImages(Array.from(event.dataTransfer.files)) }} className="mt-4 flex cursor-pointer items-center justify-between gap-4 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-4 transition hover:border-blue-400 hover:bg-blue-50">
+                  <div className="flex items-center gap-3"><UploadCloud className="h-7 w-7 text-slate-500" /><div><p className="text-sm font-semibold text-slate-700">Drag &amp; drop color images here to upload</p><p className="mt-0.5 text-xs text-slate-500">Supported: JPG, PNG, WEBP � Max size 5MB</p></div></div><span className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white"><Upload className="h-3.5 w-3.5" /> Upload Images</span><input type="file" multiple accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleColorImageUpload} />
+                </label>
+
+                <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_1.4fr_1fr]">
+                  <div className="rounded-xl border border-slate-200 p-3"><p className="mb-2 text-xs font-semibold text-slate-800">Bulk Actions</p><div className="flex flex-wrap gap-2"><label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"><Download className="h-3.5 w-3.5" /> Import Colors<input type="file" accept="application/json,.json" className="hidden" onChange={handleImportColors} /></label><button type="button" onClick={exportColors} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"><Download className="h-3.5 w-3.5" /> Export Colors</button><button type="button" onClick={assignImagesToUnassigned} className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50"><ImagePlus className="h-3.5 w-3.5" /> Assign Images</button></div></div>
+                  <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-3"><p className="flex items-center gap-2 text-xs font-semibold text-blue-900"><CheckCircle2 className="h-4 w-4 text-blue-600" /> Need help?</p><p className="mt-1 text-xs leading-5 text-blue-800">Customers will select a color on the product page. Assigned images can be shown automatically when a color is selected.</p></div>
+                  <div className="grid grid-cols-2 divide-x divide-slate-200 rounded-xl border border-slate-200 bg-white"><div className="p-3"><p className="text-[11px] font-semibold text-slate-500">Total Colors</p><p className="mt-1 text-xl font-bold text-slate-900">{colorVariants.length}</p></div><div className="p-3"><p className="text-[11px] font-semibold text-slate-500">Total Stock</p><p className="mt-1 text-xl font-bold text-slate-900">{colorVariants.reduce((total, variant) => total + (Number(variant.stock) || 0), 0)}</p></div></div>
+                </div>
+                <div className="sticky bottom-3 z-10 mt-4 flex justify-end gap-2 rounded-xl border border-slate-200 bg-white/95 p-2 shadow-lg backdrop-blur">
+                  <button type="button" onClick={handleCancel} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
+                  <button type="submit" disabled={isSubmitting} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"><Save className="h-4 w-4" /> Save Colors</button>
+                </div>
+              </section>
               {/* Tags */}
-              <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+                <h2 className="mb-4 flex items-center gap-2 text-base font-semibold text-slate-900">
                   <Tag className="h-5 w-5 mr-2" />
                   Tags
                 </h2>
@@ -1028,7 +1369,7 @@ const AdminCreateProduct: React.FC = () => {
                         return safeSplit(value);
                       }
                     })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                     placeholder="tag1, tag2, tag3"
                   />
                   <p className="mt-1 text-sm text-gray-500">
@@ -1038,7 +1379,7 @@ const AdminCreateProduct: React.FC = () => {
               </div>
 
               {/* Settings */}
-              <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Settings</h2>
                 
                 <div className="space-y-4">
@@ -1074,7 +1415,7 @@ const AdminCreateProduct: React.FC = () => {
               </div>
 
               {/* Submit Button */}
-              <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 xl:sticky xl:top-24">
                 <div className="space-y-3">
                   {isSubmitting ? (
                     <div className="flex items-center justify-center py-3">
@@ -1111,3 +1452,8 @@ const AdminCreateProduct: React.FC = () => {
 }
 
 export default AdminCreateProduct
+
+
+
+
+

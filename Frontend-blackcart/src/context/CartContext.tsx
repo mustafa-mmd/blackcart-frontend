@@ -1,4 +1,4 @@
-/* eslint-disable react-refresh/only-export-components */
+﻿/* eslint-disable react-refresh/only-export-components */
 import React, {
   createContext,
   useCallback,
@@ -17,7 +17,7 @@ interface CartContextType {
   cartTotal: number
   loading: boolean
   error: string | null
-  addToCart: (product: Product, quantity?: number, variant?: ProductColorVariant) => Promise<void>
+  addToCart: (product: Product, quantity?: number, variant?: ProductColorVariant, options?: { showToast?: boolean }) => Promise<void>
   removeFromCart: (productId: string, variantId?: string) => Promise<void>
   updateQuantity: (productId: string, quantity: number, product?: Product, variantId?: string) => Promise<void>
   clearCart: () => Promise<void>
@@ -109,7 +109,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [cartItems])
 
-  const addToCart = useCallback(async (product: Product, quantity = 1, variant?: ProductColorVariant) => {
+  const addToCart = useCallback(async (product: Product, quantity = 1, variant?: ProductColorVariant, options?: { showToast?: boolean }) => {
     const safeQuantity = Math.max(1, quantity)
     const variantId = getVariantId(variant)
     setCartItems((current) => {
@@ -133,7 +133,9 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           : item,
       )
     })
-    toast.success(`${safeQuantity} × ${product.name} added to cart`)
+if (options?.showToast !== false) {
+      toast.success(`${safeQuantity} × ${product.name} added to cart`)
+    }
   }, [])
 
   const removeFromCart = useCallback(async (productId: string, variantId = '') => {
@@ -212,3 +214,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 }
 
 export { CartContext }
+
+
+

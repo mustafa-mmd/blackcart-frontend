@@ -176,6 +176,8 @@ const AdminCreateProduct: React.FC = () => {
   const pointerDragIdRef = useRef<string | null>(null)
   const [specifications, setSpecifications] = useState<Specification[]>([{ key: '', value: '' }])
   const [features, setFeatures] = useState<string[]>([''])
+  const [specSearch, setSpecSearch] = useState('')
+  const [featureSearch, setFeatureSearch] = useState('')
   const [categories, setCategories] = useState<Category[]>([])
   const [loadingCategories, setLoadingCategories] = useState(false)
   const [remoteImageUrl, setRemoteImageUrl] = useState('')
@@ -562,6 +564,201 @@ const AdminCreateProduct: React.FC = () => {
     newFeatures.splice(targetIndex, 0, moved)
     setFeatures(newFeatures)
     setValue('features', newFeatures, { shouldValidate: true })
+  }
+
+  const downloadTextFile = (filename: string, content: string) => {
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  }
+
+  const exportSpecifications = () => {
+    const rows = specifications
+      .map((spec) => ({ key: spec.key.trim(), value: spec.value.trim() }))
+      .filter((spec) => spec.key || spec.value)
+      .map((spec) => `${spec.key}: ${spec.value}`)
+
+    if (!rows.length) {
+      toast.error('Add at least one specification before exporting.')
+      return
+    }
+
+    downloadTextFile('product-specifications.txt', rows.join('\n'))
+    toast.success('Specifications exported.')
+  }
+
+  const exportFeatures = () => {
+    const rows = features
+      .map((feature) => feature.trim())
+      .filter(Boolean)
+
+    if (!rows.length) {
+      toast.error('Add at least one feature before exporting.')
+      return
+    }
+
+    downloadTextFile('product-features.txt', rows.join('\n'))
+    toast.success('Features exported.')
+  }
+
+  const recentSpecKeys = specifications
+    .map((spec) => spec.key.trim())
+    .filter(Boolean)
+    .slice(-20)
+
+  const normalizeSmartText = (value: string) => value
+    .replace(/^[-•✓*]+\s*/g, '')
+    .replace(/\busb\s*c\b/gi, 'USB-C')
+    .replace(/\bbluetooth\b/gi, 'Bluetooth')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  const addSuggestedSpecification = (key: string) => {
+    const cleanKey = normalizeSmartText(key)
+    if (!cleanKey) return
+
+    const existingIndex = specifications.findIndex((spec) => spec.key.trim().toLowerCase() === cleanKey.toLowerCase())
+    if (existingIndex >= 0) {
+      toast('Specification already exists. You can edit it below.')
+      setSpecSearch(cleanKey)
+      return
+    }
+
+    const nextSpecs = [...specifications.filter((spec) => spec.key.trim() || spec.value.trim()), { key: cleanKey, value: '' }]
+    setSpecifications(nextSpecs)
+    setValue('specifications', nextSpecs, { shouldValidate: true })
+    setSpecSearch(cleanKey)
+  }
+
+  const loadTemplate = (template: keyof typeof SPECIFICATION_TEMPLATES) => {
+    const selectedTemplate = SPECIFICATION_TEMPLATES[template]
+    const nextSpecs = selectedTemplate.specifications.map((spec) => ({ ...spec }))
+    const nextFeatures = [...selectedTemplate.features]
+    setSpecifications(nextSpecs)
+    setFeatures(nextFeatures)
+    setValue('specifications', nextSpecs, { shouldValidate: true })
+    setValue('features', nextFeatures, { shouldValidate: true })
+    toast.success(`${template} template loaded.`)
+  }
+
+  const parseSpecificationLines = (input: string): Specification[] => input
+    .split(/\r?\n/)
+    .map((line) => normalizeSmartText(line))
+    .filter(Boolean)
+    .map((line) => {
+      const separatorMatch = line.match(/^(.+?)\s*[:=|\-]\s*(.+)$/)
+      if (separatorMatch) {
+        return { key: normalizeSmartText(separatorMatch[1]), value: normalizeSmartText(separatorMatch[2]) }
+      }
+      const parts = line.split(' ').filter(Boolean)
+      if (parts.length >= 2) {
+        return { key: normalizeSmartText(parts[0]), value: normalizeSmartText(parts.slice(1).join(' ')) }
+      }
+      return null
+    })
+    .filter((spec): spec is Specification => Boolean(spec && spec.key && spec.value))
+
+  const openSmartPaste = (mode: BulkMode) => {
+    const pasted = window.prompt(
+      mode === 'specifications'
+        ? 'Paste specifications, one per line. Example: Brand: Logitech'
+        : 'Paste features, one per line. Example: Rechargeable Battery'
+    )
+
+    if (!pasted) return
+
+    if (mode === 'specifications') {
+      const parsedSpecs = parseSpecificationLines(pasted)
+      if (!parsedSpecs.length) {
+        toast.error('No valid specifications found. Try Brand: Logitech format.')
+        return
+      }
+      const existingKeys = new Set(specifications.map((spec) => spec.key.trim().toLowerCase()).filter(Boolean))
+      const uniqueSpecs = parsedSpecs.filter((spec) => !existingKeys.has(spec.key.trim().toLowerCase()))
+      const nextSpecs = [...specifications.filter((spec) => spec.key.trim() || spec.value.trim()), ...uniqueSpecs]
+      setSpecifications(nextSpecs)
+      setValue('specifications', nextSpecs, { shouldValidate: true })
+      toast.success(`Imported ${uniqueSpecs.length} specifications.`)
+      return
+    }
+
+    const existingFeatures = new Set(features.map((feature) => feature.trim().toLowerCase()).filter(Boolean))
+    const parsedFeatures = pasted
+      .split(/\r?\n/)
+      .map((line) => normalizeSmartText(line))
+      .filter(Boolean)
+      .filter((feature) => !existingFeatures.has(feature.toLowerCase()))
+
+    if (!parsedFeatures.length) {
+      toast.error('No new features found.')
+      return
+    }
+
+    const nextFeatures = [...features.filter((feature) => feature.trim()), ...parsedFeatures]
+    setFeatures(nextFeatures)
+    setValue('features', nextFeatures, { shouldValidate: true })
+    toast.success(`Imported ${parsedFeatures.length} features.`)
+  }
+
+  const generateFromDescription = () => {
+    const description = `${watch('shortDescription') || ''} ${watch('description') || ''}`.trim()
+    if (!description) {
+      toast.error('Add a short or full description first.')
+      return
+    }
+
+    const generatedSpecs: Specification[] = []
+    const generatedFeatures: string[] = []
+    const lowerDescription = description.toLowerCase()
+
+    if (lowerDescription.includes('bluetooth') || lowerDescription.includes('2.4ghz')) {
+      generatedSpecs.push({ key: 'Connectivity', value: lowerDescription.includes('bluetooth') && lowerDescription.includes('2.4ghz') ? 'Bluetooth + 2.4GHz' : lowerDescription.includes('bluetooth') ? 'Bluetooth' : '2.4GHz' })
+      generatedFeatures.push('Wireless Connectivity')
+    }
+    const batteryMatch = description.match(/(\d+\s*mAh)/i)
+    if (batteryMatch) {
+      generatedSpecs.push({ key: 'Battery', value: `${batteryMatch[1].replace(/\s+/g, '')} Rechargeable` })
+      generatedFeatures.push('Rechargeable Battery')
+    }
+    const dpiMatch = description.match(/(\d{3,5})\s*DPI/i)
+    if (dpiMatch) generatedSpecs.push({ key: 'DPI', value: dpiMatch[1] })
+    if (/usb\s*-?\s*c/i.test(description)) {
+      generatedSpecs.push({ key: 'Charging Port', value: 'USB-C' })
+      generatedFeatures.push('USB-C Charging')
+    }
+    if (lowerDescription.includes('ergonomic')) generatedFeatures.push('Ergonomic Design')
+    if (lowerDescription.includes('silent')) generatedFeatures.push('Silent Click')
+    if (lowerDescription.includes('windows') || lowerDescription.includes('mac')) {
+      generatedSpecs.push({ key: 'Compatibility', value: lowerDescription.includes('windows') && lowerDescription.includes('mac') ? 'Windows, macOS' : lowerDescription.includes('windows') ? 'Windows' : 'macOS' })
+    }
+
+    if (!generatedSpecs.length && !generatedFeatures.length) {
+      toast.error('Could not detect specs/features from the description. Use Smart Paste instead.')
+      return
+    }
+
+    const existingKeys = new Set(specifications.map((spec) => spec.key.trim().toLowerCase()).filter(Boolean))
+    const existingFeatures = new Set(features.map((feature) => feature.trim().toLowerCase()).filter(Boolean))
+    const nextSpecs = [
+      ...specifications.filter((spec) => spec.key.trim() || spec.value.trim()),
+      ...generatedSpecs.filter((spec) => !existingKeys.has(spec.key.trim().toLowerCase()))
+    ]
+    const nextFeatures = [
+      ...features.filter((feature) => feature.trim()),
+      ...generatedFeatures.filter((feature) => !existingFeatures.has(feature.toLowerCase()))
+    ]
+
+    setSpecifications(nextSpecs.length ? nextSpecs : specifications)
+    setFeatures(nextFeatures.length ? nextFeatures : features)
+    setValue('specifications', nextSpecs, { shouldValidate: true })
+    setValue('features', nextFeatures, { shouldValidate: true })
+    toast.success('Generated suggestions from description.')
   }
 
   const safeSplit = (value: unknown): string[] => {

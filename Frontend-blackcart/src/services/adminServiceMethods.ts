@@ -489,6 +489,11 @@ updateProduct: async (id: string, data: any): Promise<ApiResponse<Product>> => {
     return response.data
   },
 
+  deleteAdminOrder: async (id: string): Promise<ApiResponse<{ id: string }>> => {
+    const response = await api.delete('/admin/orders/' + id)
+    return response.data
+  },
+
 updateAdminOrder: async (id: string, data: any): Promise<ApiResponse<Order>> => {
   try {
     console.log('📡 Updating admin order status:', id, data);

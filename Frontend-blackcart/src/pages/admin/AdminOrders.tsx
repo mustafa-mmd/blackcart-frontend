@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   AlertCircle,
@@ -20,6 +20,7 @@ import {
   Search,
   ShieldAlert,
   Truck,
+  Trash2,
   WalletCards,
   XCircle,
 } from 'lucide-react'
@@ -171,15 +172,29 @@ const AdminOrders: React.FC = () => {
   }
 
   const handleCancelOrder = async (order: Order) => {
-    if (!window.confirm('Cancel this order? This will update the order status.')) return
+    if (!window.confirm('Cancel this order? This will update the order status and restore stock where applicable.')) return
     try {
       setOpenMenuId(null)
-      await adminService.bulkUpdateOrders([order._id], { status: 'cancelled' })
+      await adminService.updateAdminOrder(order._id, { status: 'cancelled' })
       toast.success('Order cancelled')
       await fetchOrders(pagination.page)
     } catch (error) {
       console.error('Cancel order failed:', error)
       toast.error('Failed to cancel order')
+    }
+  }
+
+  const handleDeleteOrder = async (order: Order) => {
+    const orderLabel = order.invoiceNumber || '#' + order._id.slice(-6)
+    if (!window.confirm('Permanently delete order ' + orderLabel + '? This cannot be undone.')) return
+    try {
+      setOpenMenuId(null)
+      await adminService.deleteAdminOrder(order._id)
+      toast.success('Order deleted')
+      await fetchOrders(pagination.page)
+    } catch (error) {
+      console.error('Delete order failed:', error)
+      toast.error('Failed to delete order')
     }
   }
 
@@ -330,7 +345,7 @@ const AdminOrders: React.FC = () => {
                         <td className="px-4 py-5 align-top"><span className={'inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold ' + status.classes}>{status.icon}{status.label}</span></td>
                         <td className="px-4 py-5 align-top"><p className="font-medium capitalize text-slate-800">{(order.paymentMethod || 'unknown').replace('_', ' ')}</p><span className={'mt-1 inline-flex rounded-md border px-2 py-1 text-xs font-semibold ' + (order.isPaid ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700')}>{order.isPaid ? 'Paid' : 'Unpaid'}</span></td>
                         <td className="px-4 py-5 align-top"><p className="font-bold text-slate-900">{formatCurrency(order.totalPrice)}</p></td>
-                        <td className="px-5 py-5 align-top"><div className="flex items-center justify-end gap-2"><button type="button" onClick={() => navigate('/admin/orders/' + order._id)} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-blue-700 transition hover:bg-blue-100" aria-label="View order"><Eye className="h-4 w-4" /></button><div className="relative"><button type="button" onClick={() => setOpenMenuId(isMenuOpen ? null : order._id)} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700" aria-label="More order actions" aria-expanded={isMenuOpen}><MoreHorizontal className="h-4 w-4" /></button>{isMenuOpen && <div className="absolute right-0 z-20 mt-2 w-48 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl"><button type="button" onClick={() => { setOpenMenuId(null); navigate('/admin/orders/edit/' + order._id) }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"><Edit3 className="h-4 w-4 text-slate-500" /> Edit Order</button><button type="button" onClick={() => { setOpenMenuId(null); navigate('/admin/orders/edit/' + order._id) }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"><RefreshCw className="h-4 w-4 text-blue-600" /> Update Status</button>{!order.isPaid && <button type="button" onClick={() => { setOpenMenuId(null); navigate('/admin/payment-proofs?orderId=' + order._id) }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"><WalletCards className="h-4 w-4 text-amber-600" /> Mark Payment</button>}{order.orderStatus !== 'cancelled' && <><div className="my-1 border-t border-slate-100" /><button type="button" onClick={() => handleCancelOrder(order)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-50"><XCircle className="h-4 w-4" /> Cancel Order</button></>}</div>}</div></div></td>
+                        <td className="px-5 py-5 align-top"><div className="flex items-center justify-end gap-2"><button type="button" onClick={() => navigate('/admin/orders/' + order._id)} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-blue-700 transition hover:bg-blue-100" aria-label="View order"><Eye className="h-4 w-4" /></button><div className="relative"><button type="button" onClick={() => setOpenMenuId(isMenuOpen ? null : order._id)} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700" aria-label="More order actions" aria-expanded={isMenuOpen}><MoreHorizontal className="h-4 w-4" /></button>{isMenuOpen && <div className="absolute right-0 z-20 mt-2 w-48 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl"><button type="button" onClick={() => { setOpenMenuId(null); navigate('/admin/orders/edit/' + order._id) }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"><Edit3 className="h-4 w-4 text-slate-500" /> Edit Order</button><button type="button" onClick={() => { setOpenMenuId(null); navigate('/admin/orders/edit/' + order._id) }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"><RefreshCw className="h-4 w-4 text-blue-600" /> Update Status</button>{!order.isPaid && <button type="button" onClick={() => { setOpenMenuId(null); navigate('/admin/payment-proofs?orderId=' + order._id) }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"><WalletCards className="h-4 w-4 text-amber-600" /> Mark Payment</button>}<div className="my-1 border-t border-slate-100" />{order.orderStatus !== 'cancelled' && <button type="button" onClick={() => handleCancelOrder(order)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-50"><XCircle className="h-4 w-4" /> Cancel Order</button>}<button type="button" onClick={() => handleDeleteOrder(order)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-red-700 hover:bg-red-50"><Trash2 className="h-4 w-4" /> Delete Order</button></div>}</div></div></td>
                       </tr>
                     )
                   })}

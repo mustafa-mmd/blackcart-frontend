@@ -1,4 +1,6 @@
-﻿import api from './api';
+import api from './api';
+
+const BANNER_UPLOAD_TIMEOUT = 90_000;
 
 export type BannerType = 'homepage' | 'category' | 'promotion' | 'announcement' | 'popup';
 export type BannerStatus = 'draft' | 'active' | 'scheduled' | 'disabled';
@@ -61,12 +63,16 @@ class BannerService {
   }
 
   async createBanner(formData: FormData): Promise<HeroBanner> {
-    const response = await api.post('/banners/admin', formData);
+    const response = await api.post('/banners/admin', formData, { timeout: BANNER_UPLOAD_TIMEOUT });
     return response.data.data;
   }
 
   async updateBanner(id: string, data: FormData | Partial<HeroBanner>): Promise<HeroBanner> {
-    const response = await api.put(`/banners/admin/${id}`, data);
+    const response = await api.put(
+      `/banners/admin/${id}`,
+      data,
+      data instanceof FormData ? { timeout: BANNER_UPLOAD_TIMEOUT } : undefined
+    );
     return response.data.data;
   }
 

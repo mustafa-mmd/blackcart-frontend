@@ -1,4 +1,4 @@
-﻿// src/pages/admin/AdminCategories.tsx 
+// src/pages/admin/AdminCategories.tsx 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
@@ -537,7 +537,8 @@ const AdminCategories: React.FC = () => {
                       <p className="mt-1 line-clamp-2 min-h-10 text-sm leading-5 text-slate-500">{category.description || 'No description'}</p>
                       <p className="mt-3 text-sm font-semibold text-blue-700">{category.productCount || 0} products</p>
                     </div>
-                    <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-4 py-3">
+                    <div className="grid grid-cols-[1fr_auto_auto] items-center gap-2 border-t border-slate-100 px-4 py-3">
+                      <button type="button" onClick={() => navigate('/categories/' + category.slug)} className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 text-sm font-semibold text-blue-700 transition hover:border-blue-300 hover:bg-blue-100" title="View Category"><Eye className="h-4 w-4" /> View</button>
                       <button type="button" onClick={() => openEditModal(category)} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-blue-600 transition hover:border-blue-300 hover:bg-blue-50" title="Edit"><Edit2 className="h-4 w-4" /></button>
                       {renderActionMenu(category)}
                     </div>

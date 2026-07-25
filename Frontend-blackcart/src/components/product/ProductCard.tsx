@@ -1,7 +1,7 @@
-﻿
+
 
 // src/components/product/ProductCard.tsx
-import React, { useEffect } from 'react'
+import React, { useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Star, ShoppingCart, Eye } from 'lucide-react'
@@ -23,7 +23,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
   const { addToCart, isInCart } = useCart()
   const [isHovered, setIsHovered] = React.useState(false)
   const [imageError, setImageError] = React.useState(false)
-  const [imageUrl, setImageUrl] = React.useState<string>('/placeholder.png')
+  const [displayImageIndex, setDisplayImageIndex] = React.useState(0)
+  const slideshowTimerRef = useRef<number | null>(null)
 
   // Extract category name properly
   const getCategoryName = (): string => {
@@ -40,43 +41,90 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
     return String(product.category) || 'Uncategorized'
   }
 
-  // Get product image URL - FIXED to handle object format
-  useEffect(() => {
-    const loadImage = () => {
-      if (!product) {
-        setImageUrl('/placeholder.png')
-        return
-      }
-      
-      try {
-        // Get the first image from the images array (which contains objects with url property)
-        let imageData = null
-        
-        if (product.images && Array.isArray(product.images) && product.images.length > 0) {
-          imageData = product.images[0]
-        } 
-        // Fallback to product.image if it exists (could be string or object)
-        else if (product.image) {
-          imageData = product.image
-        }
-        
-        if (!imageData) {
-          setImageUrl('/placeholder.png')
-          return
-        }
-        
-        // Use the utility to get the full URL
-        const url = getImageUrl(imageData)
-        setImageUrl(url)
-        
-      } catch (error) {
-        console.error('Error getting image URL for product:', product.name, error)
-        setImageUrl('/placeholder.png')
-      }
+  const productImages = useMemo(() => {
+    if (!product) return ['/placeholder.png']
+
+    const rawImages: unknown[] = []
+    const productWithGallery = product as StorefrontProduct & { gallery?: unknown[] | unknown }
+
+    if (Array.isArray(product.images)) rawImages.push(...product.images)
+    if (Array.isArray(productWithGallery.gallery)) rawImages.push(...productWithGallery.gallery)
+    if (product.image) rawImages.push(product.image)
+    if (product.thumbnail) rawImages.push(product.thumbnail)
+    if (Array.isArray(product.colorVariants)) {
+      product.colorVariants.forEach((variant) => {
+        if (Array.isArray(variant.images)) rawImages.push(...variant.images)
+      })
     }
-    
-    loadImage()
+
+    const urls = rawImages
+      .map((imageData) => {
+        try {
+          return getImageUrl(imageData)
+        } catch {
+          return ''
+        }
+      })
+      .filter((url): url is string => Boolean(url && url.trim()))
+
+    const uniqueUrls = Array.from(new Set(urls))
+    return uniqueUrls.length > 0 ? uniqueUrls : ['/placeholder.png']
   }, [product])
+
+  const currentImageUrl = imageError ? productImages[0] || '/placeholder.png' : productImages[displayImageIndex] || productImages[0] || '/placeholder.png'
+
+  const prefersReducedMotion = () => (
+    typeof window !== 'undefined'
+    && window.matchMedia
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  )
+
+  const isTouchDevice = () => (
+    typeof window !== 'undefined'
+    && ('ontouchstart' in window || navigator.maxTouchPoints > 0)
+  )
+
+  const stopImageSlideshow = () => {
+    if (slideshowTimerRef.current !== null) {
+      window.clearInterval(slideshowTimerRef.current)
+      slideshowTimerRef.current = null
+    }
+  }
+
+  const handleProductMouseEnter = () => {
+    setIsHovered(true)
+
+    if (productImages.length <= 1 || isTouchDevice() || prefersReducedMotion()) return
+
+    stopImageSlideshow()
+    slideshowTimerRef.current = window.setInterval(() => {
+      if (document.hidden) return
+      setImageError(false)
+      setDisplayImageIndex((currentIndex) => (currentIndex + 1) % productImages.length)
+    }, 1400)
+  }
+
+  const handleProductMouseLeave = () => {
+    setIsHovered(false)
+    stopImageSlideshow()
+    setImageError(false)
+    setDisplayImageIndex(0)
+  }
+
+  useEffect(() => {
+    setImageError(false)
+    setDisplayImageIndex(0)
+    stopImageSlideshow()
+
+    return stopImageSlideshow
+  }, [productImages])
+
+  useEffect(() => {
+    if (productImages.length <= 1) return
+    const nextImage = productImages[(displayImageIndex + 1) % productImages.length]
+    const preloadImage = new Image()
+    preloadImage.src = nextImage
+  }, [displayImageIndex, productImages])
 
   const getProductName = () => product?.name || 'Product'
 
@@ -190,8 +238,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: index * 0.05 }}
         className="card overflow-hidden group cursor-pointer bg-white rounded-lg shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:ring-1 hover:ring-blue-100"
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
+        onMouseEnter={handleProductMouseEnter}
+        onMouseLeave={handleProductMouseLeave}
         onClick={handleCardClick}
         role="button"
         tabIndex={0}
@@ -208,11 +256,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
           <div className="relative flex-shrink-0">
             <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-lg overflow-hidden bg-gray-100">
               <img
-                src={imageError ? '/placeholder.png' : imageUrl}
+                src={currentImageUrl}
                 alt={safeRender(product.name, 'Product image')}
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+                className="h-full w-full object-contain transition-all duration-500 group-hover:scale-[1.04]"
                 onError={() => {
-                  console.log('Image failed to load:', imageUrl);
+                  console.log('Image failed to load:', currentImageUrl);
                   setImageError(true);
                 }}
                 loading="lazy"
@@ -317,8 +365,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: compact ? Math.min(index, 3) * 0.03 : index * 0.05 }}
       className={`card overflow-hidden group cursor-pointer bg-white rounded-lg shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:ring-1 hover:ring-blue-100 ${compact ? 'flex h-full flex-col' : ''}`}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      onMouseEnter={handleProductMouseEnter}
+      onMouseLeave={handleProductMouseLeave}
       onClick={handleCardClick}
       role="button"
       tabIndex={0}
@@ -332,11 +380,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
     >
       <div className={`relative overflow-hidden bg-gray-100 ${compact ? "aspect-[4/3]" : "aspect-square"}`}>
         <img
-          src={imageError ? '/placeholder.png' : imageUrl}
+          src={currentImageUrl}
           alt={safeRender(product.name, 'Product image')}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+          className="h-full w-full object-contain transition-all duration-500 group-hover:scale-[1.04]"
           onError={() => {
-            console.log('Image failed to load:', imageUrl);
+            console.log('Image failed to load:', currentImageUrl);
             setImageError(true);
           }}
           loading="lazy"
@@ -376,29 +424,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
           </button>
         </div>
 
-        {/* Add to cart button on hover */}
-        <button
-          onClick={handleAddToCart}
-          className={`absolute bottom-0 left-0 right-0 bg-blue-600 text-white py-3 font-medium transition-all duration-300 ${
-            isHovered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-full'
-          } ${product.stock === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'}`}
-          disabled={product.stock === 0}
-          aria-label={product.stock === 0 ? "Out of stock" : "Add to cart"}
-        >
-          {isInCart(product._id) ? (
-            <span className="flex items-center justify-center">
-              <ShoppingCart className="h-4 w-4 mr-2" />
-              In Cart
-            </span>
-          ) : product.stock === 0 ? (
-            'Out of Stock'
-          ) : (
-            <span className="flex items-center justify-center">
-              <ShoppingCart className="h-4 w-4 mr-2" />
-              Add to Cart
-            </span>
-          )}
-        </button>
       </div>
 
       {/* Product info */}

@@ -1,4 +1,4 @@
-﻿
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -10,10 +10,12 @@ import {
 } from 'lucide-react';
 import { categoryService } from '../services/categoryService';
 import { productService } from '../services/productService';
+import bannerService, { type HeroBanner } from '../services/bannerService';
 import { useCart } from '../context/CartContext';
 import Loader from '../components/common/Loader';
 import toast from 'react-hot-toast';
 import type { Category, Product, StorefrontProduct } from '../types';
+import { getImageUrl } from '../utils/imageUtils';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://blackcart-backend.onrender.com';
 
@@ -62,6 +64,9 @@ const CategoryProductsPage: React.FC = () => {
   const [showMobileFilters, setShowMobileFilters] = useState<boolean>(false);
   const [totalProducts, setTotalProducts] = useState<number>(0);
   const [categoryBanner, setCategoryBanner] = useState<HeroBanner | null>(null);
+  const [hoveredProductId, setHoveredProductId] = useState<string | null>(null);
+  const [hoverImageIndex, setHoverImageIndex] = useState<number>(0);
+  const hoverSlideshowTimerRef = useRef<number | null>(null);
   
   const prevFiltersRef = useRef(filters);
   const isInitialMount = useRef(true);
@@ -86,7 +91,80 @@ const CategoryProductsPage: React.FC = () => {
     } catch {
       return '/images/placeholder-product.jpg';
     }
+  };  const getProductHoverImages = (product: StorefrontProduct): string[] => {
+    const rawImages: unknown[] = [];
+    const productWithGallery = product as StorefrontProduct & { gallery?: unknown[] | unknown };
+
+    if (Array.isArray(product.images)) rawImages.push(...product.images);
+    if (Array.isArray(productWithGallery.gallery)) rawImages.push(...productWithGallery.gallery);
+    if (product.image) rawImages.push(product.image);
+    if (product.thumbnail) rawImages.push(product.thumbnail);
+    if (Array.isArray(product.colorVariants)) {
+      product.colorVariants.forEach((variant) => {
+        if (Array.isArray(variant.images)) rawImages.push(...variant.images);
+      });
+    }
+
+    const urls = rawImages
+      .map((imageData) => {
+        try {
+          return getImageUrl(imageData);
+        } catch {
+          return '';
+        }
+      })
+      .filter((url): url is string => Boolean(url && url.trim() && !url.includes('cloudinary.com/demo')));
+
+    const uniqueUrls = Array.from(new Set(urls));
+    return uniqueUrls.length > 0 ? uniqueUrls : [getProductImage(product)];
   };
+
+  const getCategoryCardImage = (product: StorefrontProduct): string => {
+    const images = getProductHoverImages(product);
+    if (hoveredProductId !== product._id) return images[0] || '/images/placeholder-product.jpg';
+    return images[hoverImageIndex] || images[0] || '/images/placeholder-product.jpg';
+  };
+
+  const prefersReducedMotion = () => (
+    typeof window !== 'undefined'
+    && window.matchMedia
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
+
+  const isTouchDevice = () => (
+    typeof window !== 'undefined'
+    && ('ontouchstart' in window || navigator.maxTouchPoints > 0)
+  );
+
+  const stopCategoryImageSlideshow = useCallback(() => {
+    if (hoverSlideshowTimerRef.current !== null) {
+      window.clearInterval(hoverSlideshowTimerRef.current);
+      hoverSlideshowTimerRef.current = null;
+    }
+  }, []);
+
+  const handleCategoryProductMouseEnter = (product: StorefrontProduct) => {
+    const images = getProductHoverImages(product);
+    setHoveredProductId(product._id);
+    setHoverImageIndex(0);
+
+    if (images.length <= 1 || isTouchDevice() || prefersReducedMotion()) return;
+
+    stopCategoryImageSlideshow();
+    hoverSlideshowTimerRef.current = window.setInterval(() => {
+      if (document.hidden) return;
+      setHoverImageIndex((currentIndex) => (currentIndex + 1) % images.length);
+    }, 1400);
+  };
+
+  const handleCategoryProductMouseLeave = () => {
+    stopCategoryImageSlideshow();
+    setHoveredProductId(null);
+    setHoverImageIndex(0);
+  };
+
+  useEffect(() => stopCategoryImageSlideshow, [stopCategoryImageSlideshow]);
+
 
 
   const getCategoryBannerUrl = (url?: string): string => {
@@ -513,14 +591,16 @@ const CategoryProductsPage: React.FC = () => {
                   transition={{ duration: 0.3, delay: index * 0.05 }}
                 >
                   {viewMode === 'grid' ? (
-                    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow duration-300">
+                    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow duration-300"
+                      onMouseEnter={() => handleCategoryProductMouseEnter(product)}
+                      onMouseLeave={handleCategoryProductMouseLeave}>
                       <div onClick={() => navigate(`/products/${product.slug || product._id}`)} className="cursor-pointer">
                         {/* âœ… Reduced image height h-48 â†’ h-36 */}
                         <div className="relative h-36 overflow-hidden bg-white sm:h-40">
                           <img
-                            src={getProductImage(product)}
+                            src={getCategoryCardImage(product)}
                             alt={product.name}
-                            className="h-full w-full object-contain p-2 transition-transform duration-300 hover:scale-105"
+                            className="h-full w-full object-contain p-2 transition-all duration-500 hover:scale-105"
                             onError={(e) => { e.currentTarget.src = '/images/placeholder-product.jpg'; }}
                           />
                           {product.discountPrice && (
@@ -562,16 +642,18 @@ const CategoryProductsPage: React.FC = () => {
                       </div>
                     </div>
                   ) : (
-                    <div className="bg-white rounded-xl border border-gray-200 p-3 hover:shadow-md transition-shadow">
+                    <div className="bg-white rounded-xl border border-gray-200 p-3 hover:shadow-md transition-shadow"
+                      onMouseEnter={() => handleCategoryProductMouseEnter(product)}
+                      onMouseLeave={handleCategoryProductMouseLeave}>
                       <div className="flex flex-col sm:flex-row">
                         <div
                           className="sm:flex-shrink-0 sm:w-36 h-36 sm:h-auto mb-3 sm:mb-0 sm:mr-4 cursor-pointer"
                           onClick={() => navigate(`/products/${product.slug || product._id}`)}
                         >
                           <img
-                            src={getProductImage(product)}
+                            src={getCategoryCardImage(product)}
                             alt={product.name}
-                            className="w-full h-full object-cover rounded-lg"
+                            className="h-full w-full object-contain rounded-lg transition-all duration-500"
                             onError={(e) => { e.currentTarget.src = '/images/placeholder-product.jpg'; }}
                           />
                         </div>

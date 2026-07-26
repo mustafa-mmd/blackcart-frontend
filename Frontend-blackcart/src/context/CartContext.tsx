@@ -1,4 +1,4 @@
-﻿/* eslint-disable react-refresh/only-export-components */
+/* eslint-disable react-refresh/only-export-components */
 import React, {
   createContext,
   useCallback,
@@ -11,13 +11,21 @@ import React, {
 import toast from 'react-hot-toast'
 import type { CartItem, Product, ProductColorVariant } from '../types'
 
+interface AddToCartOptions {
+  showToast?: boolean
+  animationOrigin?: {
+    x: number
+    y: number
+  }
+}
+
 interface CartContextType {
   cartItems: CartItem[]
   itemCount: number
   cartTotal: number
   loading: boolean
   error: string | null
-  addToCart: (product: Product, quantity?: number, variant?: ProductColorVariant, options?: { showToast?: boolean }) => Promise<void>
+  addToCart: (product: Product, quantity?: number, variant?: ProductColorVariant, options?: AddToCartOptions) => Promise<void>
   removeFromCart: (productId: string, variantId?: string) => Promise<void>
   updateQuantity: (productId: string, quantity: number, product?: Product, variantId?: string) => Promise<void>
   clearCart: () => Promise<void>
@@ -50,6 +58,13 @@ const getProductId = (product: CartItem['product']): string => {
 const getVariantId = (variant: CartItem['variant']): string => {
   if (!variant) return ''
   return typeof variant === 'string' ? variant : String(variant._id || '')
+}
+
+const getCartImage = (product: Product, variant?: ProductColorVariant): string => {
+  const source = variant?.images?.[0] || product.images?.[0] || product.image || product.thumbnail
+  if (typeof source === 'string') return source
+  if (source && typeof source === 'object' && 'url' in source) return String(source.url || '')
+  return ''
 }
 
 const readStoredCart = (): CartItem[] => {
@@ -109,9 +124,10 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [cartItems])
 
-  const addToCart = useCallback(async (product: Product, quantity = 1, variant?: ProductColorVariant, options?: { showToast?: boolean }) => {
+  const addToCart = useCallback(async (product: Product, quantity = 1, variant?: ProductColorVariant, options?: AddToCartOptions) => {
     const safeQuantity = Math.max(1, quantity)
     const variantId = getVariantId(variant)
+    const wasEmpty = cartItems.length === 0
     setCartItems((current) => {
       const existingIndex = current.findIndex((item) => (
         getProductId(item.product) === product._id && getVariantId(item.variant) === variantId
@@ -133,10 +149,21 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           : item,
       )
     })
-if (options?.showToast !== false) {
+    window.dispatchEvent(new CustomEvent('blackcart:cart-item-added', {
+      detail: {
+        imageUrl: getCartImage(product, variant),
+        productName: product.name,
+        quantity: safeQuantity,
+        openDrawer: wasEmpty,
+        fromX: options?.animationOrigin?.x,
+        fromY: options?.animationOrigin?.y,
+      },
+    }))
+
+    if (options?.showToast === true) {
       toast.success(`${safeQuantity} × ${product.name} added to cart`)
     }
-  }, [])
+  }, [cartItems.length])
 
   const removeFromCart = useCallback(async (productId: string, variantId = '') => {
     setCartItems((current) => current.filter((item) => !(

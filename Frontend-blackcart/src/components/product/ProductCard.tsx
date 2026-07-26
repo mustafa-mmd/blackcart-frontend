@@ -71,7 +71,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
     return uniqueUrls.length > 0 ? uniqueUrls : ['/placeholder.png']
   }, [product])
 
-  const currentImageUrl = imageError ? productImages[0] || '/placeholder.png' : productImages[displayImageIndex] || productImages[0] || '/placeholder.png'
+  const currentImageUrl = imageError ? '/placeholder.png' : productImages[displayImageIndex] || productImages[0] || '/placeholder.png'
 
   const prefersReducedMotion = () => (
     typeof window !== 'undefined'
@@ -79,9 +79,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
     && window.matchMedia('(prefers-reduced-motion: reduce)').matches
   )
 
-  const isTouchDevice = () => (
+  const supportsMouseHover = () => (
     typeof window !== 'undefined'
-    && ('ontouchstart' in window || navigator.maxTouchPoints > 0)
+    && window.matchMedia
+    && window.matchMedia('(hover: hover) and (pointer: fine)').matches
   )
 
   const stopImageSlideshow = () => {
@@ -94,14 +95,16 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
   const handleProductMouseEnter = () => {
     setIsHovered(true)
 
-    if (productImages.length <= 1 || isTouchDevice() || prefersReducedMotion()) return
+    if (productImages.length <= 1 || !supportsMouseHover() || prefersReducedMotion()) return
 
     stopImageSlideshow()
+    setImageError(false)
+    setDisplayImageIndex(1)
     slideshowTimerRef.current = window.setInterval(() => {
       if (document.hidden) return
       setImageError(false)
       setDisplayImageIndex((currentIndex) => (currentIndex + 1) % productImages.length)
-    }, 1400)
+    }, 1000)
   }
 
   const handleProductMouseLeave = () => {
@@ -164,7 +167,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
       navigate(`/products/${product.slug || product._id}`)
       return
     }
-    addToCart(cartProduct)
+    const sourceRect = e.currentTarget.getBoundingClientRect()
+    addToCart(cartProduct, 1, undefined, {
+      animationOrigin: {
+        x: sourceRect.left + sourceRect.width / 2,
+        y: sourceRect.top + sourceRect.height / 2,
+      },
+    })
   }
 
   const handleQuickView = (e: React.MouseEvent) => {
@@ -255,7 +264,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
           {/* Product Image - FIXED: Smaller size for list view */}
           <div className="relative flex-shrink-0">
             <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-lg overflow-hidden bg-gray-100">
-              <img
+              <motion.img
+                key={currentImageUrl}
+                initial={{ opacity: 0.35 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.22 }}
                 src={currentImageUrl}
                 alt={safeRender(product.name, 'Product image')}
                 className="h-full w-full object-contain transition-all duration-500 group-hover:scale-[1.04]"
@@ -379,7 +392,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, viewMode 
       aria-label={`View ${product.name} details`}
     >
       <div className={`relative overflow-hidden bg-gray-100 ${compact ? "aspect-[4/3]" : "aspect-square"}`}>
-        <img
+        <motion.img
+          key={currentImageUrl}
+          initial={{ opacity: 0.35 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.22 }}
           src={currentImageUrl}
           alt={safeRender(product.name, 'Product image')}
           className="h-full w-full object-contain transition-all duration-500 group-hover:scale-[1.04]"

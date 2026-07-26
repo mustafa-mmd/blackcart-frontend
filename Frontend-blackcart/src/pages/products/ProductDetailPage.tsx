@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { useParams, useNavigate } from "react-router-dom";
 import {
@@ -194,17 +194,18 @@ const ProductDetailPage: React.FC = () => {
       return;
     }
 
-    await addToCart(cartProduct, qtyToAdd, selectedColor, { showToast: false });
+    await addToCart(cartProduct, qtyToAdd, selectedColor, {
+      showToast: false,
+      animationOrigin: sourceRect
+        ? {
+            x: sourceRect.left + sourceRect.width / 2,
+            y: sourceRect.top + sourceRect.height / 2,
+          }
+        : undefined,
+    });
 
     setCartFeedback("added");
     setSparkleKey((current) => current + 1);
-    window.dispatchEvent(new CustomEvent("blackcart:cart-celebration", {
-      detail: {
-        imageUrl: productImages[0] || "/placeholder.png",
-        fromX: sourceRect ? sourceRect.left + sourceRect.width / 2 : window.innerWidth * 0.68,
-        fromY: sourceRect ? sourceRect.top + sourceRect.height / 2 : window.innerHeight * 0.72,
-      },
-    }));
     window.setTimeout(() => setCartFeedback("idle"), 1300);
 
     // Reset local quantity to 1 after adding

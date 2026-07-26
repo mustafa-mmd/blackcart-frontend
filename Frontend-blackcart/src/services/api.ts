@@ -1,7 +1,8 @@
 import axios from 'axios'
 import toast from 'react-hot-toast'
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://blackcart-backend.onrender.com'
+const API_URL = import.meta.env.VITE_API_URL
+  || (import.meta.env.DEV ? 'http://localhost:5000' : 'https://blackcart-backend.onrender.com')
 
 const api = axios.create({
   baseURL: `${API_URL}/api`,

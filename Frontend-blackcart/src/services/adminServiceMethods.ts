@@ -280,8 +280,8 @@ export const adminService = {
     return response.data
   },
 
-  importRemoteProductImage: async (url: string): Promise<ApiResponse<{ url: string; public_id: string; alt?: string }>> => {
-    const response = await api.post('/admin/products/remote-image', { url }, { timeout: 30000 })
+  importRemoteProductImage: async (url: string, sourceUrl?: string): Promise<ApiResponse<{ url: string; public_id: string; alt?: string }>> => {
+    const response = await api.post('/admin/products/remote-image', { url, sourceUrl }, { timeout: 30000 })
     return response.data
   },
 

@@ -167,6 +167,66 @@ const SPECIFICATION_SUGGESTIONS = [
 const getErrorMessage = (error: unknown, fallback: string) =>
   error instanceof Error ? error.message : fallback
 
+interface DroppedImageData {
+  urls: string[]
+  sourceUrl?: string
+}
+
+const normalizeExternalImageUrl = (value: string): string | null => {
+  const trimmed = value.trim().replace(/^["']|["']$/g, '')
+  if (!trimmed || trimmed.startsWith('data:') || trimmed.startsWith('blob:')) return null
+
+  const candidate = trimmed.startsWith('//') ? `https:${trimmed}` : trimmed
+  try {
+    const parsed = new URL(candidate)
+    return ['http:', 'https:'].includes(parsed.protocol) ? parsed.toString() : null
+  } catch {
+    return null
+  }
+}
+
+const extractDroppedImageData = (dataTransfer: DataTransfer): DroppedImageData => {
+  const candidates: string[] = []
+  let sourceUrl: string | undefined
+  const addCandidate = (value: string | null | undefined) => {
+    if (!value) return
+    const normalized = normalizeExternalImageUrl(value)
+    if (normalized) candidates.push(normalized)
+  }
+
+  const html = dataTransfer.getData('text/html')
+  if (html) {
+    const documentFragment = new DOMParser().parseFromString(html, 'text/html')
+    documentFragment.querySelectorAll('img, source').forEach((element) => {
+      ;['src', 'data-src', 'data-lazy-src', 'data-original', 'data-image'].forEach((attribute) => {
+        addCandidate(element.getAttribute(attribute))
+      })
+
+      ;['srcset', 'data-srcset'].forEach((attribute) => {
+        const srcset = element.getAttribute(attribute)
+        srcset?.split(',').forEach((entry) => addCandidate(entry.trim().split(/\s+/)[0]))
+      })
+    })
+
+    documentFragment.querySelectorAll<HTMLElement>('[style*="background-image"]').forEach((element) => {
+      const match = element.style.backgroundImage.match(/url\((['"]?)(.*?)\1\)/i)
+      addCandidate(match?.[2])
+    })
+
+    const linkedPage = documentFragment.querySelector<HTMLAnchorElement>('a[href]')?.href
+    sourceUrl = normalizeExternalImageUrl(linkedPage || '') || undefined
+  }
+
+  ;['text/uri-list', 'text/x-moz-url', 'text/plain'].forEach((type) => {
+    const value = dataTransfer.getData(type)
+    value.split(/\r?\n/).forEach((line) => {
+      if (!line.trim().startsWith('#')) addCandidate(line)
+    })
+  })
+
+  return { urls: Array.from(new Set(candidates)), sourceUrl }
+}
+
 const AdminCreateProduct: React.FC = () => {
   const navigate = useNavigate()
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -281,32 +341,77 @@ const AdminCreateProduct: React.FC = () => {
     e.target.value = ''
   }
 
-  const handleImageDrop = (event: React.DragEvent<HTMLLabelElement>) => {
+  const importRemoteImageUrls = async (rawUrls: string[], sourceUrl?: string, clearInput = false) => {
+    const urls = Array.from(new Set(rawUrls.map(normalizeExternalImageUrl).filter((url): url is string => Boolean(url))))
+    if (!urls.length) {
+      toast.error('No public image URL was found. Save the image to your device, then upload the saved file.')
+      return
+    }
+
+    const availableSlots = Math.max(10 - images.length, 0)
+    if (!availableSlots) {
+      toast.error('You can upload a maximum of 10 images')
+      return
+    }
+
+    const selectedUrls = urls.slice(0, availableSlots)
+    const importedImages: PendingImage[] = []
+    const failures: string[] = []
+
+    try {
+      setIsImportingImage(true)
+      for (const url of selectedUrls) {
+        try {
+          const response = await adminService.importRemoteProductImage(url, sourceUrl)
+          const imported = response.data
+          if (!imported?.url || !imported.public_id) throw new Error('The image import did not return a valid file')
+          importedImages.push({
+            id: `remote-${imported.public_id}-${Date.now()}-${importedImages.length}`,
+            remote: imported,
+            previewUrl: imported.url,
+          })
+        } catch (error) {
+          failures.push(getErrorMessage(error, 'Marketplace blocked the image import'))
+        }
+      }
+
+      if (importedImages.length) {
+        setImages((previous) => [...previous, ...importedImages].slice(0, 10))
+        if (clearInput) setRemoteImageUrl('')
+        toast.success(`${importedImages.length} web image${importedImages.length === 1 ? '' : 's'} imported securely`)
+      }
+
+      if (failures.length) {
+        toast.error(
+          importedImages.length
+            ? `${failures.length} image${failures.length === 1 ? '' : 's'} could not be imported.`
+            : `${failures[0]} Try opening the image itself in a new tab and paste that URL, or use "Save image as" and upload the file.`,
+          { duration: 7000 }
+        )
+      }
+    } finally {
+      setIsImportingImage(false)
+    }
+  }
+
+  const handleImageDrop = async (event: React.DragEvent<HTMLLabelElement>) => {
     event.preventDefault()
-    addLocalImages(Array.from(event.dataTransfer.files))
+    if (isImportingImage) return
+
+    const droppedFiles = Array.from(event.dataTransfer.files)
+    if (droppedFiles.length) {
+      addLocalImages(droppedFiles)
+      return
+    }
+
+    const dropped = extractDroppedImageData(event.dataTransfer)
+    await importRemoteImageUrls(dropped.urls, dropped.sourceUrl)
   }
 
   const handleRemoteImageImport = async () => {
     const url = remoteImageUrl.trim()
     if (!url) return toast.error('Enter a public image URL')
-    if (images.length >= 10) return toast.error('You can upload a maximum of 10 images')
-    try {
-      setIsImportingImage(true)
-      const response = await adminService.importRemoteProductImage(url)
-      const imported = response.data
-      if (!imported?.url || !imported.public_id) throw new Error('The image import did not return a valid file')
-      setImages((previous) => [...previous, {
-        id: `remote-${imported.public_id}-${Date.now()}`,
-        remote: imported,
-        previewUrl: imported.url,
-      }])
-      setRemoteImageUrl('')
-      toast.success('Web image imported securely')
-    } catch (error) {
-      toast.error(getErrorMessage(error, 'Could not import that image URL'))
-    } finally {
-      setIsImportingImage(false)
-    }
+    await importRemoteImageUrls([url], undefined, true)
   }
 
   const suggestColorSku = (name: string) => {
@@ -578,7 +683,7 @@ const AdminCreateProduct: React.FC = () => {
     URL.revokeObjectURL(url)
   }
 
-  const exportSpecifications = () => {
+  const handleExportSpecifications = () => {
     const rows = specifications
       .map((spec) => ({ key: spec.key.trim(), value: spec.value.trim() }))
       .filter((spec) => spec.key || spec.value)
@@ -1183,7 +1288,7 @@ const AdminCreateProduct: React.FC = () => {
                     <button type="button" onClick={addSpecification} className="inline-flex items-center rounded-lg border border-blue-200 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50"><Plus className="h-4 w-4 mr-1" />Add Specification</button>
                     <button type="button" onClick={() => openSmartPaste('specifications')} className="inline-flex items-center rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700"><Sparkles className="h-4 w-4 mr-1" />Smart Paste</button>
                     <button type="button" onClick={() => openSmartPaste('specifications')} className="inline-flex items-center rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"><Download className="h-4 w-4 mr-1" />Import</button>
-                    <button type="button" onClick={exportSpecifications} className="inline-flex items-center rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"><Download className="h-4 w-4 mr-1" />Export</button>
+                    <button type="button" onClick={handleExportSpecifications} className="inline-flex items-center rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"><Download className="h-4 w-4 mr-1" />Export</button>
                   </div>
                 </div>
                 <div className="mb-4 grid gap-3 lg:grid-cols-[1fr_auto]">
@@ -1410,11 +1515,14 @@ const AdminCreateProduct: React.FC = () => {
                       <label
                         onDragOver={(event) => event.preventDefault()}
                         onDrop={handleImageDrop}
-                        className="flex h-40 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 transition hover:border-blue-400 hover:bg-blue-50 sm:h-[11.25rem]"
+                        className={`flex h-40 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 transition hover:border-blue-400 hover:bg-blue-50 sm:h-[11.25rem] ${isImportingImage ? 'pointer-events-none opacity-60' : ''}`}
                       >
                         <Upload className="mb-2 h-8 w-8 text-gray-400" />
-                        <span className="text-sm text-gray-600">Upload Images</span>
+                        <span className="text-center text-sm font-medium text-gray-700">
+                          {isImportingImage ? 'Importing web image...' : 'Upload or drop product images'}
+                        </span>
                         <span className="mt-1 text-xs text-gray-500">Max 5MB each · {10 - images.length} left</span>
+                        <span className="mt-2 px-3 text-center text-[11px] text-gray-500">Supports local files and images dragged from Google, Alibaba, AliExpress, or Daraz.</span>
                         <input
                           type="file"
                           accept="image/jpeg,image/png,image/webp,image/gif"
@@ -1446,7 +1554,7 @@ const AdminCreateProduct: React.FC = () => {
                         {isImportingImage ? 'Importing…' : 'Import image'}
                       </button>
                     </div>
-                    <p className="mt-2 text-xs text-gray-500">HTTPS/HTTP only. The server validates type, size, redirects, and private network addresses before saving to Cloudinary.</p>
+                    <p className="mt-2 text-xs text-gray-500">HTTPS/HTTP direct image links only. The server validates type, size, redirects, and private network addresses before saving to Cloudinary. If a marketplace blocks importing, open the image itself in a new tab or save it locally first.</p>
                   </div>
                   
                   <div className="text-sm">

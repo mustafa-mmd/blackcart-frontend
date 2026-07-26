@@ -1,4 +1,4 @@
-﻿
+
 import React, { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Minus, Plus, ShoppingCart, Trash2, X, Shield, Sparkles } from 'lucide-react'
@@ -15,7 +15,6 @@ const getVariantId = (variant: unknown) => {
 const MiniCart: React.FC = () => {
   const { cartItems, itemCount, cartTotal, removeFromCart, updateQuantity } = useCart()
   const [isOpen, setIsOpen] = useState(false)
-  const containerRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const closeRef = useRef<HTMLButtonElement>(null)
   const navigate = useNavigate()
@@ -29,50 +28,61 @@ const MiniCart: React.FC = () => {
     toY: number
   } | null>(null)
 
-  useEffect(() => {
-    const closeOnOutsideClick = (event: MouseEvent) => {
-      if (!containerRef.current?.contains(event.target as Node)) setIsOpen(false)
-    }
-    document.addEventListener('mousedown', closeOnOutsideClick)
-    return () => document.removeEventListener('mousedown', closeOnOutsideClick)
-  }, [])
 
   useEffect(() => {
     if (!isOpen) return
     closeRef.current?.focus()
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return
       setIsOpen(false)
       triggerRef.current?.focus()
     }
     document.addEventListener('keydown', closeOnEscape)
-    return () => document.removeEventListener('keydown', closeOnEscape)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      document.removeEventListener('keydown', closeOnEscape)
+    }
   }, [isOpen])
 
   useEffect(() => {
-    const handleCartCelebration = (event: Event) => {
-      const detail = (event as CustomEvent<{ imageUrl?: string; fromX?: number; fromY?: number }>).detail
+    const handleCartItemAdded = (event: Event) => {
+      const detail = (event as CustomEvent<{
+        imageUrl?: string
+        fromX?: number
+        fromY?: number
+        openDrawer?: boolean
+      }>).detail
       const target = triggerRef.current?.getBoundingClientRect()
-      if (!target || !detail?.imageUrl) return
+      if (!target) return
 
       const id = Date.now()
-      const fromX = detail.fromX ?? window.innerWidth * 0.7
-      const fromY = detail.fromY ?? window.innerHeight * 0.72
-      setFlyingProduct({
-        id,
-        imageUrl: detail.imageUrl,
-        fromX,
-        fromY,
-        toX: target.left + target.width / 2,
-        toY: target.top + target.height / 2,
-      })
       setCartPulse(id)
-      window.setTimeout(() => setFlyingProduct((current) => current?.id === id ? null : current), 850)
-      window.setTimeout(() => setCartPulse((current) => current === id ? 0 : current), 700)
+
+      if (detail?.imageUrl) {
+        const fromX = detail.fromX ?? window.innerWidth * 0.7
+        const fromY = detail.fromY ?? window.innerHeight * 0.72
+        setFlyingProduct({
+          id,
+          imageUrl: getImageUrl(detail.imageUrl),
+          fromX,
+          fromY,
+          toX: target.left + target.width / 2,
+          toY: target.top + target.height / 2,
+        })
+        window.setTimeout(() => setFlyingProduct((current) => current?.id === id ? null : current), 850)
+      }
+
+      if (detail?.openDrawer) {
+        window.setTimeout(() => setIsOpen(true), detail.imageUrl ? 520 : 80)
+      }
+
+      window.setTimeout(() => setCartPulse((current) => current === id ? 0 : current), 900)
     }
 
-    window.addEventListener('blackcart:cart-celebration', handleCartCelebration)
-    return () => window.removeEventListener('blackcart:cart-celebration', handleCartCelebration)
+    window.addEventListener('blackcart:cart-item-added', handleCartItemAdded)
+    return () => window.removeEventListener('blackcart:cart-item-added', handleCartItemAdded)
   }, [])
 
   // Free shipping limit is PKR 5000
@@ -82,7 +92,7 @@ const MiniCart: React.FC = () => {
   const remainingForFreeShipping = freeShippingThreshold - cartTotal
 
   return (
-    <div ref={containerRef} className="relative">
+    <div className="relative">
       <button
         ref={triggerRef}
         type="button"
@@ -117,13 +127,20 @@ const MiniCart: React.FC = () => {
       )}
 
       {isOpen && (
-        <div 
-          id="mini-cart" 
-          role="dialog" 
-          aria-modal="false" 
-          aria-label="Shopping cart" 
-          className="fixed inset-x-3 top-[4.5rem] z-[70] overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-2xl sm:absolute sm:inset-x-auto sm:right-0 sm:top-12 sm:w-[25rem]"
-        >
+        <>
+          <button
+            type="button"
+            className="fixed inset-0 z-[80] cursor-default bg-slate-950/35 backdrop-blur-[1px] cart-drawer-backdrop"
+            onClick={() => setIsOpen(false)}
+            aria-label="Close shopping cart"
+          />
+          <aside
+            id="mini-cart"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Shopping cart"
+            className="fixed inset-y-0 right-0 z-[90] flex h-dvh w-full max-w-[420px] flex-col overflow-hidden border-l border-gray-200/80 bg-white shadow-2xl cart-drawer-enter"
+          >
           {/* Header */}
           <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
             <div>
@@ -182,7 +199,7 @@ const MiniCart: React.FC = () => {
               </div>
 
               {/* Items List */}
-              <div className="max-h-[40vh] divide-y divide-gray-100 overflow-y-auto pr-1">
+              <div className="min-h-0 flex-1 divide-y divide-gray-100 overflow-y-auto pr-1">
                 {cartItems.map((item, index) => {
                   const product = typeof item.product === 'object' ? item.product : null
                   if (!product) return null
@@ -299,7 +316,8 @@ const MiniCart: React.FC = () => {
               </div>
             </>
           )}
-        </div>
+          </aside>
+        </>
       )}
     </div>
   )

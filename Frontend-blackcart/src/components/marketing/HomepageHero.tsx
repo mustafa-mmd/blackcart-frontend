@@ -14,7 +14,7 @@ const TrustItems = () => (
 )
 
 const FallbackHero = () => (
-  <section className="relative min-h-[310px] overflow-hidden rounded-2xl bg-[#0b1220] px-6 py-8 text-white sm:px-10 md:min-h-[360px] md:py-12">
+  <section className="relative min-h-[calc(100vh-112px)] md:min-h-[calc(100vh-120px)] lg:min-h-[calc(100vh-128px)] overflow-hidden rounded-2xl bg-[#0b1220] px-6 py-8 text-white sm:px-10 md:py-12 flex flex-col justify-center">
     <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_35%,rgba(37,99,235,0.45),transparent_28%),radial-gradient(circle_at_62%_92%,rgba(249,115,22,0.18),transparent_25%)]" />
     <div className="relative z-10 max-w-[520px]">
       <span className="inline-flex rounded-md bg-orange-500/15 px-3 py-1 text-xs font-bold tracking-wide text-orange-300">PREMIUM TECH ESSENTIALS</span>
@@ -68,7 +68,7 @@ const HomepageHero = () => {
   return (
     <section
       aria-label={banner.accessibilityLabel || banner.name || 'Homepage promotion'}
-      className="relative min-h-[310px] overflow-hidden rounded-2xl bg-[#0b1220] text-white md:min-h-[360px]"
+      className="relative min-h-[calc(100vh-112px)] md:min-h-[calc(100vh-120px)] lg:min-h-[calc(100vh-128px)] overflow-hidden rounded-2xl bg-[#0b1220] text-white"
     >
       <picture className="absolute inset-0">
         <source media="(max-width: 639px)" srcSet={mobileImage} />
@@ -89,7 +89,7 @@ const HomepageHero = () => {
           }}
         />
       )}
-      <div className={`relative z-10 flex min-h-[310px] flex-col justify-center px-6 py-8 sm:px-10 md:min-h-[360px] md:py-12 ${bannerAlignment(banner)}`} style={{ color: banner.textColor || '#ffffff' }}>
+      <div className={`relative z-10 flex min-h-[calc(100vh-112px)] md:min-h-[calc(100vh-120px)] lg:min-h-[calc(100vh-128px)] flex-col justify-center px-6 py-8 sm:px-10 md:py-12 ${bannerAlignment(banner)}`} style={{ color: banner.textColor || '#ffffff' }}>
         <div className="max-w-[560px]">
           {banner.headline && <h1 className="text-3xl font-black tracking-tight sm:text-4xl lg:text-5xl">{banner.headline}</h1>}
           {banner.subheading && <p className="mt-4 text-base leading-7 opacity-90 sm:text-lg">{banner.subheading}</p>}

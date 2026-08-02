@@ -1,6 +1,6 @@
 ﻿
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query'
 import ProductCard from '../../components/product/ProductCard'
 import ProductFilters from '../../components/product/ProductFilters'
 import ProductSorting from '../../components/product/ProductSorting'
+import Pagination from '../../components/common/Pagination'
 import { productService } from '../../services/productService'
 import { AlertCircle, RefreshCw, Package, X, Filter, ChevronLeft } from 'lucide-react'
 import type { Product } from '../../types'
@@ -23,66 +24,9 @@ interface ProductFiltersState {
   search: string
 }
 
-const PRODUCT_BATCH_SIZE = 100
-
-const getAllProducts = async (queryParams: Record<string, string | number | boolean>) => {
-  const firstPage = await productService.getProducts({
-    ...queryParams,
-    page: 1,
-    limit: PRODUCT_BATCH_SIZE,
-  })
-
-  if (!firstPage.success) {
-    throw new Error(firstPage.message || 'Failed to load products')
-  }
-
-  const pageCount = Math.max(1, Number(firstPage.data?.pagination?.pages) || 1)
-  const remainingPages = pageCount > 1
-    ? await Promise.all(
-        Array.from({ length: pageCount - 1 }, (_, index) =>
-          productService.getProducts({
-            ...queryParams,
-            page: index + 2,
-            limit: PRODUCT_BATCH_SIZE,
-          })
-        )
-      )
-    : []
-
-  const failedPage = remainingPages.find((response) => !response.success)
-  if (failedPage) {
-    throw new Error(failedPage.message || 'Failed to load all products')
-  }
-
-  const allProducts = [
-    ...(firstPage.data?.products || []),
-    ...remainingPages.flatMap((response) => response.data?.products || []),
-  ] as Product[]
-  const seenProductIds = new Set<string>()
-  const uniqueProducts = allProducts.filter((product) => {
-    if (!product._id || seenProductIds.has(product._id)) return false
-    seenProductIds.add(product._id)
-    return true
-  })
-
-  return {
-    ...firstPage,
-    data: {
-      ...firstPage.data,
-      products: uniqueProducts,
-      pagination: {
-        ...firstPage.data.pagination,
-        page: 1,
-        limit: uniqueProducts.length,
-        pages: 1,
-        total: firstPage.data.pagination?.total ?? uniqueProducts.length,
-      },
-    },
-  }
-}
-
 const ProductsPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams()
+  const isInitialMount = useRef(true)
   
   // Filter sidebar state
   const [showFilters, setShowFilters] = useState(() => typeof window === 'undefined' ? true : window.innerWidth >= 1024)
@@ -114,12 +58,23 @@ const ProductsPage: React.FC = () => {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(() => {
     return (searchParams.get('order') as 'asc' | 'desc') || 'desc'
   })
+  const [currentPage, setCurrentPage] = useState(() => {
+    const page = searchParams.get('page')
+    return page ? Number(page) : 1
+  })
+  const limit = 12
+
   useEffect(() => {
     localStorage.setItem('productViewMode', viewMode)
   }, [viewMode])
 
   // Sync filters to URL
   useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false
+      return
+    }
+
     const params = new URLSearchParams()
     
     // Arrays: join with comma
@@ -138,13 +93,16 @@ const ProductsPage: React.FC = () => {
       params.set('sort', sortBy)
       params.set('order', sortOrder)
     }
-
+    if (currentPage > 1) params.set('page', currentPage.toString())
+    
     setSearchParams(params, { replace: true })
-  }, [filters, sortBy, sortOrder, setSearchParams])
+  }, [filters, sortBy, sortOrder, currentPage, setSearchParams])
 
   // Build API query params
   const queryParams = useMemo(() => {
     const params: Record<string, string | number | boolean> = {
+      page: currentPage,
+      limit,
       sort: sortBy,
       order: sortOrder,
     }
@@ -164,7 +122,7 @@ const ProductsPage: React.FC = () => {
     if (filters.search && filters.search.trim() !== '') params.search = filters.search.trim()
     
     return params
-  }, [filters, sortBy, sortOrder])
+  }, [filters, sortBy, sortOrder, currentPage, limit])
 
   const { 
     data, 
@@ -174,7 +132,7 @@ const ProductsPage: React.FC = () => {
     refetch 
   } = useQuery({
     queryKey: ['products', queryParams],
-    queryFn: () => getAllProducts(queryParams),
+    queryFn: () => productService.getProducts(queryParams),
     placeholderData: (previousData) => previousData,
     retry: 1,
     staleTime: 1000 * 60 * 5,
@@ -184,17 +142,24 @@ const ProductsPage: React.FC = () => {
     return data?.success ? (data.data?.products || []) : []
   }, [data])
 
-  const totalProducts = data?.success
-    ? Number(data.data?.pagination?.total ?? products.length)
-    : 0
+  const pagination = useMemo(() => {
+    return data?.success ? data.data?.pagination : null
+  }, [data])
 
   const handleFilterChange = useCallback((newFilters: Partial<ProductFiltersState>) => {
     setFilters(prev => ({ ...prev, ...newFilters }))
+    setCurrentPage(1)
   }, [])
 
   const handleSortChange = useCallback((sort: string, order: 'asc' | 'desc') => {
     setSortBy(sort)
     setSortOrder(order)
+    setCurrentPage(1)
+  }, [])
+
+  const handlePageChange = useCallback((page: number) => {
+    setCurrentPage(page)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [])
 
   const clearAllFilters = useCallback(() => {
@@ -210,7 +175,24 @@ const ProductsPage: React.FC = () => {
     })
     setSortBy('createdAt')
     setSortOrder('desc')
+    setCurrentPage(1)
   }, [])
+
+  // Active filter count
+  const activeFilterCount = useMemo(() => {
+    let count = 0
+    const cats = Array.isArray(filters.category) ? filters.category : []
+    const brands = Array.isArray(filters.brand) ? filters.brand : []
+    if (cats.length > 0) count += cats.length
+    if (brands.length > 0) count += brands.length
+    if (filters.minPrice !== undefined) count++
+    if (filters.maxPrice !== undefined) count++
+    if (filters.featured) count++
+    if (filters.newArrivals) count++
+    if (filters.onSale) count++
+    if (filters.search && filters.search !== '') count++
+    return count
+  }, [filters])
 
   // Loading state
   if (isLoading) {
@@ -301,7 +283,7 @@ const ProductsPage: React.FC = () => {
               </h1>
               <p className="text-gray-600">
                 {products.length > 0 
-                  ? `Showing all ${products.length} products`
+                  ? `Showing ${products.length} of ${pagination?.total || 0} products`
                   : 'No products found matching your criteria'}
                 {isFetching && ' (Updating...)'}
               </p>
@@ -351,7 +333,7 @@ const ProductsPage: React.FC = () => {
               viewMode={viewMode}
               onSortChange={handleSortChange}
               onViewChange={setViewMode}
-              totalProducts={totalProducts}
+              totalProducts={pagination?.total || 0}
               showingProducts={products.length}
               isLoading={isFetching}
             />
@@ -374,7 +356,7 @@ const ProductsPage: React.FC = () => {
                     key={product._id}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: Math.min(index, 12) * 0.03 }}
+                    transition={{ delay: index * 0.05 }}
                   >
                     <ProductCard
                       product={product}
@@ -397,6 +379,16 @@ const ProductsPage: React.FC = () => {
                 >
                   Clear All Filters
                 </button>
+              </div>
+            )}
+
+            {pagination && pagination.pages > 1 && (
+              <div className="mt-12">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={pagination.pages}
+                  onPageChange={handlePageChange}
+                />
               </div>
             )}
           </div>

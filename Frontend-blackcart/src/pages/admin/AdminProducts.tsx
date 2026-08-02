@@ -1,6 +1,6 @@
 ﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AlertTriangle, Box, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Download, Edit2, Eye, EyeOff, Filter, LayoutGrid, List, Loader2, MoreHorizontal, Package, Plus, RefreshCw, Search, Star, Trash2, Upload, X } from "lucide-react";
+import { AlertTriangle, Box, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Download, Edit2, Eye, EyeOff, LayoutGrid, List, Loader2, MoreHorizontal, Package, Plus, RefreshCw, Search, Star, Trash2, Upload, X } from "lucide-react";
 import { adminService, type BulkProductAction, type PriceAdjustmentOperation, type Product, type ProductPriceAdjustment } from "../../services/adminServiceMethods";
 import { productService } from "../../services/productService";
 import toast from "react-hot-toast";
@@ -16,7 +16,6 @@ const getRequestError = (error: unknown, fallback: string) => {
   }
   return error instanceof Error ? error.message : fallback;
 };
-const getRequestData = (error: unknown) => typeof error === "object" && error !== null && "response" in error ? (error as { response?: { data?: { hasOrders?: boolean } } }).response?.data : undefined;
 const toRecord = (value: unknown): Record<string, unknown> | null => typeof value === "object" && value !== null ? value as Record<string, unknown> : null;
 
 const AdminProducts: React.FC = () => {
@@ -31,7 +30,7 @@ const AdminProducts: React.FC = () => {
   const [brands, setBrands] = useState<string[]>([]);
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0, limit: 10, hasNext: false, hasPrev: false });
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
-  const [bulkActionInProgress, setBulkActionInProgress] = useState<BulkProductAction | "export" | null>(null);
+  const [bulkActionInProgress, setBulkActionInProgress] = useState<BulkProductAction | "export" | "permanentDelete" | null>(null);
   const [openProductMenu, setOpenProductMenu] = useState<string | null>(null);
   const [showPriceDialog, setShowPriceDialog] = useState(false);
   const [priceAdjustment, setPriceAdjustment] = useState<ProductPriceAdjustment>({ operation: "increasePercent", value: 10 });
@@ -80,12 +79,20 @@ const AdminProducts: React.FC = () => {
   const handleLimitChange = (limit: number) => { setPagination((current) => ({ ...current, limit })); fetchProducts(1, { limit }); };
 
   const handleUpdateProduct = async (productId: string, updates: Partial<Product>) => { try { await adminService.updateProduct(productId, updates); toast.success("Product updated successfully"); setOpenProductMenu(null); fetchProducts(pagination.page); } catch (error: unknown) { toast.error(getRequestError(error, "Failed to update product")); } };
-  const handleDeleteProduct = async (productId: string, permanent = false) => {
-    const message = permanent ? "This will permanently delete the product and associated data. Continue?" : "Delete this product? It will be deactivated and order history preserved.";
-    if (!window.confirm(message)) return;
-    try { setLoading(true); const response = await adminService.deleteProduct(productId, permanent); if (response.success) { toast.success(response.message || (permanent ? "Product permanently deleted" : "Product deactivated")); if (permanent) { setProducts((current) => current.filter((product) => product._id !== productId)); setPagination((current) => ({ ...current, total: Math.max(0, current.total - 1) })); } else setProducts((current) => current.map((product) => product._id === productId ? { ...product, isActive: false } : product)); } else toast.error(response.message || "Failed to delete product"); }
-    catch (error: unknown) { toast.error(getRequestData(error)?.hasOrders ? "This product has associated orders. Use permanent delete only if certain." : getRequestError(error, "Failed to delete product")); }
-    finally { setLoading(false); setOpenProductMenu(null); }
+  const handlePermanentDeleteProduct = async (productId: string) => {
+    if (!window.confirm("Permanently delete this product? This cannot be undone. Products connected to orders cannot be permanently deleted.")) return;
+    try {
+      setLoading(true);
+      const response = await adminService.bulkDeleteProducts({ productIds: [productId], deleteType: "hard" });
+      toast.success(response.message || "Product permanently deleted");
+      setProducts((current) => current.filter((product) => product._id !== productId));
+      setPagination((current) => ({ ...current, total: Math.max(0, current.total - 1) }));
+    } catch (error: unknown) {
+      toast.error(getRequestError(error, "Failed to permanently delete this product"));
+    } finally {
+      setLoading(false);
+      setOpenProductMenu(null);
+    }
   };
 
   const handleSelectProduct = (productId: string) => setSelectedProducts((current) => current.includes(productId) ? current.filter((id) => id !== productId) : [...current, productId]);
@@ -98,6 +105,33 @@ const AdminProducts: React.FC = () => {
     try { setBulkActionInProgress(action); const response = await adminService.bulkProductAction({ productIds: validSelectedIds, action, priceAdjustment: adjustment }); toast.success(response.message || `${validSelectedIds.length} product(s) updated`); setSelectedProducts([]); setShowPriceDialog(false); await fetchProducts(pagination.page); }
     catch (error: unknown) { toast.error(getRequestError(error, `Failed to ${action} selected products`)); }
     finally { setBulkActionInProgress(null); }
+  };
+
+  const handleBulkPermanentDelete = async () => {
+    if (validSelectedIds.length === 0) {
+      toast("Select at least one product first", { icon: "⚠️" });
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Permanently delete ${validSelectedIds.length} selected product(s)? This cannot be undone. Products connected to orders will not be deleted.`,
+    );
+    if (!confirmed) return;
+
+    try {
+      setBulkActionInProgress("permanentDelete");
+      const response = await adminService.bulkDeleteProducts({
+        productIds: validSelectedIds,
+        deleteType: "hard",
+      });
+      toast.success(response.message || `${validSelectedIds.length} product(s) permanently deleted`);
+      setSelectedProducts([]);
+      await fetchProducts(pagination.page);
+    } catch (error: unknown) {
+      toast.error(getRequestError(error, "Failed to permanently delete the selected products"));
+    } finally {
+      setBulkActionInProgress(null);
+    }
   };
 
   const exportSelectedProducts = () => {
@@ -117,9 +151,19 @@ const AdminProducts: React.FC = () => {
   const getStockState = (stock: number) => stock === 0 ? { label: "Out of stock", tone: "text-rose-600 bg-rose-50", icon: AlertTriangle } : stock < 10 ? { label: `Low stock · ${stock}`, tone: "text-amber-700 bg-amber-50", icon: AlertTriangle } : { label: `Stock ${stock}`, tone: "text-emerald-700 bg-emerald-50", icon: Check };
 
   const renderActionMenu = (product: Product) => (
-    <div className="relative" onClick={(event) => event.stopPropagation()}>
+    <div className="relative flex items-center gap-2" onClick={(event) => event.stopPropagation()}>
+      <button onClick={() => handlePermanentDeleteProduct(product._id)} className="grid h-9 w-9 place-items-center rounded-lg border border-rose-200 text-rose-600 transition hover:bg-rose-50" aria-label={`Permanently delete ${product.name}`} title="Permanently delete"><Trash2 className="h-4 w-4" /></button>
       <button aria-label={`More actions for ${product.name}`} onClick={() => setOpenProductMenu(openProductMenu === product._id ? null : product._id)} className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"><MoreHorizontal className="h-4 w-4" /></button>
-      {openProductMenu === product._id && <div className="absolute bottom-full right-0 z-50 mb-2 w-48 rounded-xl border border-slate-200 bg-white p-1.5 text-left shadow-xl"><button onClick={() => navigate(`/products/${product.slug || product._id}`)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"><Eye className="h-3.5 w-3.5" />View product</button><button onClick={() => handleDuplicateProduct(product)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"><Copy className="h-3.5 w-3.5" />Duplicate</button><button onClick={() => handleUpdateProduct(product._id, { isActive: !product.isActive })} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50">{product.isActive ? <EyeOff className="h-3.5 w-3.5 text-amber-600" /> : <Eye className="h-3.5 w-3.5 text-emerald-600" />}{product.isActive ? "Deactivate" : "Activate"}</button><button onClick={() => handleUpdateProduct(product._id, { isFeatured: !product.isFeatured })} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"><Star className={`h-3.5 w-3.5 ${product.isFeatured ? "fill-amber-400 text-amber-500" : "text-slate-400"}`} />{product.isFeatured ? "Remove featured" : "Mark featured"}</button><div className="my-1 border-t border-slate-100" /><button onClick={() => handleDeleteProduct(product._id, false)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50"><Trash2 className="h-3.5 w-3.5" />Delete</button></div>}
+      {openProductMenu === product._id && (
+        <div className="absolute bottom-full right-0 z-50 mb-2 w-52 rounded-xl border border-slate-200 bg-white p-1.5 text-left shadow-xl">
+          <button onClick={() => navigate(`/products/${product.slug || product._id}`)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"><Eye className="h-3.5 w-3.5" />View product</button>
+          <button onClick={() => handleDuplicateProduct(product)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"><Copy className="h-3.5 w-3.5" />Duplicate</button>
+          <button onClick={() => handleUpdateProduct(product._id, { isActive: !product.isActive })} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50">{product.isActive ? <EyeOff className="h-3.5 w-3.5 text-amber-600" /> : <Eye className="h-3.5 w-3.5 text-emerald-600" />}{product.isActive ? "Deactivate" : "Activate"}</button>
+          <button onClick={() => handleUpdateProduct(product._id, { isFeatured: !product.isFeatured })} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"><Star className={`h-3.5 w-3.5 ${product.isFeatured ? "fill-amber-400 text-amber-500" : "text-slate-400"}`} />{product.isFeatured ? "Remove featured" : "Mark featured"}</button>
+          <div className="my-1 border-t border-slate-100" />
+          <button onClick={() => handlePermanentDeleteProduct(product._id)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50"><Trash2 className="h-3.5 w-3.5" />Permanently delete</button>
+        </div>
+      )}
     </div>
   );
 
@@ -144,7 +188,23 @@ const AdminProducts: React.FC = () => {
 
       <section className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">{stats.map(({ label, value, helper, icon: Icon, tone }) => { const iconTone = { blue: "bg-blue-50 text-blue-600", green: "bg-emerald-50 text-emerald-600", amber: "bg-amber-50 text-amber-600", red: "bg-rose-50 text-rose-600" }[tone]; const valueTone = { blue: "text-slate-900", green: "text-emerald-600", amber: "text-amber-600", red: "text-rose-600" }[tone]; return <article key={label} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-medium text-slate-500 sm:text-sm">{label}</p><p className={`mt-2 text-2xl font-bold ${valueTone}`}>{loading ? "—" : value}</p><p className="mt-1 text-xs text-slate-400 sm:text-sm">{helper}</p></div><span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${iconTone}`}><Icon className="h-5 w-5" /></span></div></article>; })}</section>
 
-      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"><div className="flex flex-col gap-3 border-b border-slate-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5"><label className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700"><input type="checkbox" checked={allVisibleSelected} ref={(element) => { if (element) element.indeterminate = someVisibleSelected; }} onChange={handleSelectAll} disabled={loading || products.length === 0} className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />Select all products</label>{validSelectedIds.length > 0 ? <div className="flex flex-wrap items-center gap-2"><span className="mr-1 text-xs font-semibold text-blue-700">{validSelectedIds.length} selected</span><button disabled={bulkDisabled} onClick={() => handleBulkAction("activate")} className="rounded-lg bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-40">Activate</button><button disabled={bulkDisabled} onClick={() => handleBulkAction("deactivate")} className="rounded-lg bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-100 disabled:opacity-40">Change Status</button><button disabled={bulkDisabled} onClick={openPriceDialog} className="rounded-lg bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-100 disabled:opacity-40">Edit Prices</button><button disabled={bulkDisabled} onClick={exportSelectedProducts} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200 disabled:opacity-40"><Download className="mr-1 inline h-3.5 w-3.5" />Export</button><button disabled={bulkDisabled} onClick={() => handleBulkAction("delete")} className="rounded-lg bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-100 disabled:opacity-40">Delete</button></div> : <p className="text-xs text-slate-400">Select products to manage them in bulk</p>}</div>
+      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-col gap-3 border-b border-slate-100 px-4 py-3 xl:flex-row xl:items-center xl:justify-between sm:px-5">
+          <label className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
+            <input type="checkbox" checked={allVisibleSelected} ref={(element) => { if (element) element.indeterminate = someVisibleSelected; }} onChange={handleSelectAll} disabled={loading || products.length === 0} className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+            Select all products
+          </label>
+          <div className="flex flex-wrap items-center gap-2" aria-label="Bulk product actions">
+            <span className={`mr-1 text-xs font-semibold ${validSelectedIds.length ? "text-blue-700" : "text-slate-400"}`}>
+              {validSelectedIds.length ? `${validSelectedIds.length} selected` : "Select products, then choose an action"}
+            </span>
+            <button disabled={bulkDisabled} onClick={() => handleBulkAction("activate")} className="rounded-lg bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-40">Activate</button>
+            <button disabled={bulkDisabled} onClick={() => handleBulkAction("deactivate")} className="rounded-lg bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-40">Deactivate</button>
+            <button disabled={bulkDisabled} onClick={openPriceDialog} className="rounded-lg bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-40">Edit Prices</button>
+            <button disabled={bulkDisabled} onClick={exportSelectedProducts} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-40"><Download className="mr-1 inline h-3.5 w-3.5" />Export</button>
+            <button disabled={bulkDisabled} onClick={handleBulkPermanentDelete} className="inline-flex items-center rounded-lg bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-40"><Trash2 className="mr-1 h-3.5 w-3.5" />Permanently Delete</button>
+          </div>
+        </div>
 
         {viewMode === "grid" ? (loading ? <div className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">{Array.from({ length: 10 }).map((_, index) => <div key={index} className="overflow-hidden rounded-xl border border-slate-200"><div className="aspect-[4/3] animate-pulse bg-slate-100" /><div className="space-y-3 p-4"><div className="h-4 animate-pulse rounded bg-slate-100" /><div className="h-3 w-2/3 animate-pulse rounded bg-slate-100" /><div className="h-8 animate-pulse rounded bg-slate-100" /></div></div>)}</div> : products.length === 0 ? <div className="px-6 py-16 text-center"><div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-slate-100 text-slate-400"><Package className="h-5 w-5" /></div><h2 className="mt-3 text-base font-semibold text-slate-800">{searchTerm || statusFilter !== "all" || categoryFilter !== "all" || brandFilter !== "all" ? "No products found" : "No products yet"}</h2><p className="mt-1 text-sm text-slate-400">{searchTerm || statusFilter !== "all" || categoryFilter !== "all" || brandFilter !== "all" ? "Try adjusting your search or filters." : "Add your first product to start building your store catalog."}</p><button onClick={() => navigate("/admin/products/new")} className="mt-5 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"><Plus className="h-4 w-4" />Add Product</button></div> : <div className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">{products.map(renderCard)}</div>) : (loading ? <div className="space-y-3 p-4">{Array.from({ length: 5 }).map((_, index) => <div key={index} className="h-20 animate-pulse rounded-lg bg-slate-100" />)}</div> : products.length === 0 ? <div className="px-6 py-16 text-center"><Package className="mx-auto h-8 w-8 text-slate-300" /><p className="mt-3 text-sm font-semibold text-slate-700">No products found</p><p className="mt-1 text-sm text-slate-400">Try adjusting your search or filters.</p></div> : <div className="overflow-x-auto"><table className="min-w-[900px] w-full text-left"><thead className="border-b border-slate-100 bg-slate-50/80"><tr>{["PRODUCT", "SKU", "PRICE", "STOCK", "STATUS", "UPDATED", "ACTIONS"].map((heading) => <th key={heading} className={`px-5 py-3 text-[11px] font-bold tracking-wide text-slate-500 ${heading === "ACTIONS" ? "text-right" : ""}`}>{heading}</th>)}</tr></thead><tbody className="divide-y divide-slate-100">{products.map((product) => { const stock = getStockState(product.stock); const StockIcon = stock.icon; return <tr key={product._id} className="transition hover:bg-blue-50/30"><td className="px-5 py-3"><div className="flex items-center gap-3"><input type="checkbox" checked={validSelectedIds.includes(product._id)} onChange={() => handleSelectProduct(product._id)} aria-label={`Select ${product.name}`} className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" /><img src={productService.getFirstImageUrl(product)} alt="" className="h-12 w-14 rounded-lg bg-slate-100 object-cover" /><div className="min-w-0"><p className="max-w-[260px] truncate text-sm font-semibold text-slate-800">{product.name}</p><p className="text-xs text-slate-400">{product.brand || "BlackCart"}</p></div></div></td><td className="px-5 py-3 text-sm text-slate-500">{product.sku}</td><td className="px-5 py-3 text-sm font-bold text-blue-700">{formatCurrency(product.discountPrice || product.price)}</td><td className="px-5 py-3"><span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold ${stock.tone}`}><StockIcon className="h-3.5 w-3.5" />{stock.label}</span></td><td className="px-5 py-3"><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${product.isActive ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>{product.isActive ? "Active" : "Inactive"}</span></td><td className="px-5 py-3 text-sm text-slate-500">{formatDate(product.updatedAt)}</td><td className="px-5 py-3"><div className="flex items-center justify-end gap-2"><button onClick={() => navigate(`/admin/products/edit/${product._id}`)} className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 text-blue-600 hover:bg-blue-50" aria-label={`Edit ${product.name}`}><Edit2 className="h-4 w-4" /></button>{renderActionMenu(product)}</div></td></tr>; })}</tbody></table></div>)}
 

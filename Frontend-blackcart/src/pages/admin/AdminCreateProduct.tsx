@@ -28,6 +28,7 @@ import {
 } from 'lucide-react'
 import { adminService } from '../../services/adminServiceMethods'
 import Loader from '../../components/common/Loader'
+import { getFriendlyErrorMessage } from '../../utils/friendlyErrorMessage'
 
 interface Specification {
   key: string
@@ -137,7 +138,7 @@ const SPECIFICATION_SUGGESTIONS = [
 ]
 
 const getErrorMessage = (error: unknown, fallback: string) =>
-  error instanceof Error ? error.message : fallback
+  getFriendlyErrorMessage(error, { fallback })
 
 interface DroppedImageData {
   urls: string[]
@@ -904,7 +905,7 @@ const AdminCreateProduct: React.FC = () => {
           navigate('/admin/products');
         }, 1500);
       } else {
-        toast.error(response.message || 'Failed to create product');
+        toast.error(getFriendlyErrorMessage(response.message, { fallback: 'Failed to create product' }));
       }
       
     } catch (error: unknown) {

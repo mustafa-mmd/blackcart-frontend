@@ -270,35 +270,35 @@ const OrderDetailsPage: React.FC = () => {
   }
 
   return (
-      <div className="min-h-screen bg-slate-50 py-5 sm:py-8">
+      <div className="min-h-screen bg-slate-50 py-3 sm:py-5">
         <div className="mx-auto w-full max-w-7xl px-3 sm:px-5 lg:px-8">
           {/* Header */}
-          <div className="mb-5 sm:mb-6">
+          <div className="mb-4">
             <button
               onClick={() => navigate('/')}
-              className="flex items-center text-gray-600 hover:text-primary-600 mb-4"
+              className="mb-3 flex items-center text-sm text-gray-600 hover:text-primary-600"
             >
               <ArrowLeft className="h-5 w-5 mr-2" />
               Back to Orders
             </button>
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-950 mb-1">
+                <h1 className="mb-1 text-xl font-bold tracking-tight text-slate-950 sm:text-2xl">
                   Order #{order.invoiceNumber || order._id.slice(-8).toUpperCase()}
                 </h1>
-                <p className="text-gray-600">Placed on {new Date(order.createdAt).toLocaleDateString()}</p>
+                <p className="text-sm text-gray-600">Placed on {new Date(order.createdAt).toLocaleDateString()}</p>
               </div>
-              <div className="flex flex-wrap gap-3">
+              <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => window.print()}
-                  className="flex items-center px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                  className="flex items-center rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
                 >
                   <Printer className="h-4 w-4 mr-2" />
                   Print
                 </button>
                 <button
                   onClick={() => downloadInvoice(order._id, order.invoiceNumber)}
-                  className="flex items-center px-4 py-2 border border-primary-600 text-primary-600 rounded-lg hover:bg-primary-50"
+                  className="flex items-center rounded-lg border border-primary-600 px-3 py-1.5 text-sm text-primary-600 hover:bg-primary-50"
                 >
                   <Download className="h-4 w-4 mr-2" />
                   Invoice
@@ -308,7 +308,7 @@ const OrderDetailsPage: React.FC = () => {
                     navigator.clipboard.writeText(window.location.href)
                     toast.success('Link copied to clipboard')
                   }}
-                  className="flex items-center px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                  className="flex items-center rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
                 >
                   <Share2 className="h-4 w-4 mr-2" />
                   Share
@@ -317,20 +317,20 @@ const OrderDetailsPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1.65fr)_minmax(320px,0.9fr)] lg:gap-6">
+          <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1.55fr)_minmax(320px,0.85fr)] lg:gap-5">
             {/* Main Content */}
-            <div className="min-w-0 space-y-5 order-1">
+            <div className="order-1 min-w-0 space-y-4">
               {/* Order Status & Tracking */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="card p-4 sm:p-5"
+                className="card p-3.5 sm:p-4"
               >
-                <h2 className="text-lg sm:text-xl font-bold text-slate-950 mb-4">Order Status & Tracking</h2>
+                <h2 className="mb-3 text-base font-bold text-slate-950 sm:text-lg">Order Status & Tracking</h2>
                 
                 {/* Progress Bar */}
-                <div className="relative mb-8">
-                  <div className="absolute top-5 sm:top-6 left-0 right-0 h-1.5 bg-slate-200">
+                <div className="relative mb-5">
+                  <div className="absolute left-0 right-0 top-5 h-1 bg-slate-200">
                     <div 
                       className="h-full bg-primary-600 transition-all duration-500"
                       style={{ width: `${(currentStepIndex + 1) * 25}%` }}
@@ -345,14 +345,14 @@ const OrderDetailsPage: React.FC = () => {
                       
                       return (
                         <div key={step.status} className="flex flex-col items-center">
-                          <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 z-10 ${
+                          <div className={`z-10 mb-1.5 flex h-10 w-10 items-center justify-center rounded-full ${
                             isCompleted
                               ? 'bg-primary-600 text-white'
                               : 'bg-gray-200 text-gray-600'
                           }`}>
-                            <StepIcon className="h-6 w-6" />
+                            <StepIcon className="h-5 w-5" />
                           </div>
-                          <span className={`text-sm font-medium ${
+                          <span className={`text-xs font-medium sm:text-sm ${
                             isCompleted ? 'text-primary-600' : 'text-gray-500'
                           }`}>
                             {step.label}
@@ -394,14 +394,14 @@ const OrderDetailsPage: React.FC = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="card p-4 sm:p-5"
+                className="card p-3.5 sm:p-4"
               >
-                <h2 className="text-lg sm:text-xl font-bold text-slate-950 mb-4">Order Items</h2>
+                <h2 className="mb-3 text-base font-bold text-slate-950 sm:text-lg">Order Items</h2>
                 <div className="space-y-3">
                   {order.orderItems?.map((item: any) => (
                     <div key={item._id} className="border-b border-slate-200 pb-3 last:border-0">
                       <div className="flex items-start">
-                        <div className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-100 rounded-lg overflow-hidden mr-3 sm:mr-4 flex-shrink-0">
+                        <div className="mr-3 h-14 w-14 flex-shrink-0 overflow-hidden rounded-lg bg-slate-100 sm:h-16 sm:w-16">
                           <img
                             src={item.image || FALLBACK_IMAGE}
                             alt={item.name || 'Product'}
@@ -430,15 +430,13 @@ const OrderDetailsPage: React.FC = () => {
                   ))}
                 </div>
               </motion.div>
-            </div>
-
 
               {/* Order Support */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.15 }}
-                className="rounded-xl border border-blue-100 bg-blue-50 p-4 sm:p-5"
+                className="rounded-xl border border-blue-100 bg-blue-50 p-3.5 sm:p-4"
               >
                 <div className="flex items-start gap-3">
                   <Headphones className="mt-0.5 h-5 w-5 shrink-0 text-primary-600" />
@@ -451,16 +449,19 @@ const OrderDetailsPage: React.FC = () => {
                   <button onClick={() => navigate('/contact')} className="rounded-lg border border-primary-600 bg-white px-3 py-2 text-sm font-semibold text-primary-600 hover:bg-blue-100">Contact Support</button>
                   <a href="https://wa.me/923146965599" className="rounded-lg border border-emerald-500 bg-white px-3 py-2 text-center text-sm font-semibold text-emerald-700 hover:bg-emerald-50">WhatsApp</a>
                 </div>
-              </motion.div>            {/* Sidebar */}
-            <div className="space-y-5 order-2 lg:sticky lg:top-24">
+              </motion.div>
+            </div>
+
+            {/* Sidebar */}
+            <div className="order-2 space-y-4 lg:sticky lg:top-20">
               {/* Order Summary - TAX REMOVED */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="card p-4 sm:p-5"
+                className="card p-3.5 sm:p-4"
               >
-                <h2 className="text-lg sm:text-xl font-bold text-slate-950 mb-4">Order Summary</h2>
+                <h2 className="mb-3 text-base font-bold text-slate-950 sm:text-lg">Order Summary</h2>
                 
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
@@ -514,17 +515,17 @@ const OrderDetailsPage: React.FC = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="card p-4 sm:p-5"
+                className="card p-3.5 sm:p-4"
               >
-                <h2 className="text-lg sm:text-xl font-bold text-slate-950 mb-4">Shipping & Payment</h2>
+                <h2 className="mb-3 text-base font-bold text-slate-950 sm:text-lg">Shipping & Payment</h2>
                 
                 {/* Shipping Address */}
-                <div className="mb-6">
+                <div className="mb-4">
                   <div className="flex items-center mb-3">
                     <MapPin className="h-5 w-5 text-gray-400 mr-2" />
                     <h3 className="font-medium text-gray-900">Shipping Address</h3>
                   </div>
-                  <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="rounded-lg bg-gray-50 p-3 text-sm">
                     <p className="font-medium">{order.shippingAddress?.fullName}</p>
                     <p className="text-gray-600">{order.shippingAddress?.address}</p>
                     <p className="text-gray-600">
@@ -568,14 +569,14 @@ const OrderDetailsPage: React.FC = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
-                className="card p-4 sm:p-5"
+                className="card p-3.5 sm:p-4"
               >
-                <h2 className="text-lg sm:text-xl font-bold text-slate-950 mb-4">Actions</h2>
+                <h2 className="mb-3 text-base font-bold text-slate-950 sm:text-lg">Actions</h2>
                 <div className="space-y-3">
                   {order.isRefundable && (
                     <button
                       onClick={() => setShowRefundModal(true)}
-                      className="w-full flex items-center justify-center py-3 border border-orange-600 text-orange-600 rounded-lg hover:bg-orange-50"
+                      className="flex w-full items-center justify-center rounded-lg border border-orange-600 py-2 text-sm text-orange-600 hover:bg-orange-50"
                     >
                       <DollarSign className="h-5 w-5 mr-2" />
                       Request Refund
@@ -583,14 +584,14 @@ const OrderDetailsPage: React.FC = () => {
                   )}
                   <button
                     onClick={() => navigate(`/orders/${order._id}/invoice`)}
-                    className="w-full flex items-center justify-center py-3 border border-primary-600 text-primary-600 rounded-lg hover:bg-primary-50"
+                    className="flex w-full items-center justify-center rounded-lg border border-primary-600 py-2 text-sm text-primary-600 hover:bg-primary-50"
                   >
                     <FileText className="h-5 w-5 mr-2" />
                     View Invoice
                   </button>
                   <button
                     onClick={() => navigate('/products')}
-                    className="w-full flex items-center justify-center py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                    className="flex w-full items-center justify-center rounded-lg border border-gray-300 py-2 text-sm text-gray-700 hover:bg-gray-50"
                   >
                     <ShoppingBag className="h-5 w-5 mr-2" />
                     Shop Again

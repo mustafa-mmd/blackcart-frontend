@@ -1,7 +1,7 @@
 // Frontend-blackcart/src/pages/admin/AdminCreateProduct.tsx
 import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { toast } from 'react-hot-toast'
 import { 
   ArrowLeft, 
@@ -20,17 +20,11 @@ import {
   Link as LinkIcon,
   Palette,
   Images,
-  Boxes,
   Sparkles,
-  MoreVertical,
   ImagePlus,
-  UploadCloud,
   Download,
-  Copy,
   MoveUp,
   MoveDown,
-  AlertTriangle,
-  CheckCircle2
 } from 'lucide-react'
 import { adminService } from '../../services/adminServiceMethods'
 import Loader from '../../components/common/Loader'
@@ -80,30 +74,8 @@ interface ColorVariantDraft {
   sku: string
   stock: string
   imageIds: string[]
-  active: boolean
 }
 type BulkMode = 'specifications' | 'features'
-type DuplicateAction = 'skip' | 'replace' | 'duplicate'
-
-interface SpecificationPreviewRow extends Specification {
-  source: string
-  duplicate: boolean
-  action: DuplicateAction
-}
-
-interface FeaturePreviewRow {
-  value: string
-  source: string
-  duplicate: boolean
-  action: DuplicateAction
-}
-
-interface BulkPreviewState {
-  mode: BulkMode
-  specifications: SpecificationPreviewRow[]
-  features: FeaturePreviewRow[]
-  rejected: string[]
-}
 
 const SPECIFICATION_TEMPLATES = {
   'Gaming Mouse': {
@@ -243,7 +215,6 @@ const AdminCreateProduct: React.FC = () => {
   const [remoteImageUrl, setRemoteImageUrl] = useState('')
   const [isImportingImage, setIsImportingImage] = useState(false)
   const [colorVariants, setColorVariants] = useState<ColorVariantDraft[]>([])
-  const [draggedColorId, setDraggedColorId] = useState<string | null>(null)
   const [openImagePicker, setOpenImagePicker] = useState<string | null>(null)
 
   // Fetch categories on component mount
@@ -276,7 +247,7 @@ const AdminCreateProduct: React.FC = () => {
     previewUrlsRef.current.clear()
   }, [])
 
-  const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm<ProductFormData>({
+  const { register, handleSubmit, formState: { errors }, setValue, getValues, control } = useForm<ProductFormData>({
     defaultValues: {
       isFeatured: false,
       isActive: true,
@@ -289,7 +260,10 @@ const AdminCreateProduct: React.FC = () => {
     }
   })
 
-  const addLocalImages = (selectedFiles: File[]) => {
+  const addLocalImages = (
+    selectedFiles: File[],
+    onAdded?: (addedImages: PendingImage[]) => void,
+  ) => {
     const availableSlots = Math.max(10 - images.length, 0)
     const files = selectedFiles.slice(0, availableSlots)
     console.log(`📁 Selected ${files.length} files`);
@@ -333,6 +307,7 @@ const AdminCreateProduct: React.FC = () => {
       }
     })
     setImages(previous => [...previous, ...pendingImages])
+    onAdded?.(pendingImages)
   }
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -415,7 +390,7 @@ const AdminCreateProduct: React.FC = () => {
   }
 
   const suggestColorSku = (name: string) => {
-    const base = String(watch('sku') || 'COLOR').trim().toUpperCase().replace(/[^A-Z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
+    const base = String(getValues('sku') || 'COLOR').trim().toUpperCase().replace(/[^A-Z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
     const suffix = name.trim().toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
     return suffix ? (base || 'COLOR') + '-' + suffix : ''
   }
@@ -427,7 +402,6 @@ const AdminCreateProduct: React.FC = () => {
     sku: '',
     stock: '',
     imageIds: [],
-    active: true,
   }])
 
   const updateColorVariant = (id: string, updates: Partial<ColorVariantDraft>) => {
@@ -442,103 +416,36 @@ const AdminCreateProduct: React.FC = () => {
     }))
   }
 
-  const moveColorVariant = (id: string, direction: -1 | 1) => {
-    setColorVariants((previous) => {
-      const index = previous.findIndex((variant) => variant.id === id)
-      const target = index + direction
-      if (index < 0 || target < 0 || target >= previous.length) return previous
-      const next = [...previous]
-      const [moved] = next.splice(index, 1)
-      next.splice(target, 0, moved)
-      return next
-    })
-  }
-
-  const duplicateColorVariant = (id: string) => {
-    setColorVariants((previous) => {
-      const source = previous.find((variant) => variant.id === id)
-      if (!source) return previous
-      const copy = { ...source, id: 'color-' + Date.now(), name: source.name ? source.name + ' Copy' : '', sku: source.sku ? (source.sku + '-COPY').slice(0, 80) : '' }
-      const index = previous.findIndex((variant) => variant.id === id)
-      const next = [...previous]
-      next.splice(index + 1, 0, copy)
-      return next
-    })
-  }
-
   const removeColorVariant = (id: string) => {
     setColorVariants((previous) => previous.filter((variant) => variant.id !== id))
     setOpenImagePicker((current) => current === id ? null : current)
   }
 
-  const handleColorDrop = (event: React.DragEvent<HTMLDivElement>, targetId: string) => {
-    event.preventDefault()
-    const sourceId = event.dataTransfer.getData('text/plain') || draggedColorId
-    if (!sourceId || sourceId === targetId) return
-    setColorVariants((previous) => {
-      const from = previous.findIndex((variant) => variant.id === sourceId)
-      const to = previous.findIndex((variant) => variant.id === targetId)
-      if (from < 0 || to < 0) return previous
-      const next = [...previous]
-      const [moved] = next.splice(from, 1)
-      next.splice(to, 0, moved)
-      return next
-    })
-    setDraggedColorId(null)
-  }
-
-  const assignImagesToUnassigned = () => {
-    if (!images.length) {
-      toast.error('Upload product images before assigning them to colors.')
-      return
+  const handleColorImageUpload = (
+    variantId: string,
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    if (event.target.files?.length) {
+      addLocalImages(Array.from(event.target.files), (addedImages) => {
+        setColorVariants((previous) => previous.map((variant) =>
+          variant.id === variantId
+            ? {
+                ...variant,
+                imageIds: Array.from(new Set([
+                  ...variant.imageIds,
+                  ...addedImages.map((image) => image.id),
+                ])),
+              }
+            : variant,
+        ))
+        toast.success(
+          `${addedImages.length} image${addedImages.length === 1 ? '' : 's'} added to this color`,
+        )
+      })
     }
-    setColorVariants((previous) => previous.map((variant) => variant.imageIds.length ? variant : { ...variant, imageIds: [images[0].id] }))
-    toast.success('Assigned the first uploaded image to colors without an image.')
-  }
-
-  const handleColorImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files?.length) addLocalImages(Array.from(event.target.files))
     event.target.value = ''
   }
 
-  const exportColors = () => {
-    const payload = colorVariants.map((variant) => {
-      const payloadVariant = { ...variant }
-      delete payloadVariant.id
-      return payloadVariant
-    })
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const anchor = document.createElement('a')
-    anchor.href = url
-    anchor.download = 'blackcart-color-variants.json'
-    anchor.click()
-    URL.revokeObjectURL(url)
-  }
-
-  const handleImportColors = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    event.target.value = ''
-    if (!file) return
-    try {
-      const parsed = JSON.parse(await file.text())
-      const imported = Array.isArray(parsed) ? parsed : parsed.colors
-      if (!Array.isArray(imported)) throw new Error('Expected a JSON array of colors.')
-      const next = imported.map((variant, index) => ({
-        id: 'color-import-' + Date.now() + '-' + index,
-        name: String(variant.name || ''),
-        value: /^#[0-9a-f]{6}$/i.test(String(variant.value || '')) ? String(variant.value).toUpperCase() : '#000000',
-        sku: String(variant.sku || ''),
-        stock: variant.stock === null || variant.stock === undefined ? '' : String(variant.stock),
-        imageIds: [],
-        active: variant.active !== false,
-      }))
-      setColorVariants((previous) => [...previous, ...next])
-      toast.success(next.length + ' color variant' + (next.length === 1 ? '' : 's') + ' imported.')
-    } catch (error) {
-      toast.error(getErrorMessage(error, 'Import a valid color JSON file.'))
-    }
-  }
   const handleRemoveImage = (index: number) => {
     const image = images[index]
     if (image?.file) {
@@ -757,7 +664,7 @@ const AdminCreateProduct: React.FC = () => {
     .map((line) => normalizeSmartText(line))
     .filter(Boolean)
     .map((line) => {
-      const separatorMatch = line.match(/^(.+?)\s*[:=|\-]\s*(.+)$/)
+      const separatorMatch = line.match(/^(.+?)\s*[:=|-]\s*(.+)$/)
       if (separatorMatch) {
         return { key: normalizeSmartText(separatorMatch[1]), value: normalizeSmartText(separatorMatch[2]) }
       }
@@ -812,7 +719,7 @@ const AdminCreateProduct: React.FC = () => {
   }
 
   const generateFromDescription = () => {
-    const description = `${watch('shortDescription') || ''} ${watch('description') || ''}`.trim()
+    const description = `${getValues('shortDescription') || ''} ${getValues('description') || ''}`.trim()
     if (!description) {
       toast.error('Add a short or full description first.')
       return
@@ -896,6 +803,23 @@ const AdminCreateProduct: React.FC = () => {
       toast.error('Each color variant needs a name.')
       return
     }
+    if (colorVariants.some((variant) => !/^#[0-9A-F]{6}$/i.test(variant.value))) {
+      toast.error('Each color needs a valid 6-digit color code.')
+      return
+    }
+    if (colorVariants.some((variant) =>
+      variant.stock !== '' && (!Number.isFinite(Number(variant.stock)) || Number(variant.stock) < 0),
+    )) {
+      toast.error('Color stock must be zero or greater.')
+      return
+    }
+    const colorSkus = colorVariants
+      .map((variant) => variant.sku.trim().toUpperCase())
+      .filter(Boolean)
+    if (colorSkus.length !== new Set(colorSkus).size) {
+      toast.error('Variant SKUs must be unique.')
+      return
+    }
     
     try {
       setIsSubmitting(true);
@@ -950,10 +874,10 @@ const AdminCreateProduct: React.FC = () => {
         index: image.file ? localImages.findIndex((candidate) => candidate.id === image.id) : remoteImages.findIndex((candidate) => candidate.id === image.id),
       }))))
       formData.append('colorVariants', JSON.stringify(colorVariants.map((variant) => ({
-        name: variant.name,
-        value: variant.value,
-        sku: variant.sku,
-        stock: variant.stock,
+        name: variant.name.trim(),
+        value: variant.value.toUpperCase(),
+        sku: variant.sku.trim().toUpperCase(),
+        stock: variant.stock === '' ? null : Number(variant.stock),
         imageIndexes: variant.imageIds.map((imageId) => images.findIndex((image) => image.id === imageId)).filter((index) => index >= 0),
       }))))
       
@@ -1008,8 +932,8 @@ const AdminCreateProduct: React.FC = () => {
     }
   }
 
-  const price = watch('price')
-  const shortDescription = watch('shortDescription') || ''
+  const price = useWatch({ control, name: 'price' })
+  const shortDescription = useWatch({ control, name: 'shortDescription' }) || ''
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 sm:p-5 lg:p-6">
@@ -1582,58 +1506,33 @@ const AdminCreateProduct: React.FC = () => {
                   <button type="button" onClick={addColorVariant} className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-200 bg-white px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-50"><Plus className="h-4 w-4" /> Add New Color</button>
                 </div>
 
-                <div className="mt-5 grid gap-px overflow-hidden rounded-xl border border-slate-200 bg-slate-200 sm:grid-cols-2 xl:grid-cols-4">
-                  {[
-                    { icon: Sparkles, title: 'Flexible Options', text: 'Add unlimited color variants', tone: 'bg-blue-50 text-blue-600' },
-                    { icon: Images, title: 'Image Support', text: 'Assign images to each color', tone: 'bg-violet-50 text-violet-600' },
-                    { icon: Boxes, title: 'Stock Tracking', text: 'Manage stock per variant', tone: 'bg-emerald-50 text-emerald-600' },
-                    { icon: CheckCircle2, title: 'Better Experience', text: 'Help customers choose easily', tone: 'bg-orange-50 text-orange-600' },
-                  ].map((item) => (
-                    <div key={item.title} className="flex items-center gap-3 bg-white p-3">
-                      <span className={'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ' + item.tone}><item.icon className="h-4 w-4" /></span>
-                      <div><p className="text-xs font-semibold text-slate-800">{item.title}</p><p className="mt-0.5 text-[11px] text-slate-500">{item.text}</p></div>
-                    </div>
-                  ))}
-                </div>
-
                 <div className="mt-5 space-y-3">
                   {colorVariants.map((variant, index) => {
                     const assignedImage = images.find((image) => variant.imageIds.includes(image.id))
                     const pickerOpen = openImagePicker === variant.id
                     return (
-                      <div key={variant.id} draggable onDragStart={(event) => { setDraggedColorId(variant.id); event.dataTransfer.setData('text/plain', variant.id); event.dataTransfer.effectAllowed = 'move' }} onDragOver={(event) => event.preventDefault()} onDrop={(event) => handleColorDrop(event, variant.id)} className={'rounded-xl border bg-white p-3 transition ' + (draggedColorId === variant.id ? 'border-blue-400 opacity-70 shadow-lg' : 'border-slate-200 hover:border-blue-200 hover:shadow-sm')}>
-                        <div className="grid items-start gap-3 lg:grid-cols-[34px_70px_minmax(150px,1.1fr)_minmax(130px,.8fr)_minmax(190px,1.35fr)_minmax(160px,1fr)_104px]">
-                          <div className="flex items-center gap-2 pt-2">
-                            <button type="button" className="cursor-grab touch-none text-slate-400 hover:text-blue-600" title="Drag to reorder" aria-label={'Reorder color ' + (index + 1)}><GripVertical className="h-5 w-5" /></button>
-                            <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-xs font-semibold text-slate-600">{index + 1}</span>
+                      <div key={variant.id} className="min-w-0 rounded-xl border border-slate-200 bg-white p-3 transition hover:border-blue-200 hover:shadow-sm sm:p-4">
+                        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-xs font-semibold text-slate-600">{index + 1}</span>
+                            <span className="h-10 w-10 shrink-0 rounded-lg border border-slate-200 shadow-inner" style={{ backgroundColor: variant.value }} title={variant.value} />
+                            <div className="min-w-0"><p className="truncate text-sm font-semibold text-slate-900">{variant.name || `Color ${index + 1}`}</p><p className="text-[11px] text-slate-500">Color variant</p></div>
                           </div>
-                          <div>
-                            <p className="mb-1 text-[11px] font-semibold text-slate-500">Color Preview</p>
-                            <span className="block h-12 w-12 rounded-lg border border-slate-200 shadow-inner" style={{ backgroundColor: variant.value }} title={variant.value} />
-                          </div>
-                          <label className="block text-xs font-semibold text-slate-600">Color Name <span className="text-red-500">*</span>
-                            <div className="relative mt-1"><input value={variant.name} onChange={(event) => handleColorNameChange(variant.id, event.target.value.slice(0, 40))} placeholder="Midnight Black" className="h-10 w-full rounded-lg border border-slate-300 px-3 pr-12 text-sm font-medium text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" /><span className="pointer-events-none absolute right-2 top-3 text-[10px] font-normal text-slate-400">{variant.name.length}/40</span></div>
-                          </label>
-                          <label className="block text-xs font-semibold text-slate-600">Color Code
-                            <div className="mt-1 flex h-10 items-center gap-2 rounded-lg border border-slate-300 bg-white px-2"><input value={variant.value} onChange={(event) => updateColorVariant(variant.id, { value: event.target.value.toUpperCase().slice(0, 7) })} className="min-w-0 flex-1 border-0 px-1 text-sm font-medium uppercase text-slate-700 outline-none" maxLength={7} /><input type="color" value={/^#[0-9A-Fa-f]{6}$/.test(variant.value) ? variant.value : '#000000'} onChange={(event) => updateColorVariant(variant.id, { value: event.target.value.toUpperCase() })} className="h-6 w-6 cursor-pointer rounded border-0 p-0" aria-label="Choose color" /></div>
-                          </label>
-                          <div className="relative">
+                          <button type="button" onClick={() => removeColorVariant(variant.id)} className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"><Trash2 className="h-3.5 w-3.5" /> Remove</button>
+                        </div>
+                        <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                          <label className="block min-w-0 text-xs font-semibold text-slate-600">Color Name <span className="text-red-500">*</span><div className="relative mt-1"><input value={variant.name} onChange={(event) => handleColorNameChange(variant.id, event.target.value.slice(0, 40))} placeholder="Midnight Black" className="h-10 w-full rounded-lg border border-slate-300 px-3 pr-12 text-sm font-medium text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" /><span className="pointer-events-none absolute right-2 top-3 text-[10px] font-normal text-slate-400">{variant.name.length}/40</span></div></label>
+                          <label className="block min-w-0 text-xs font-semibold text-slate-600">Color Code<div className="mt-1 flex h-10 items-center gap-2 rounded-lg border border-slate-300 bg-white px-2"><input value={variant.value} onChange={(event) => updateColorVariant(variant.id, { value: event.target.value.toUpperCase().slice(0, 7) })} className="min-w-0 flex-1 border-0 px-1 text-sm font-medium uppercase text-slate-700 outline-none" maxLength={7} /><input type="color" value={/^#[0-9A-Fa-f]{6}$/.test(variant.value) ? variant.value : '#000000'} onChange={(event) => updateColorVariant(variant.id, { value: event.target.value.toUpperCase() })} className="h-6 w-6 shrink-0 cursor-pointer rounded border-0 p-0" aria-label="Choose color" /></div></label>
+                          <label className="block min-w-0 text-xs font-semibold text-slate-600">Variant SKU<input value={variant.sku} onChange={(event) => updateColorVariant(variant.id, { sku: event.target.value.slice(0, 80).toUpperCase() })} placeholder="Auto-generated" className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-xs font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" /></label>
+                          <label className="block min-w-0 text-xs font-semibold text-slate-600">Variant Stock<input type="number" min="0" value={variant.stock} onChange={(event) => updateColorVariant(variant.id, { stock: event.target.value })} placeholder="0" className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-xs font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" /></label>
+                          <div className="relative min-w-0 md:col-span-2 xl:col-span-4">
                             <p className="text-xs font-semibold text-slate-600">Color image <span className="font-normal text-slate-400">(Optional)</span></p>
-                            <div className="mt-1 flex items-center gap-2">
-                              {assignedImage ? <img src={assignedImage.previewUrl} alt={variant.name || 'Assigned color'} className="h-12 w-16 rounded-lg border border-slate-200 object-cover" /> : <div className="flex h-12 w-16 items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 text-slate-400"><ImagePlus className="h-5 w-5" /></div>}
-                              <div className="flex min-w-0 flex-1 flex-col gap-1"><button type="button" onClick={() => setOpenImagePicker(pickerOpen ? null : variant.id)} className="inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-blue-200 px-2 text-[11px] font-semibold text-blue-700 hover:bg-blue-50"><Images className="h-3.5 w-3.5" /> Choose from uploaded images</button><label className="inline-flex h-8 cursor-pointer items-center justify-center gap-1 rounded-lg border border-slate-200 px-2 text-[11px] font-semibold text-slate-600 hover:bg-slate-50"><Upload className="h-3.5 w-3.5" /> Upload new image<input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleColorImageUpload} /></label></div>
+                            <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center">
+                              {assignedImage ? <img src={assignedImage.previewUrl} alt={variant.name || 'Assigned color'} className="h-16 w-20 shrink-0 rounded-lg border border-slate-200 object-cover" /> : <div className="flex h-16 w-20 shrink-0 items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 text-slate-400"><ImagePlus className="h-5 w-5" /></div>}
+                              <div className="flex min-w-0 flex-1 flex-wrap gap-2"><button type="button" onClick={() => setOpenImagePicker(pickerOpen ? null : variant.id)} className="inline-flex min-h-9 items-center justify-center gap-1 rounded-lg border border-blue-200 px-3 text-xs font-semibold text-blue-700 hover:bg-blue-50"><Images className="h-3.5 w-3.5" /> Choose uploaded image</button><label className="inline-flex min-h-9 cursor-pointer items-center justify-center gap-1 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-600 hover:bg-slate-50"><Upload className="h-3.5 w-3.5" /> Upload new image<input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(event) => handleColorImageUpload(variant.id, event)} /></label>{assignedImage && <button type="button" onClick={() => updateColorVariant(variant.id, { imageIds: [] })} className="inline-flex min-h-9 items-center justify-center rounded-lg border border-red-100 px-3 text-xs font-semibold text-red-600 hover:bg-red-50">Remove image</button>}</div>
                             </div>
-                            {pickerOpen && <div className="absolute left-0 top-full z-30 mt-2 w-64 rounded-xl border border-slate-200 bg-white p-3 shadow-xl"><div className="mb-2 flex items-center justify-between"><p className="text-xs font-semibold text-slate-700">Choose a color image</p><button type="button" onClick={() => setOpenImagePicker(null)} className="text-slate-400 hover:text-slate-700">�</button></div>{images.length ? <div className="grid max-h-44 grid-cols-4 gap-2 overflow-y-auto">{images.map((image) => <button type="button" key={image.id} onClick={() => { updateColorVariant(variant.id, { imageIds: [image.id] }); setOpenImagePicker(null) }} className={'rounded-lg border p-1 ' + (variant.imageIds.includes(image.id) ? 'border-blue-600 ring-2 ring-blue-100' : 'border-slate-200 hover:border-blue-300')}><img src={image.previewUrl} alt="Uploaded product" className="h-11 w-full rounded object-cover" /></button>)}</div> : <p className="py-4 text-center text-xs text-slate-500">Upload product images first.</p>}</div>}
-                            {!assignedImage && images.length > 0 && <p className="mt-1 flex items-center gap-1 text-[10px] font-medium text-amber-600"><AlertTriangle className="h-3 w-3" /> Assign a color image for this variant.</p>}
-                          </div>
-                          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
-                            <label className="block text-xs font-semibold text-slate-600">SKU <input value={variant.sku} onChange={(event) => updateColorVariant(variant.id, { sku: event.target.value.slice(0, 80).toUpperCase() })} placeholder="Auto-generated" className="mt-1 h-9 w-full rounded-lg border border-slate-300 px-2 text-xs font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" /></label>
-                            <label className="block text-xs font-semibold text-slate-600">Stock <input type="number" min="0" value={variant.stock} onChange={(event) => updateColorVariant(variant.id, { stock: event.target.value })} placeholder="0" className="mt-1 h-9 w-full rounded-lg border border-slate-300 px-2 text-xs font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" /></label>
-                          </div>
-                          <div className="flex items-start justify-between gap-2 pt-1 lg:flex-col lg:items-center">
-                            <button type="button" role="switch" aria-checked={variant.active} onClick={() => updateColorVariant(variant.id, { active: !variant.active })} className={'flex h-6 w-11 items-center rounded-full p-1 transition ' + (variant.active ? 'bg-blue-600' : 'bg-slate-300')}><span className={'h-4 w-4 rounded-full bg-white shadow transition ' + (variant.active ? 'translate-x-5' : '')} /></button>
-                            <span className="text-[10px] font-medium text-slate-500">{variant.active ? 'Active' : 'Inactive'}</span>
-                            <details className="relative"><summary className="flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-blue-600"><MoreVertical className="h-4 w-4" /></summary><div className="absolute right-0 top-9 z-20 w-40 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl"><button type="button" onClick={() => duplicateColorVariant(variant.id)} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs text-slate-700 hover:bg-blue-50"><Copy className="h-3.5 w-3.5" /> Duplicate</button><button type="button" onClick={() => moveColorVariant(variant.id, -1)} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs text-slate-700 hover:bg-blue-50"><MoveUp className="h-3.5 w-3.5" /> Move up</button><button type="button" onClick={() => moveColorVariant(variant.id, 1)} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs text-slate-700 hover:bg-blue-50"><MoveDown className="h-3.5 w-3.5" /> Move down</button><button type="button" onClick={() => removeColorVariant(variant.id)} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs text-red-600 hover:bg-red-50"><Trash2 className="h-3.5 w-3.5" /> Remove</button></div></details>
+                            {pickerOpen && <div className="absolute left-0 top-full z-40 mt-2 w-full max-w-sm rounded-xl border border-slate-200 bg-white p-3 shadow-xl"><div className="mb-2 flex items-center justify-between"><p className="text-xs font-semibold text-slate-700">Choose a color image</p><button type="button" aria-label="Close image picker" onClick={() => setOpenImagePicker(null)} className="rounded px-2 py-1 text-slate-500 hover:bg-slate-100">&times;</button></div>{images.length ? <div className="grid max-h-52 grid-cols-4 gap-2 overflow-y-auto">{images.map((image) => <button type="button" key={image.id} onClick={() => { updateColorVariant(variant.id, { imageIds: [image.id] }); setOpenImagePicker(null) }} className={'rounded-lg border p-1 ' + (variant.imageIds.includes(image.id) ? 'border-blue-600 ring-2 ring-blue-100' : 'border-slate-200 hover:border-blue-300')}><img src={image.previewUrl} alt="Uploaded product" className="h-14 w-full rounded object-cover" /></button>)}</div> : <p className="py-4 text-center text-xs text-slate-500">Upload product images first.</p>}</div>}
+                            {!assignedImage && <p className="mt-1 text-[11px] text-slate-500">Optional — the main product image is used when no color image is selected.</p>}
                           </div>
                         </div>
                       </div>
@@ -1642,19 +1541,11 @@ const AdminCreateProduct: React.FC = () => {
                   {colorVariants.length === 0 && <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-10 text-center"><Palette className="mx-auto h-8 w-8 text-slate-400" /><p className="mt-2 text-sm font-semibold text-slate-700">No colors added yet</p><p className="mt-1 text-xs text-slate-500">Add a color variant to let customers choose it on the product page.</p></div>}
                 </div>
 
-                <label onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); addLocalImages(Array.from(event.dataTransfer.files)) }} className="mt-4 flex cursor-pointer items-center justify-between gap-4 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-4 transition hover:border-blue-400 hover:bg-blue-50">
-                  <div className="flex items-center gap-3"><UploadCloud className="h-7 w-7 text-slate-500" /><div><p className="text-sm font-semibold text-slate-700">Drag &amp; drop color images here to upload</p><p className="mt-0.5 text-xs text-slate-500">Supported: JPG, PNG, WEBP � Max size 5MB</p></div></div><span className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white"><Upload className="h-3.5 w-3.5" /> Upload Images</span><input type="file" multiple accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleColorImageUpload} />
-                </label>
-
-                <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_1.4fr_1fr]">
-                  <div className="rounded-xl border border-slate-200 p-3"><p className="mb-2 text-xs font-semibold text-slate-800">Bulk Actions</p><div className="flex flex-wrap gap-2"><label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"><Download className="h-3.5 w-3.5" /> Import Colors<input type="file" accept="application/json,.json" className="hidden" onChange={handleImportColors} /></label><button type="button" onClick={exportColors} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"><Download className="h-3.5 w-3.5" /> Export Colors</button><button type="button" onClick={assignImagesToUnassigned} className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50"><ImagePlus className="h-3.5 w-3.5" /> Assign Images</button></div></div>
-                  <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-3"><p className="flex items-center gap-2 text-xs font-semibold text-blue-900"><CheckCircle2 className="h-4 w-4 text-blue-600" /> Need help?</p><p className="mt-1 text-xs leading-5 text-blue-800">Customers will select a color on the product page. Assigned images can be shown automatically when a color is selected.</p></div>
-                  <div className="grid grid-cols-2 divide-x divide-slate-200 rounded-xl border border-slate-200 bg-white"><div className="p-3"><p className="text-[11px] font-semibold text-slate-500">Total Colors</p><p className="mt-1 text-xl font-bold text-slate-900">{colorVariants.length}</p></div><div className="p-3"><p className="text-[11px] font-semibold text-slate-500">Total Stock</p><p className="mt-1 text-xl font-bold text-slate-900">{colorVariants.reduce((total, variant) => total + (Number(variant.stock) || 0), 0)}</p></div></div>
-                </div>
-                <div className="sticky bottom-3 z-10 mt-4 flex justify-end gap-2 rounded-xl border border-slate-200 bg-white/95 p-2 shadow-lg backdrop-blur">
-                  <button type="button" onClick={handleCancel} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
-                  <button type="submit" disabled={isSubmitting} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"><Save className="h-4 w-4" /> Save Colors</button>
-                </div>
+                {colorVariants.length > 0 && (
+                  <p className="mt-4 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-800">
+                    Color options and their assigned images are saved when you click <strong>Create Product</strong>.
+                  </p>
+                )}
               </section>
               {/* Tags */}
               <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">

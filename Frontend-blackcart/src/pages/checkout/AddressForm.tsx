@@ -332,13 +332,13 @@
 //       )}
 //     </motion.div>
 //   )
-import React, { useImperativeHandle, forwardRef } from 'react'
+import React, { useImperativeHandle, forwardRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { motion } from 'framer-motion'
 import { MapPin, User, Home, Phone, Building } from 'lucide-react'
-import { pakistanCities } from '../../utils/pakistanCities'
+import { pakistanLocations, pakistanProvinces } from '../../data/pakistanLocations'
 
 // ✅ FIXED: Updated schema to match what the backend actually expects
 const addressSchema = z.object({
@@ -347,8 +347,8 @@ const addressSchema = z.object({
     .regex(/^[A-Za-z\s]+$/, 'Full name can only contain letters and spaces'),
   // Remove 'name' field as it's not needed - we'll use fullName for both
   address: z.string().min(5, 'Address must be at least 5 characters'),
-  city: z.string().min(1, 'Please select a city'),
-  // Province will be auto-set from city selection
+  province: z.string().min(1, 'Please select a province or region'),
+  city: z.string().trim().min(1, 'Please select or enter a city'),
   postalCode: z.string().optional().or(z.literal('')),
   phone: z.string()
     .min(10, 'Phone number must be at least 10 digits')
@@ -381,12 +381,14 @@ const AddressForm = forwardRef<AddressFormRef, AddressFormProps>(({
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<AddressFormData>({
     resolver: zodResolver(addressSchema),
     defaultValues: {
       fullName: initialData?.fullName || initialData?.name || '',
       address: initialData?.address || '',
+      province: initialData?.province || '',
       city: initialData?.city || '',
       postalCode: initialData?.postalCode || '',
       phone: initialData?.phone || '',
@@ -444,38 +446,40 @@ const AddressForm = forwardRef<AddressFormRef, AddressFormProps>(({
     phoneField.onChange(e)
   }
 
-  // Auto-set province when city is selected (for display only)
-  const selectedCity = watch('city');
+  const initialProvince = initialData?.province || ''
+  const initialCities = initialProvince && initialProvince in pakistanLocations
+    ? pakistanLocations[initialProvince as keyof typeof pakistanLocations]
+    : []
+  const initialCityIsListed = initialCities.some(city => city === initialData?.city)
+  const [selectedCityOption, setSelectedCityOption] = useState(
+    initialData?.city ? (initialCityIsListed ? initialData.city : '__other__') : ''
+  )
 
-  // Get province for selected city (for display purposes)
-  const getProvinceForCity = (city: string): string => {
-    const cityData = pakistanCities.find(c => c.name === city);
-    return cityData?.province || '';
-  };
+  const selectedProvince = watch('province')
+  const selectedCity = watch('city')
+  const cities = selectedProvince && selectedProvince in pakistanLocations
+    ? pakistanLocations[selectedProvince as keyof typeof pakistanLocations]
+    : []
 
-  // Get unique cities from pakistanCities
-  const cities = pakistanCities
-    .filter(city => city.isActive)
-    .map(city => city.name)
-    .sort((a, b) => a.localeCompare(b));
+  const handleProvinceChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    setValue('province', event.target.value, { shouldValidate: true })
+    setValue('city', '', { shouldValidate: false })
+    setSelectedCityOption('')
+  }
 
-  // Handle form submission
+  const handleCitySelection = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = event.target.value
+    setSelectedCityOption(value)
+    setValue('city', value === '__other__' ? '' : value, { shouldValidate: true })
+  }
+
   const onFormSubmit = (data: AddressFormData) => {
-    // Find province from selected city
-    const cityData = pakistanCities.find(c => c.name === data.city);
-
-    if (!cityData) {
-      // This should not happen if city is selected from dropdown
-      return;
-    }
-
-    // Transform data to match what backend expects
     const addressData = {
       fullName: data.fullName,
       name: data.fullName, // Backend requires both
       address: data.address,
       city: data.city,
-      province: cityData.province,
+      province: data.province,
       postalCode: data.postalCode || '',
       country: 'Pakistan',
       phone: data.phone.replace(/\D/g, ''), // Remove non-digits for backend
@@ -586,39 +590,66 @@ const AddressForm = forwardRef<AddressFormRef, AddressFormProps>(({
           )}
         </div>
 
-        {/* City */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            City <span className="text-red-500">*</span>
-          </label>
-          <div className="relative">
-            <MapPin className="absolute left-3 top-3 h-5 w-5 text-gray-400 z-10" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Province / Region <span className="text-red-500">*</span>
+            </label>
             <select
-              {...register('city')}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all appearance-none bg-white"
+              {...register('province')}
+              onChange={handleProvinceChange}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all bg-white"
               disabled={isSubmitting}
             >
-              <option value="">Select City</option>
-              {cities.map((city) => (
-                <option key={city} value={city}>
-                  {city} {getProvinceForCity(city) && `(${getProvinceForCity(city)})`}
-                </option>
+              <option value="">Select Province / Region</option>
+              {pakistanProvinces.map(province => (
+                <option key={province} value={province}>{province}</option>
               ))}
             </select>
+            {errors.province && (
+              <p className="mt-1 text-sm text-red-600">{errors.province.message}</p>
+            )}
           </div>
-          {errors.city && (
-            <p className="mt-1 text-sm text-red-600">{errors.city.message}</p>
-          )}
-        </div>
 
-        {/* Province Display (read-only) */}
-        {selectedCity && (
-          <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-            <p className="text-sm text-gray-600">
-              <span className="font-medium">Province:</span> {getProvinceForCity(selectedCity)}
-            </p>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              City <span className="text-red-500">*</span>
+            </label>
+            <div className="relative">
+              <MapPin className="absolute left-3 top-3 h-5 w-5 text-gray-400 pointer-events-none" />
+              <select
+                value={selectedCityOption}
+                onChange={handleCitySelection}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all bg-white disabled:bg-gray-100"
+                disabled={isSubmitting || !selectedProvince}
+              >
+                <option value="">
+                  {selectedProvince ? 'Select City' : 'Select province first'}
+                </option>
+                {cities.map(city => (
+                  <option key={city} value={city}>{city}</option>
+                ))}
+                <option value="__other__">My city is not listed</option>
+              </select>
+            </div>
+            {selectedCityOption === '__other__' && (
+              <input
+                type="text"
+                value={selectedCity}
+                onChange={event => setValue('city', event.target.value, { shouldValidate: true })}
+                onBlur={() => setValue('city', selectedCity.trim(), { shouldValidate: true })}
+                className="mt-3 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
+                placeholder="Type your city name"
+                autoComplete="address-level2"
+                disabled={isSubmitting}
+              />
+            )}
+            <input type="hidden" {...register('city')} />
+            {errors.city && (
+              <p className="mt-1 text-sm text-red-600">{errors.city.message}</p>
+            )}
           </div>
-        )}
+        </div>
 
         {/* Postal Code and Phone */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

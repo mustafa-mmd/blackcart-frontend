@@ -17,7 +17,6 @@ import {
   Wallet,
   UserRound,
   Zap,
-  Clock,
   Tag,
   X,
 } from "lucide-react";
@@ -294,6 +293,15 @@ const CheckoutPage: React.FC = () => {
     };
   }, [appliedCoupon, processedCartItems, shippingEstimate]);
 
+  const standardDeliveryDays = React.useMemo(() => {
+    const cityData = pakistanCities.find(
+      (city) => city.name === selectedAddress?.city,
+    );
+    return cityData
+      ? `${cityData.minDeliveryDays}-${cityData.maxDeliveryDays}`
+      : "3-5";
+  }, [selectedAddress?.city]);
+
   useEffect(() => {
     let isMounted = true;
     couponService
@@ -372,24 +380,14 @@ const CheckoutPage: React.FC = () => {
   useEffect(() => {
     let standardCost = 0;
     let expressCost = 350;
-    let standardDays = "3-5";
     let expressDays = "1-2";
 
     standardCost = orderSummary.subtotal >= 5000 ? 0 : 200;
 
-    if (selectedAddress?.city) {
-      const cityData = pakistanCities.find(
-        (c) => c.name === selectedAddress.city,
-      );
-      if (cityData) {
-        standardDays = `${cityData.minDeliveryDays}-${cityData.maxDeliveryDays}`;
-      }
-    }
-
     if (deliveryMethod === "standard") {
       setShippingEstimate({
         price: standardCost,
-        days: standardDays,
+        days: standardDeliveryDays,
       });
     } else {
       setShippingEstimate({
@@ -397,7 +395,7 @@ const CheckoutPage: React.FC = () => {
         days: expressDays,
       });
     }
-  }, [selectedAddress, orderSummary.subtotal, deliveryMethod]);
+  }, [deliveryMethod, orderSummary.subtotal, standardDeliveryDays]);
 
   const createOrderMutation = useMutation({
     mutationFn: (orderData: any) => orderService.createOrder(orderData),
@@ -579,7 +577,7 @@ const CheckoutPage: React.FC = () => {
   const handlePaymentSelect = (methodId: string) => {
     setSelectedPaymentMethod(methodId);
   };
-  const handleContinueToPayment = () => {
+  const handleContinueToConfirmation = () => {
     if (selectedAddress) {
       setStep(2);
     } else if (addressFormRef.current) {
@@ -704,7 +702,7 @@ const CheckoutPage: React.FC = () => {
         <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1.65fr)_minmax(320px,0.9fr)] lg:gap-6">
           <div className="min-w-0 space-y-5">
             <AnimatePresence mode="wait">
-              {/* STEP 1: Shipping Address & Delivery Method */}
+              {/* STEP 1: Shipping Address */}
               {step === 1 && (
                 <motion.div
                   key="step-1"
@@ -791,90 +789,6 @@ const CheckoutPage: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Delivery Method Selection Cards */}
-                  {selectedAddress && (
-                    <div className="card p-4 sm:p-5">
-                      <h2 className="text-lg sm:text-xl font-bold text-slate-950 mb-3">
-                        Delivery Method
-                      </h2>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {/* Standard Delivery */}
-                        <div
-                          onClick={() => setDeliveryMethod("standard")}
-                          className={`relative p-5 border-2 rounded-xl cursor-pointer transition-all ${
-                            deliveryMethod === "standard"
-                              ? "border-blue-500 bg-blue-50"
-                              : "border-gray-200 hover:border-blue-300"
-                          }`}
-                        >
-                          <div className="flex items-start justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                              <Truck className="h-5 w-5 text-blue-500" />
-                              <span className="font-semibold text-gray-800">
-                                Standard Delivery
-                              </span>
-                            </div>
-                            {deliveryMethod === "standard" && (
-                              <div className="h-5 w-5 rounded-full bg-blue-500 flex items-center justify-center">
-                                <Check className="h-3 w-3 text-white" />
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex items-center text-sm text-gray-500 mb-2">
-                            <Clock className="h-4 w-4 mr-1" />
-                            {shippingEstimate.days} business days
-                          </div>
-                          <div className="text-lg font-bold text-gray-900">
-                            PKR{" "}
-                            {orderSummary.subtotal >= 5000 &&
-                            deliveryMethod === "standard"
-                              ? "0"
-                              : shippingEstimate.price.toLocaleString()}
-                          </div>
-                          {orderSummary.subtotal >= 5000 && (
-                            <span className="absolute top-2 right-12 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded font-medium">
-                              FREE
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Express Delivery */}
-                        <div
-                          onClick={() => setDeliveryMethod("express")}
-                          className={`relative p-5 border-2 rounded-xl cursor-pointer transition-all ${
-                            deliveryMethod === "express"
-                              ? "border-yellow-500 bg-yellow-50"
-                              : "border-gray-200 hover:border-yellow-300"
-                          }`}
-                        >
-                          <div className="flex items-start justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                              <Zap className="h-5 w-5 text-yellow-500" />
-                              <span className="font-semibold text-gray-800">
-                                Express Delivery
-                              </span>
-                            </div>
-                            {deliveryMethod === "express" && (
-                              <div className="h-5 w-5 rounded-full bg-yellow-500 flex items-center justify-center">
-                                <Check className="h-3 w-3 text-white" />
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex items-center text-sm text-yellow-600 mb-2">
-                            <Zap className="h-4 w-4 mr-1" />
-                            1-2 business days
-                          </div>
-                          <div className="text-lg font-bold text-gray-900">
-                            PKR 350
-                          </div>
-                          <span className="absolute top-2 right-12 text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded font-medium">
-                            RECOMMENDED
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
                   <div className="flex justify-between">
                     <button
                       onClick={() => navigate("/cart")}
@@ -883,10 +797,10 @@ const CheckoutPage: React.FC = () => {
                       Back to Cart
                     </button>
                     <button
-                      onClick={handleContinueToPayment}
+                      onClick={handleContinueToConfirmation}
                       className="btn-primary px-6 py-3 flex items-center"
                     >
-                      Continue to Payment{" "}
+                      Continue to Confirm Order{" "}
                       <ChevronRight className="h-5 w-5 ml-2" />
                     </button>
                   </div>
@@ -1017,11 +931,109 @@ const CheckoutPage: React.FC = () => {
           </div>
 
           {/* Order Summary sidebar */}
-          <div>
+          <div className="space-y-4 lg:sticky lg:top-24">
+            <motion.section
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="card p-4 sm:p-5"
+              aria-labelledby="delivery-service-heading"
+            >
+              <h2
+                id="delivery-service-heading"
+                className="text-lg font-bold text-slate-950"
+              >
+                Choose Delivery Service
+              </h2>
+              <p className="mt-1 text-xs text-gray-500">
+                Select the speed that works best for you.
+              </p>
+
+              <div
+                className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-1"
+                role="radiogroup"
+                aria-label="Delivery service"
+              >
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={deliveryMethod === "standard"}
+                  onClick={() => setDeliveryMethod("standard")}
+                  className={`flex w-full items-center gap-3 rounded-xl border-2 p-3 text-left transition-all ${
+                    deliveryMethod === "standard"
+                      ? "border-primary-500 bg-primary-50"
+                      : "border-gray-200 bg-white hover:border-primary-300"
+                  }`}
+                >
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-primary-600">
+                    <Truck className="h-5 w-5" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold text-gray-900">
+                      Standard Delivery
+                    </span>
+                    <span className="block text-xs text-gray-500">
+                      {standardDeliveryDays} business days
+                    </span>
+                  </span>
+                  <span className="text-right">
+                    <span className="block text-sm font-bold text-gray-900">
+                      {orderSummary.subtotal >= 5000 ? "Free" : "PKR 200"}
+                    </span>
+                    <span
+                      className={`mt-1 block h-4 w-4 rounded-full border-2 ${
+                        deliveryMethod === "standard"
+                          ? "border-primary-600 bg-primary-600 shadow-[inset_0_0_0_3px_white]"
+                          : "border-gray-300"
+                      }`}
+                    />
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={deliveryMethod === "express"}
+                  onClick={() => setDeliveryMethod("express")}
+                  className={`flex w-full items-center gap-3 rounded-xl border-2 p-3 text-left transition-all ${
+                    deliveryMethod === "express"
+                      ? "border-amber-500 bg-amber-50"
+                      : "border-gray-200 bg-white hover:border-amber-300"
+                  }`}
+                >
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
+                    <Zap className="h-5 w-5" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-1.5 text-sm font-semibold text-gray-900">
+                      Express Delivery
+                      <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-amber-700">
+                        Fast
+                      </span>
+                    </span>
+                    <span className="block text-xs text-gray-500">
+                      1-2 business days
+                    </span>
+                  </span>
+                  <span className="text-right">
+                    <span className="block text-sm font-bold text-gray-900">
+                      PKR 350
+                    </span>
+                    <span
+                      className={`mt-1 block h-4 w-4 rounded-full border-2 ${
+                        deliveryMethod === "express"
+                          ? "border-amber-500 bg-amber-500 shadow-[inset_0_0_0_3px_white]"
+                          : "border-gray-300"
+                      }`}
+                    />
+                  </span>
+                </button>
+              </div>
+            </motion.section>
+
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="card p-4 sm:p-5 lg:sticky lg:top-24"
+              className="card p-4 sm:p-5"
             >
               <h2 className="text-lg sm:text-xl font-bold text-slate-950 mb-3">
                 Order Summary
@@ -1229,7 +1241,7 @@ const CheckoutPage: React.FC = () => {
 
               <div className="flex items-start text-xs text-gray-500">
                 <Shield className="h-4 w-4 mr-2 text-green-600 shrink-0 mt-0.5" />
-                <span>Your payment information is encrypted and secure.</span>
+                <span>Your order and contact information are kept secure.</span>
               </div>
             </motion.div>
           </div>

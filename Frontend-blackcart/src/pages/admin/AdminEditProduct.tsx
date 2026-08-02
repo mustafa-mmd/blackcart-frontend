@@ -20,7 +20,10 @@ import {
   GripVertical,
   X,
   MoreVertical,
-  Link as LinkIcon
+  Link as LinkIcon,
+  ChevronLeft,
+  ChevronRight,
+  Sparkles
 } from 'lucide-react'
 import { adminService } from '../../services/adminServiceMethods'
 import Loader from '../../components/common/Loader'
@@ -29,6 +32,8 @@ interface Specification {
   key: string
   value: string
 }
+
+type SmartPasteMode = 'specifications' | 'features'
 
 interface ProductImage {
   url: string
@@ -147,7 +152,7 @@ const AdminEditProduct: React.FC = () => {
   const [loadingCategories, setLoadingCategories] = useState(false)
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('')
   const [isInitialLoad, setIsInitialLoad] = useState(true)
-  const [draggedImageIndex, setDraggedImageIndex] = useState<number | null>(null)
+  const [draggedImageId, setDraggedImageId] = useState<string | null>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState<string | null>(null)
   const [remoteImages, setRemoteImages] = useState<RemoteImage[]>([])
   const [remoteImageUrl, setRemoteImageUrl] = useState('')
@@ -358,10 +363,45 @@ const AdminEditProduct: React.FC = () => {
   }
 
   // ==================== DRAG & DROP ====================
-  const handleDragStart = (e: React.DragEvent, index: number) => {
-    setDraggedImageIndex(index)
+  const getImageId = (image: ProductImage) =>
+    image._id || image.public_id || image.url
+
+  const reorderExistingImage = (sourceId: string, targetId: string) => {
+    if (!sourceId || sourceId === targetId) return
+
+    setExistingImages((currentImages) => {
+      const sourceIndex = currentImages.findIndex(
+        (image) => getImageId(image) === sourceId,
+      )
+      const targetIndex = currentImages.findIndex(
+        (image) => getImageId(image) === targetId,
+      )
+      if (sourceIndex < 0 || targetIndex < 0) return currentImages
+
+      const reordered = [...currentImages]
+      const [movedImage] = reordered.splice(sourceIndex, 1)
+      reordered.splice(targetIndex, 0, movedImage)
+      return reordered.map((image, index) => ({
+        ...image,
+        isPrimary: index === 0,
+      }))
+    })
+  }
+
+  const moveExistingImage = (index: number, direction: -1 | 1) => {
+    const targetIndex = index + direction
+    if (targetIndex < 0 || targetIndex >= existingImages.length) return
+    reorderExistingImage(
+      getImageId(existingImages[index]),
+      getImageId(existingImages[targetIndex]),
+    )
+    toast.success('Image order updated — save the form to make it permanent')
+  }
+
+  const handleDragStart = (e: React.DragEvent, imageId: string) => {
+    setDraggedImageId(imageId)
     e.dataTransfer.effectAllowed = 'move'
-    e.dataTransfer.setData('text/plain', String(index))
+    e.dataTransfer.setData('text/plain', imageId)
   }
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -369,24 +409,17 @@ const AdminEditProduct: React.FC = () => {
     e.dataTransfer.dropEffect = 'move'
   }
 
-  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+  const handleDrop = (e: React.DragEvent, targetId: string) => {
     e.preventDefault()
-    if (draggedImageIndex === null || draggedImageIndex === dropIndex) {
-      return
-    }
-    
-    const reordered = [...existingImages]
-    const [dragged] = reordered.splice(draggedImageIndex, 1)
-    reordered.splice(dropIndex, 0, dragged)
-    
-    const updated = reordered.map((img, idx) => ({ ...img, isPrimary: idx === 0 }))
-    setExistingImages(updated)
-    setDraggedImageIndex(null)
+    const sourceId = e.dataTransfer.getData('text/plain') || draggedImageId
+    if (!sourceId || sourceId === targetId) return
+    reorderExistingImage(sourceId, targetId)
+    setDraggedImageId(null)
     toast.success('Image order updated — save the form to make it permanent')
   }
 
   const handleDragEnd = () => {
-    setDraggedImageIndex(null)
+    setDraggedImageId(null)
   }
 
   // ==================== MOBILE TOUCH DRAG ====================
@@ -479,6 +512,83 @@ const AdminEditProduct: React.FC = () => {
     updated[index] = value
     setFeatures(updated)
     setValue('features', updated, { shouldValidate: true })
+  }
+
+  const normalizeSmartPasteLine = (line: string) => line
+    .replace(/^\s*(?:[-*•▪◦]+|\d+[.)])\s*/, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  const parseSmartSpecifications = (input: string): Specification[] => input
+    .split(/\r?\n/)
+    .map(normalizeSmartPasteLine)
+    .filter(Boolean)
+    .map((line) => {
+      const match = line.match(/^(.+?)\s*[:=|–—-]\s*(.+)$/)
+      return match
+        ? { key: match[1].trim(), value: match[2].trim() }
+        : null
+    })
+    .filter((item): item is Specification => Boolean(item?.key && item.value))
+
+  const openSmartPaste = (mode: SmartPasteMode) => {
+    const pasted = window.prompt(
+      mode === 'specifications'
+        ? 'Paste specifications, one per line. Matching names will be updated.\nExample: Battery: 500 mAh'
+        : 'Paste the complete feature list, one feature per line. This replaces the current feature rows.',
+    )
+    if (!pasted?.trim()) return
+
+    if (mode === 'specifications') {
+      const parsed = parseSmartSpecifications(pasted)
+      if (!parsed.length) {
+        toast.error('No valid specifications found. Use Name: Value format.')
+        return
+      }
+
+      const merged = specifications
+        .filter((specification) => specification.key.trim() || specification.value.trim())
+        .map((specification) => ({ ...specification }))
+      let addedCount = 0
+      let updatedCount = 0
+
+      parsed.forEach((incoming) => {
+        const existingIndex = merged.findIndex(
+          (specification) =>
+            specification.key.trim().toLowerCase() === incoming.key.toLowerCase(),
+        )
+        if (existingIndex >= 0) {
+          merged[existingIndex] = incoming
+          updatedCount += 1
+        } else {
+          merged.push(incoming)
+          addedCount += 1
+        }
+      })
+
+      const nextSpecifications = merged.length ? merged : [{ key: '', value: '' }]
+      setSpecifications(nextSpecifications)
+      setValue('specifications', nextSpecifications, { shouldValidate: true })
+      toast.success(
+        `Smart Paste: ${updatedCount} updated, ${addedCount} added`,
+      )
+      return
+    }
+
+    const nextFeatures = Array.from(new Set(
+      pasted
+        .split(/\r?\n/)
+        .map(normalizeSmartPasteLine)
+        .filter(Boolean),
+    ))
+    if (!nextFeatures.length) {
+      toast.error('No valid features found.')
+      return
+    }
+
+    setFeatures(nextFeatures)
+    setValue('features', nextFeatures, { shouldValidate: true })
+    toast.success(`Smart Paste replaced the list with ${nextFeatures.length} features`)
   }
 
   // ==================== FORM SUBMIT ====================
@@ -861,15 +971,21 @@ const AdminEditProduct: React.FC = () => {
 
               {/* Specifications */}
               <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                   <h2 className="text-lg font-semibold text-gray-900 flex items-center">
                     <BarChart className="h-5 w-5 mr-2" />
                     Specifications
                   </h2>
-                  <button type="button" onClick={addSpecification} className="flex items-center text-sm text-blue-600 hover:text-blue-800 font-medium">
-                    <Plus className="h-4 w-4 mr-1" />
-                    Add Specification
-                  </button>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" onClick={addSpecification} className="flex items-center rounded-lg border border-blue-200 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50">
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Specification
+                    </button>
+                    <button type="button" onClick={() => openSmartPaste('specifications')} className="flex items-center rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700">
+                      <Sparkles className="h-4 w-4 mr-1" />
+                      Smart Paste
+                    </button>
+                  </div>
                 </div>
                 <div className="space-y-3">
                   {specifications.map((spec, index) => (
@@ -900,15 +1016,21 @@ const AdminEditProduct: React.FC = () => {
 
               {/* Features */}
               <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                   <h2 className="text-lg font-semibold text-gray-900 flex items-center">
                     <Award className="h-5 w-5 mr-2" />
                     Features
                   </h2>
-                  <button type="button" onClick={addFeature} className="flex items-center text-sm text-blue-600 hover:text-blue-800 font-medium">
-                    <Plus className="h-4 w-4 mr-1" />
-                    Add Feature
-                  </button>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" onClick={addFeature} className="flex items-center rounded-lg border border-blue-200 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50">
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Feature
+                    </button>
+                    <button type="button" onClick={() => openSmartPaste('features')} className="flex items-center rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700">
+                      <Sparkles className="h-4 w-4 mr-1" />
+                      Smart Paste Features
+                    </button>
+                  </div>
                 </div>
                 <div className="space-y-3">
                   {features.map((feature, index) => (
@@ -956,14 +1078,15 @@ const AdminEditProduct: React.FC = () => {
                   <div className="grid grid-cols-2 gap-3">
                     {existingImages.map((image, index) => (
                       <div 
-                        key={image._id || `img-${index}`} 
+                        key={getImageId(image)}
+                        data-image-id={getImageId(image)}
                         className={`relative group rounded-lg overflow-hidden border-2 transition-all ${
                           index === 0 ? 'border-blue-400' : 'border-transparent'
-                        } ${draggedImageIndex === index ? 'opacity-50 scale-95' : ''}`}
+                        } ${draggedImageId === getImageId(image) ? 'opacity-50 scale-95' : ''}`}
                         draggable
-                        onDragStart={(e) => handleDragStart(e, index)}
+                        onDragStart={(e) => handleDragStart(e, getImageId(image))}
                         onDragOver={handleDragOver}
-                        onDrop={(e) => handleDrop(e, index)}
+                        onDrop={(e) => handleDrop(e, getImageId(image))}
                         onDragEnd={handleDragEnd}
                       >
                         <img
@@ -986,18 +1109,28 @@ const AdminEditProduct: React.FC = () => {
                         </div>
 
                         {/* ✅ FIXED: Desktop — grip handle top-left, action buttons always visible on hover */}
-                        <div className="absolute top-1.5 left-1.5 hidden md:block cursor-move">
+                        <div className="absolute top-1.5 left-1.5 z-10 hidden md:block cursor-grab active:cursor-grabbing">
                           <div className="bg-black/50 rounded-full p-1 hover:bg-black/70 transition">
                             <GripVertical className="h-3.5 w-3.5 text-white" />
                           </div>
                         </div>
 
                         {/* Desktop hover overlay with action buttons */}
-                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all duration-200 hidden md:flex items-center justify-center gap-2">
+                        <div className="pointer-events-none absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all duration-200 hidden md:flex items-center justify-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => moveExistingImage(index, -1)}
+                            disabled={index === 0}
+                            className="pointer-events-auto p-2 bg-white text-gray-800 rounded-full hover:bg-gray-100 transition disabled:cursor-not-allowed disabled:opacity-40"
+                            title="Move image left"
+                            aria-label={`Move image ${index + 1} left`}
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                          </button>
                           <button
                             type="button"
                             onClick={() => handleRemoveExistingImage(image, index)}
-                            className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition transform hover:scale-110"
+                            className="pointer-events-auto p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition transform hover:scale-110"
                             title="Remove image"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -1006,12 +1139,22 @@ const AdminEditProduct: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => setPrimaryImage(index)}
-                              className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition transform hover:scale-110"
+                              className="pointer-events-auto p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition transform hover:scale-110"
                               title="Set as primary"
                             >
                               <Star className="h-4 w-4" />
                             </button>
                           )}
+                          <button
+                            type="button"
+                            onClick={() => moveExistingImage(index, 1)}
+                            disabled={index === existingImages.length - 1}
+                            className="pointer-events-auto p-2 bg-white text-gray-800 rounded-full hover:bg-gray-100 transition disabled:cursor-not-allowed disabled:opacity-40"
+                            title="Move image right"
+                            aria-label={`Move image ${index + 1} right`}
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </button>
                         </div>
 
                         {/* ✅ FIXED: Mobile — drag handle + menu button always visible (not hover-only) */}

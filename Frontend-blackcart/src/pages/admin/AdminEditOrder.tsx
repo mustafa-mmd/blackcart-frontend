@@ -8,20 +8,12 @@ import Loader from '../../components/common/Loader';
 import { useQueryClient } from '@tanstack/react-query';
 
 // ✅ Pakistani Courier Companies
-const PAKISTANI_COURIERS = [
-  { value: 'TCS', label: 'TCS (Tcs Express)' },
-  { value: 'Leopards', label: 'Leopards Courier' },
-  { value: 'M&P', label: 'M&P Courier' },
-  { value: 'BlueEX', label: 'BlueEX' },
-  { value: 'DHL', label: 'DHL Pakistan' },
-  { value: 'FedEx', label: 'FedEx Pakistan' },
-  { value: 'OCS', label: 'OCS Pakistan' },
-  { value: 'CallCourier', label: 'CallCourier' },
-  { value: 'PakistanPost', label: 'Pakistan Post' },
-  { value: 'Trax', label: 'Trax Courier' },
-  { value: 'SpeedEx', label: 'SpeedEx Courier' },
-  { value: 'Other', label: 'Other Courier' }
+const COURIER_SERVICES = [
+  { value: 'TCS', label: 'TCS — Express Delivery' },
+  { value: 'PostEx', label: 'PostEx — Normal Delivery' },
 ];
+
+const CUSTOM_COURIER_VALUE = 'custom';
 
 const AdminEditOrder: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -36,6 +28,8 @@ const AdminEditOrder: React.FC = () => {
     shippingCarrier: '',
     notes: ''
   });
+  const [courierOption, setCourierOption] = useState('');
+  const [customCarrierName, setCustomCarrierName] = useState('');
   const [noteLength, setNoteLength] = useState(0);
 
   useEffect(() => {
@@ -51,13 +45,25 @@ const AdminEditOrder: React.FC = () => {
       
       // Get the latest notes or empty string
       const latestNotes = orderData.notes || '';
+      const savedCarrier = orderData.shippingCarrier?.trim() || '';
+      const isPresetCarrier = COURIER_SERVICES.some(
+        (courier) => courier.value === savedCarrier,
+      );
       
       setFormData({
         orderStatus: orderData.orderStatus,
         trackingNumber: orderData.trackingNumber || '',
-        shippingCarrier: orderData.shippingCarrier || '',
+        shippingCarrier: savedCarrier,
         notes: latestNotes
       });
+      setCourierOption(
+        isPresetCarrier
+          ? savedCarrier
+          : savedCarrier
+            ? CUSTOM_COURIER_VALUE
+            : '',
+      );
+      setCustomCarrierName(isPresetCarrier ? '' : savedCarrier);
       setNoteLength(latestNotes.length);
     } catch (error) {
       console.error('Error fetching order:', error);
@@ -74,6 +80,13 @@ const AdminEditOrder: React.FC = () => {
   
   try {
     setSaving(true);
+
+    const carrierName = formData.shippingCarrier.trim();
+    if (courierOption === CUSTOM_COURIER_VALUE && !carrierName) {
+      toast.error('Enter the service provider name');
+      setSaving(false);
+      return;
+    }
     
     // Prepare update data - MUST match what updateOrderStatus expects
     const updateData: any = {};
@@ -89,8 +102,8 @@ const AdminEditOrder: React.FC = () => {
     }
 
     // Carrier (optional)
-    if (formData.shippingCarrier !== order.shippingCarrier) {
-      updateData.carrier = formData.shippingCarrier; // ✅ This is correct
+    if (carrierName !== (order.shippingCarrier || '').trim()) {
+      updateData.carrier = carrierName; // ✅ This is correct
     }
 
     // Notes (optional)
@@ -151,6 +164,27 @@ const AdminEditOrder: React.FC = () => {
     }
   };
 
+  const handleCourierChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedCourier = e.target.value;
+    setCourierOption(selectedCourier);
+    setFormData((current) => ({
+      ...current,
+      shippingCarrier:
+        selectedCourier === CUSTOM_COURIER_VALUE
+          ? customCarrierName
+          : selectedCourier,
+    }));
+  };
+
+  const handleCustomCarrierChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const providerName = e.target.value;
+    setCustomCarrierName(providerName);
+    setFormData((current) => ({
+      ...current,
+      shippingCarrier: providerName,
+    }));
+  };
+
   if (loading) {
     return <Loader size="lg" />;
   }
@@ -207,27 +241,55 @@ const AdminEditOrder: React.FC = () => {
               </p>
             </div>
 
-            {/* Shipping Carrier Dropdown */}
+            {/* Courier service provider */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Shipping Carrier
+                Courier Service Provider
               </label>
               <select
-                name="shippingCarrier"
-                value={formData.shippingCarrier}
-                onChange={handleChange}
+                name="courierOption"
+                value={courierOption}
+                onChange={handleCourierChange}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value="">Select Courier Company</option>
-                {PAKISTANI_COURIERS.map((courier) => (
+                <option value="">Select a service provider</option>
+                {COURIER_SERVICES.map((courier) => (
                   <option key={courier.value} value={courier.value}>
                     {courier.label}
                   </option>
                 ))}
+                <option value={CUSTOM_COURIER_VALUE}>
+                  Other — Enter provider name
+                </option>
               </select>
               <p className="text-xs text-gray-500 mt-1">
-                Select the courier company handling the delivery
+                TCS handles Express Delivery; PostEx handles Normal Delivery.
               </p>
+
+              {courierOption === CUSTOM_COURIER_VALUE && (
+                <div className="mt-4">
+                  <label
+                    htmlFor="customCarrierName"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
+                    Service Provider Name
+                  </label>
+                  <input
+                    id="customCarrierName"
+                    type="text"
+                    value={customCarrierName}
+                    onChange={handleCustomCarrierChange}
+                    maxLength={80}
+                    required
+                    autoFocus
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Type the courier or service provider name"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    This name will appear in the order's tracking information.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Notes Textarea with Character Counter */}

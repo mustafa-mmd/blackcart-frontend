@@ -1,5 +1,6 @@
 import axios from 'axios'
 import toast from 'react-hot-toast'
+import { getFriendlyErrorMessage } from '../utils/friendlyErrorMessage'
 
 const API_URL = import.meta.env.VITE_API_URL
   || (import.meta.env.DEV ? 'http://localhost:5000' : 'https://blackcart-backend.onrender.com')
@@ -40,7 +41,20 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401 && isAuthenticated()) clearAuthData()
-    if (error.response?.data?.message) toast.error(error.response.data.message)
+
+    const responseData = error.response?.data
+    const rawMessage = responseData?.message || responseData?.error || error.message
+    const friendlyMessage = getFriendlyErrorMessage(rawMessage, {
+      status: error.response?.status,
+    })
+
+    error.message = friendlyMessage
+    if (responseData && typeof responseData === 'object') {
+      if (responseData.message) responseData.message = friendlyMessage
+      if (responseData.error) responseData.error = friendlyMessage
+    }
+
+    if (responseData?.message) toast.error(friendlyMessage)
     return Promise.reject(error)
   },
 )

@@ -1,20 +1,19 @@
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowRight, CreditCard, ShieldCheck, Truck } from 'lucide-react'
+import { ArrowRight, CreditCard, Truck } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import bannerService, { type HeroBanner } from '../../services/bannerService'
 import { getImageUrl } from '../../utils/imageUtils'
 
 const TrustItems = () => (
   <div className="absolute bottom-7 left-6 z-10 hidden items-center gap-7 text-xs font-semibold text-slate-200 sm:flex md:left-10">
-    <span className="flex items-center gap-2"><ShieldCheck className="h-4 w-4" /> Official Warranty</span>
     <span className="flex items-center gap-2"><CreditCard className="h-4 w-4" /> Secure Payments</span>
     <span className="flex items-center gap-2"><Truck className="h-4 w-4" /> Fast Delivery</span>
   </div>
 )
 
 const FallbackHero = () => (
-  <section className="relative min-h-[calc(100vh-112px)] md:min-h-[calc(100vh-120px)] lg:min-h-[calc(100vh-128px)] overflow-hidden rounded-2xl bg-[#0b1220] px-6 py-8 text-white sm:px-10 md:py-12 flex flex-col justify-center">
+  <section className="relative flex aspect-[4/5] flex-col justify-center overflow-hidden rounded-2xl bg-[#0b1220] px-6 py-8 text-white sm:aspect-auto sm:min-h-[calc(100vh-120px)] sm:px-10 md:py-12 lg:min-h-[calc(100vh-128px)]">
     <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_35%,rgba(37,99,235,0.45),transparent_28%),radial-gradient(circle_at_62%_92%,rgba(249,115,22,0.18),transparent_25%)]" />
     <div className="relative z-10 max-w-[520px]">
       <span className="inline-flex rounded-md bg-orange-500/15 px-3 py-1 text-xs font-bold tracking-wide text-orange-300">PREMIUM TECH ESSENTIALS</span>
@@ -68,7 +67,7 @@ const HomepageHero = () => {
   return (
     <section
       aria-label={banner.accessibilityLabel || banner.name || 'Homepage promotion'}
-      className="relative min-h-[calc(100vh-112px)] md:min-h-[calc(100vh-120px)] lg:min-h-[calc(100vh-128px)] overflow-hidden rounded-2xl bg-[#0b1220] text-white"
+      className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-[#0b1220] text-white sm:aspect-auto sm:min-h-[calc(100vh-120px)] lg:min-h-[calc(100vh-128px)]"
     >
       <picture className="absolute inset-0">
         <source media="(max-width: 639px)" srcSet={mobileImage} />
@@ -89,7 +88,7 @@ const HomepageHero = () => {
           }}
         />
       )}
-      <div className={`relative z-10 flex min-h-[calc(100vh-112px)] md:min-h-[calc(100vh-120px)] lg:min-h-[calc(100vh-128px)] flex-col justify-center px-6 py-8 sm:px-10 md:py-12 ${bannerAlignment(banner)}`} style={{ color: banner.textColor || '#ffffff' }}>
+      <div className={`relative z-10 flex h-full flex-col justify-center px-6 py-8 sm:min-h-[calc(100vh-120px)] sm:px-10 md:py-12 lg:min-h-[calc(100vh-128px)] ${bannerAlignment(banner)}`} style={{ color: banner.textColor || '#ffffff' }}>
         <div className="max-w-[560px]">
           {banner.headline && <h1 className="text-3xl font-black tracking-tight sm:text-4xl lg:text-5xl">{banner.headline}</h1>}
           {banner.subheading && <p className="mt-4 text-base leading-7 opacity-90 sm:text-lg">{banner.subheading}</p>}

@@ -1,5 +1,5 @@
 
-import React from 'react'
+import React, { useEffect, useRef } from 'react'
 import { FileText, Grid, Star, Package, Shield, Truck, RefreshCw } from 'lucide-react'
 import ReviewList from '../reviews/ReviewList'
 import ProductSpecifications from './ProductSpecifications'
@@ -30,25 +30,36 @@ const ProductTabs: React.FC<ProductTabsProps> = ({
   onReviewSubmit,
   onHelpfulClick // ✅ ADDED: Destructure the new prop
 }) => {
+  const panelRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    panelRef.current?.focus({ preventScroll: true })
+  }, [activeTab])
+
+  const tabClass = (tab: ProductTabsProps['activeTab']) =>
+    `min-w-0 rounded-xl px-2 py-2.5 text-xs font-semibold transition-colors sm:px-3 sm:text-sm md:rounded-none md:border-b-2 md:px-1 md:py-4 md:text-base ${
+      activeTab === tab
+        ? 'bg-primary-50 text-primary-700 ring-1 ring-inset ring-primary-200 md:border-primary-500 md:bg-transparent md:ring-0'
+        : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800 md:border-transparent md:hover:bg-transparent'
+    }`
+
   return (
-    <div id="product-details" className="mt-6 scroll-mt-24 md:mt-8">
+    <div id="product-details" className="mt-6 min-w-0 scroll-mt-24 md:mt-8">
       {/* Tab Headers */}
-      <div className="border-b border-gray-200 overflow-x-auto">
-        <nav className="flex min-w-max space-x-8" role="tablist" aria-label="Product information">
+      <div className="rounded-2xl border border-gray-200 bg-white p-1.5 shadow-sm md:rounded-none md:border-x-0 md:border-t-0 md:p-0 md:shadow-none">
+        <nav className="grid grid-cols-4 gap-1 md:flex md:gap-8" role="tablist" aria-label="Product information">
           <button
             type="button"
             role="tab"
             aria-selected={activeTab === 'description'}
             aria-controls="product-tab-panel"
             onClick={() => onTabChange('description')}
-            className={`py-4 px-1 border-b-2 font-medium flex items-center gap-2 whitespace-nowrap ${
-              activeTab === 'description'
-                ? 'border-primary-500 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
+            className={tabClass('description')}
           >
-            <FileText className="h-5 w-5" />
-            Description
+            <span className="flex flex-col items-center justify-center gap-1 md:flex-row md:gap-2">
+              <FileText className="h-5 w-5" />
+              <span>Description</span>
+            </span>
           </button>
           
           <button
@@ -57,14 +68,13 @@ const ProductTabs: React.FC<ProductTabsProps> = ({
             aria-selected={activeTab === 'specifications'}
             aria-controls="product-tab-panel"
             onClick={() => onTabChange('specifications')}
-            className={`py-4 px-1 border-b-2 font-medium flex items-center gap-2 whitespace-nowrap ${
-              activeTab === 'specifications'
-                ? 'border-primary-500 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
+            className={tabClass('specifications')}
           >
-            <Grid className="h-5 w-5" />
-            Specifications
+            <span className="flex flex-col items-center justify-center gap-1 md:flex-row md:gap-2">
+              <Grid className="h-5 w-5" />
+              <span className="md:hidden">Specs</span>
+              <span className="hidden md:inline">Specifications</span>
+            </span>
           </button>
           
           <button
@@ -73,14 +83,12 @@ const ProductTabs: React.FC<ProductTabsProps> = ({
             aria-selected={activeTab === 'reviews'}
             aria-controls="product-tab-panel"
             onClick={() => onTabChange('reviews')}
-            className={`py-4 px-1 border-b-2 font-medium flex items-center gap-2 whitespace-nowrap ${
-              activeTab === 'reviews'
-                ? 'border-primary-500 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
+            className={tabClass('reviews')}
           >
-            <Star className="h-5 w-5" />
-            Reviews ({reviews.length})
+            <span className="flex flex-col items-center justify-center gap-1 md:flex-row md:gap-2">
+              <Star className="h-5 w-5" />
+              <span>Reviews<span className="hidden sm:inline"> ({reviews.length})</span></span>
+            </span>
           </button>
           
           <button
@@ -89,23 +97,22 @@ const ProductTabs: React.FC<ProductTabsProps> = ({
             aria-selected={activeTab === 'shipping'}
             aria-controls="product-tab-panel"
             onClick={() => onTabChange('shipping')}
-            className={`py-4 px-1 border-b-2 font-medium flex items-center gap-2 whitespace-nowrap ${
-              activeTab === 'shipping'
-                ? 'border-primary-500 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
+            className={tabClass('shipping')}
           >
-            <Truck className="h-5 w-5" />
-            Shipping & Returns
+            <span className="flex flex-col items-center justify-center gap-1 md:flex-row md:gap-2">
+              <Truck className="h-5 w-5" />
+              <span className="md:hidden">Delivery</span>
+              <span className="hidden md:inline">Shipping &amp; Returns</span>
+            </span>
           </button>
         </nav>
       </div>
 
       {/* Tab Content */}
-      <div id="product-tab-panel" className="py-8" role="tabpanel" tabIndex={0}>
+      <div ref={panelRef} id="product-tab-panel" className="py-5 outline-none md:py-8" role="tabpanel" tabIndex={-1}>
         {activeTab === 'description' && (
           <div className="prose prose-gray max-w-none">
-            <h3 className="text-2xl font-bold text-gray-900 mb-6">Product Description</h3>
+            <h3 className="mb-4 text-xl font-bold text-gray-900 md:mb-6 md:text-2xl">Product Description</h3>
             <div className="text-gray-600 space-y-4 mb-8">
               {product.description.split('\n').map((paragraph: string, index: number) => (
                 <p key={index}>{paragraph}</p>
@@ -147,10 +154,7 @@ const ProductTabs: React.FC<ProductTabsProps> = ({
         )}
         
         {activeTab === 'specifications' && (
-          <div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-6">Product Specifications</h3>
-            <ProductSpecifications specifications={product.specifications || []} />
-          </div>
+          <ProductSpecifications specifications={product.specifications || []} />
         )}
         
         {activeTab === 'reviews' && (
@@ -232,4 +236,3 @@ const ProductTabs: React.FC<ProductTabsProps> = ({
 }
 
 export default ProductTabs
-

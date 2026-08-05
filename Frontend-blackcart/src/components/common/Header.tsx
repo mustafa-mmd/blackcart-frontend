@@ -31,19 +31,19 @@ const Header: React.FC = () => {
     <>
       <header className="sticky top-0 z-50 bg-white shadow-md">
         <div className="container-lg section-padding">
-          <div className="flex h-16 items-center justify-between">
-            <Link to="/" className="flex shrink-0 items-center">
+          <div className="flex h-16 items-center justify-between gap-2">
+            <Link to="/" className="flex min-w-0 max-w-[52vw] items-center sm:max-w-[15rem] lg:max-w-none">
               {showLogo ? (
                 <img
                   src={logoUrl}
                   alt={settings?.logo?.alt || storeName}
-                  className="max-h-16 w-auto object-contain"
+                  className="max-h-12 w-auto max-w-[52vw] object-contain sm:max-h-14 sm:max-w-[15rem] lg:max-h-16"
                   onError={() => setFailedLogoUrl(logoUrl)}
                 />
               ) : (
-                <div className="flex items-center gap-2">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-600 text-xl font-bold text-white">B</div>
-                  <span className="text-2xl font-bold text-gray-900">{storeName}</span>
+                <div className="flex min-w-0 items-center gap-2">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-600 text-xl font-bold text-white">B</div>
+                  <span className="truncate text-lg font-bold text-gray-900 sm:text-2xl">{storeName}</span>
                 </div>
               )}
             </Link>
@@ -69,12 +69,12 @@ const Header: React.FC = () => {
 
             <SearchDropdown />
 
-            <div className="flex shrink-0 items-center gap-2 xl:gap-4">
-              <button onClick={() => setIsMobileSearchOpen(true)} className="p-2 text-gray-600 hover:text-primary-600 lg:hidden" aria-label="Open search">
+            <div className="flex shrink-0 items-center gap-0.5 sm:gap-2 xl:gap-4">
+              <button onClick={() => setIsMobileSearchOpen(true)} className="flex h-11 w-11 items-center justify-center rounded-full text-gray-600 hover:bg-gray-100 hover:text-primary-600 lg:hidden" aria-label="Open search">
                 <Search className="h-6 w-6" />
               </button>
               <MiniCart />
-              <button onClick={() => setIsMenuOpen(open => !open)} className="p-2 text-gray-600 hover:text-primary-600 md:hidden" aria-label="Toggle menu">
+              <button onClick={() => setIsMenuOpen(open => !open)} className="flex h-11 w-11 items-center justify-center rounded-full text-gray-600 hover:bg-gray-100 hover:text-primary-600 md:hidden" aria-label="Toggle menu">
                 {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
               </button>
             </div>

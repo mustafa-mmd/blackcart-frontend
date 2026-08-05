@@ -414,9 +414,13 @@ const ProductDetailPage: React.FC = () => {
   const isFreeShipping = singleItemPrice >= 5000;
   const standardCost = isFreeShipping ? "FREE" : "PKR 200";
   const expressCost = "PKR 350";
+  const categoryName =
+    typeof product.category === "object"
+      ? product.category.name || "Category"
+      : product.category || "Category";
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-20 sm:pb-0">
       <Helmet>
         <title>{product.name} - Buy in Pakistan | BlackCart</title>
         <meta
@@ -443,12 +447,41 @@ const ProductDetailPage: React.FC = () => {
         </script>
       </Helmet>
       {/* Breadcrumb */}
-      <div className="container mx-auto px-4 py-2">
+      <div className="container mx-auto hidden px-4 py-2 sm:block">
         <Breadcrumb items={breadcrumbItems} />
       </div>
 
       {/* Main Product Section */}
-      <div className="container mx-auto px-3 py-2 sm:px-4 lg:py-3">
+      <div className="container mx-auto px-3 py-3 sm:px-4 lg:py-3">
+        {/* Mobile-first product identity: customers should know what they are viewing before the gallery. */}
+        <section className="mb-4 lg:hidden" aria-labelledby="mobile-product-title">
+          <div className="mb-2 flex flex-wrap items-center gap-2 text-xs">
+            <span className="rounded-full bg-blue-50 px-2.5 py-1 font-semibold text-blue-700">
+              {categoryName}
+            </span>
+            <span className="text-gray-500">SKU: <span className="font-medium text-gray-700">{selectedColor?.sku || product.sku}</span></span>
+          </div>
+          <h1 id="mobile-product-title" className="text-xl font-bold leading-7 text-gray-950 sm:text-2xl">
+            {product.name}
+          </h1>
+          <div className="mt-2 flex items-center gap-1.5 text-sm font-medium text-emerald-700">
+            <CheckCircle className="h-4 w-4" />
+            <span>Verified product</span>
+          </div>
+          <div className="mt-3 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            <span className="text-2xl font-bold tracking-tight text-gray-950">
+              {formatPrice(product.discountPrice || product.price)}
+            </span>
+            {discountPercentage > 0 && (
+              <>
+                <span className="text-sm text-gray-500 line-through">{formatPrice(product.price)}</span>
+                <span className="rounded-md bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-800">Save {discountPercentage}%</span>
+              </>
+            )}
+          </div>
+          <p className="mt-1 text-xs leading-5 text-gray-500">Inclusive of all taxes · Delivery options shown at checkout</p>
+        </section>
+
         <div className="grid grid-cols-1 items-start gap-4 sm:gap-6 lg:grid-cols-[0.95fr_1.05fr] 2xl:gap-8">
           {/* Left Column - Images + Color Picker + Tabs */}
           <div className="flex flex-col">
@@ -465,7 +498,7 @@ const ProductDetailPage: React.FC = () => {
 
 
             {product.shortDescription && (
-              <div className="mt-3 rounded-lg bg-gray-50 p-3">
+              <div className="mt-3 hidden rounded-lg bg-gray-50 p-3 lg:block">
                 <h3 className="mb-1.5 font-semibold text-gray-900">Quick Overview</h3>
                 <p className="text-sm leading-6 text-gray-600">{product.shortDescription}</p>
               </div>
@@ -477,12 +510,10 @@ const ProductDetailPage: React.FC = () => {
           {/* Right Column - Product Info */}
           <div className="space-y-1">
             {/* Product Title & Meta */}
-            <div>
+            <div className="hidden lg:block">
               <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <span className="text-sm font-medium text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
-                  {typeof product.category === "object"
-                    ? product.category.name || "Category"
-                    : product.category || "Category"}
+                  {categoryName}
                 </span>
                 <div className="flex items-center space-x-2">
                   <span className="text-sm text-gray-500">SKU:</span>
@@ -503,7 +534,7 @@ const ProductDetailPage: React.FC = () => {
             </div>
 
             {/* Price Section */}
-            <div className="border-b border-gray-200 bg-transparent pb-3">
+            <div className="hidden border-b border-gray-200 bg-transparent pb-3 lg:block">
               <div className="mb-1 flex flex-wrap items-baseline gap-x-2 gap-y-1">
                 <span className="text-xl font-bold text-gray-950 sm:text-2xl 2xl:text-2xl">
                   {formatPrice(product.discountPrice || product.price)}
@@ -575,11 +606,11 @@ const ProductDetailPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex flex-col gap-3 sm:flex-row sm:gap-4"><div className="relative order-2 flex-1">
+              <div className="hidden gap-4 sm:flex"><div className="relative order-1 flex-1">
                   <button
                     onClick={handleAddToCart}
                     disabled={availableStock === 0}
-                    className={`relative z-10 flex h-full w-full items-center justify-center gap-3 rounded-full border border-gray-900 px-3 py-2 text-gray-950 transition-all duration-300 ${
+                    className={`relative z-10 flex min-h-12 w-full items-center justify-center gap-2 rounded-full border border-gray-900 px-2 py-2 text-sm text-gray-950 transition-all duration-300 sm:gap-3 sm:px-3 sm:text-base ${
                       availableStock === 0
                         ? "cursor-not-allowed bg-gray-200 text-gray-500"
                         : cartFeedback === "added"
@@ -624,7 +655,7 @@ const ProductDetailPage: React.FC = () => {
                 <button
                   onClick={handleBuyNow}
                   disabled={availableStock === 0}
-                  className={`order-1 flex-1 rounded-full bg-gray-950 px-3 py-2 font-semibold tracking-wide text-white transition-all ${
+                  className={`order-2 min-h-12 flex-1 rounded-full bg-gray-950 px-3 py-2 text-sm font-semibold tracking-wide text-white transition-all sm:text-base ${
                     availableStock === 0
                       ? "bg-gray-200 text-gray-500 cursor-not-allowed"
                       : "bg-black hover:bg-gray-800 text-white"
@@ -634,6 +665,13 @@ const ProductDetailPage: React.FC = () => {
                 </button>
               </div>
             </div>
+
+            {product.shortDescription && (
+              <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm lg:hidden">
+                <h2 className="mb-1.5 text-sm font-semibold text-gray-900">Quick overview</h2>
+                <p className="text-sm leading-6 text-gray-600">{product.shortDescription}</p>
+              </div>
+            )}
 
             {/* Features Grid with real dates & removed Warranty */}
             <div className="grid grid-cols-1 gap-2 border-t border-gray-200 pt-4 sm:grid-cols-3 sm:gap-3">
@@ -747,7 +785,7 @@ const ProductDetailPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="mt-10">
+        <div className="mt-7 sm:mt-10">
           <ProductTabs
             activeTab={activeTab}
             onTabChange={setActiveTab}
@@ -770,6 +808,36 @@ const ProductDetailPage: React.FC = () => {
             />
           </div>
         )}
+      </div>
+
+      <div className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-[1fr_1.15fr] gap-2 border-t border-gray-200 bg-white/95 px-3 pt-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] shadow-[0_-8px_24px_rgba(15,23,42,0.10)] backdrop-blur sm:hidden">
+        <button
+          type="button"
+          onClick={handleAddToCart}
+          disabled={availableStock === 0}
+          className={`flex min-h-12 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-semibold transition ${
+            availableStock === 0
+              ? "cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400"
+              : cartFeedback === "added"
+                ? "border-emerald-600 bg-emerald-50 text-emerald-700"
+                : "border-gray-300 bg-white text-gray-900 active:bg-gray-100"
+          }`}
+        >
+          {cartFeedback === "added" ? <CheckCircle className="h-5 w-5" /> : <ShoppingCart className="h-5 w-5" />}
+          <span>{cartFeedback === "added" ? "Added" : availableStock === 0 ? "Out of stock" : "Add to cart"}</span>
+        </button>
+        <button
+          type="button"
+          onClick={handleBuyNow}
+          disabled={availableStock === 0}
+          className={`min-h-12 rounded-xl px-4 text-sm font-semibold tracking-wide transition ${
+            availableStock === 0
+              ? "cursor-not-allowed bg-gray-200 text-gray-500"
+              : "bg-gray-950 text-white active:bg-gray-800"
+          }`}
+        >
+          Buy now
+        </button>
       </div>
     </div>
   );

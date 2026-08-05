@@ -125,12 +125,12 @@ const ProductSpecifications: React.FC<ProductSpecificationsProps> = ({
   };
 
   return (
-    <div className="space-y-8">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">
-          {title}
+    <section className="space-y-5 md:space-y-8" aria-labelledby="specifications-heading">
+      <div>
+        <h2 id="specifications-heading" className="text-xl font-bold text-gray-900 md:text-2xl">
+          Product {title}
         </h2>
-        <p className="text-gray-600 mt-1">
+        <p className="mt-1 text-sm leading-6 text-gray-600 md:text-base">
           Complete technical specifications and features
         </p>
       </div>
@@ -138,13 +138,13 @@ const ProductSpecifications: React.FC<ProductSpecificationsProps> = ({
       {Object.entries(groupedSpecs).map(([group, specs]) => (
         <div 
           key={group} 
-          className="bg-white rounded-xl border border-gray-200 overflow-hidden"
+          className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
         >
           {/* Group Header */}
-          <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-              {group}
-              <span className="text-sm font-normal text-gray-500 ml-2">
+          <div className="border-b border-gray-200 bg-gray-50 px-4 py-3.5 sm:px-5 md:px-6 md:py-4">
+            <h3 className="flex flex-wrap items-baseline gap-x-2 text-base font-semibold text-gray-900 md:text-lg">
+              <span>{group}</span>
+              <span className="text-xs font-normal text-gray-500 sm:text-sm">
                 ({specs.length} {specs.length === 1 ? 'specification' : 'specifications'})
               </span>
             </h3>
@@ -155,9 +155,9 @@ const ProductSpecifications: React.FC<ProductSpecificationsProps> = ({
             {specs.map((spec, index) => (
               <div 
                 key={`${group}-${spec.key}-${index}`}
-                className="px-6 py-4 hover:bg-gray-50 transition-colors"
+                className="px-4 py-3.5 transition-colors hover:bg-gray-50 sm:px-5 md:px-6 md:py-4"
               >
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6">
+                <div className="grid grid-cols-[minmax(0,0.9fr)_minmax(0,1.25fr)] items-start gap-3 sm:grid-cols-[minmax(0,0.75fr)_minmax(0,1.5fr)] md:grid-cols-12 md:gap-6">
                   {/* Specification Key */}
                   <div className="md:col-span-4">
                     <div className="flex items-start gap-3">
@@ -168,7 +168,7 @@ const ProductSpecifications: React.FC<ProductSpecificationsProps> = ({
                         </div>
                       )}
                       <div>
-                        <h4 className="font-medium text-gray-900">
+                        <h4 className="text-sm font-semibold leading-5 text-gray-900 md:text-base">
                           {formatKey(spec.key)}
                         </h4>
                         {spec.unit && !spec.value.toString().includes(spec.unit) && (
@@ -182,8 +182,8 @@ const ProductSpecifications: React.FC<ProductSpecificationsProps> = ({
                   
                   {/* Specification Value */}
                   <div className="md:col-span-8">
-                    <div className="flex items-center min-h-8">
-                      <p className="text-gray-700">
+                    <div className="flex min-h-5 items-start md:min-h-8 md:items-center">
+                      <p className="min-w-0 break-words text-sm leading-5 text-gray-700 md:text-base md:leading-6">
                         {formatValue(spec)}
                       </p>
                     </div>
@@ -196,13 +196,13 @@ const ProductSpecifications: React.FC<ProductSpecificationsProps> = ({
       ))}
       
       {/* Footer Note */}
-      <div className="mt-6 pt-6 border-t border-gray-200">
-        <p className="text-sm text-gray-500 text-center">
+      <div className="border-t border-gray-200 pt-4 md:mt-6 md:pt-6">
+        <p className="text-center text-xs leading-5 text-gray-500 md:text-sm">
           Specifications are subject to change without notice. 
           Refer to manufacturer documentation for complete details.
         </p>
       </div>
-    </div>
+    </section>
   );
 };
 

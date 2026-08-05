@@ -37,7 +37,7 @@
 
 @layer base {
   body {
-    font-family: var(--font-sans, 'Inter', system-ui, sans-serif);
+    font-family: 'Inter', Arial, Helvetica, sans-serif;
     background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
     color: #1f2937;
     -webkit-font-smoothing: antialiased;
